@@ -6,7 +6,7 @@ use rusqlite::Connection;
 
 use crate::evento;
 use crate::grupo;
-use crate::modelo::{Error, Evento, EventoCompleto, Grupo, Notificacion};
+use crate::modelo::{Adjunto, Error, Evento, EventoCompleto, Grupo, Notificacion};
 use crate::ocurrencia;
 
 /// Lo que ocurrió, con lo justo para poder revertirlo.
@@ -20,10 +20,12 @@ pub enum Accion {
     GruposReordenados { antes: Vec<i64> },
 
     EventoCreado { id: i64 },
-    /// `None` si la edición no movió ninguna hora.
+    /// Las notificaciones son `None` si la edición no movió ninguna hora. Los
+    /// adjuntos no: la edición siempre declara la lista que tiene que quedar.
     EventoEditado {
         antes: Evento,
         notificaciones: Option<Vec<Notificacion>>,
+        adjuntos: Vec<Adjunto>,
     },
     /// Borrar un evento se lleva por cascada todo lo que cuelga de él.
     EventoBorrado(EventoCompleto),
@@ -53,7 +55,8 @@ fn revertir(conexion: &Connection, accion: Accion) -> Result<Accion, Error> {
         Accion::EventoEditado {
             antes,
             notificaciones,
-        } => evento::escribir(conexion, &antes, notificaciones.as_deref()),
+            adjuntos,
+        } => evento::escribir(conexion, &antes, notificaciones.as_deref(), &adjuntos),
         Accion::EventoBorrado(completo) => evento::restaurar(conexion, &completo),
 
         Accion::OcurrenciaExcluida {

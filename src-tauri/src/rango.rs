@@ -225,14 +225,12 @@ mod pruebas {
             imagen: None,
             rrule: None,
             recordatorio_min: None,
+            adjuntos: Vec::new(),
         }
     }
 
     fn crear(conexion: &Connection, nuevo: EventoNuevo) -> i64 {
-        match evento::crear(conexion, nuevo).unwrap() {
-            Accion::EventoCreado { id } => id,
-            otro => panic!("se esperaba EventoCreado, llegó {otro:?}"),
-        }
+        evento::crear(conexion, nuevo).unwrap().0
     }
 
     fn consultar(

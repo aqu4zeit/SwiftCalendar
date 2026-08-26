@@ -144,6 +144,7 @@ mod pruebas {
             imagen: None,
             rrule: None,
             recordatorio_min: None,
+            adjuntos: Vec::new(),
         }
     }
 

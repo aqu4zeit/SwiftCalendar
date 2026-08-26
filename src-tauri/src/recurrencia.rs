@@ -396,12 +396,11 @@ mod pruebas {
     use crate::db;
     use crate::evento;
     use crate::grupo;
-    use crate::historial::Accion;
     use crate::modelo::{Cuando, EventoNuevo, Importancia};
 
     fn serie_semanal(conexion: &Connection, inicio: NaiveDateTime) -> i64 {
         let grupo_id = grupo::listar(conexion).unwrap()[0].id;
-        let accion = evento::crear(
+        let (id, _) = evento::crear(
             conexion,
             EventoNuevo {
                 grupo_id,
@@ -417,14 +416,12 @@ mod pruebas {
                 imagen: None,
                 rrule: Some("FREQ=WEEKLY".to_string()),
                 recordatorio_min: None,
+                adjuntos: Vec::new(),
             },
         )
         .unwrap();
 
-        match accion {
-            Accion::EventoCreado { id } => id,
-            otro => panic!("se esperaba EventoCreado, llegó {otro:?}"),
-        }
+        id
     }
 
     fn excluir(conexion: &Connection, evento_id: i64, fecha: &str) {

@@ -162,11 +162,17 @@ pub struct EventoNuevo {
     pub imagen: Option<Imagen>,
     pub rrule: Option<String>,
     pub recordatorio_min: Option<i64>,
+    /// Van acá y no aparte para que crear una ocurrencia suelta los lleve por
+    /// el mismo camino que crear un evento nuevo.
+    pub adjuntos: Vec<Adjunto>,
 }
 
+/// Un archivo colgado de un evento.
+///
+/// Sin identificador: ninguna otra tabla apunta a un adjunto, así que
+/// conservarlo al restaurar sería un segundo camino para llenar la misma tabla.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Adjunto {
-    pub id: i64,
     pub ruta: String,
     pub nombre_original: String,
     pub tamano: i64,

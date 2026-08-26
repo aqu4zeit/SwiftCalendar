@@ -54,6 +54,15 @@ export interface Instancia {
   de: number;
 }
 
+/** Un archivo colgado del evento, tal como está guardado. */
+export interface AdjuntoDetalle {
+  ruta: string;
+  nombre_original: string;
+  tamano: number;
+  /** Falso si el archivo ya no está en la carpeta. */
+  existe: boolean;
+}
+
 /**
  * Un evento tal como está guardado.
  *
@@ -71,6 +80,11 @@ export interface EventoDetalle {
   descripcion: string | null;
   ubicacion: string | null;
   url: string | null;
+  imagen: string | null;
+  miniatura: string | null;
+  /** Falso si el archivo ya no está en la carpeta. */
+  imagen_existe: boolean;
+  adjuntos: AdjuntoDetalle[];
   rrule: string | null;
   recordatorio_min: number | null;
 }
@@ -100,6 +114,27 @@ export const TODAS_LAS_IMPORTANCIAS: Importancia[] = [
   "urgente",
 ];
 
+/**
+ * Qué imagen tiene que quedar guardada.
+ *
+ * Las tres formas son estados distintos. Con una ruta opcional habría que
+ * adivinar si es la que ya estaba o una nueva por copiar.
+ */
+export type ImagenPedida =
+  | { tipo: "sin" }
+  | { tipo: "guardada"; original: string; miniatura: string }
+  | { tipo: "nueva"; origen: string };
+
+/** Las mismas formas del adjunto, menos "sin": eso es la lista vacía. */
+export type AdjuntoPedido =
+  | {
+      tipo: "guardado";
+      ruta: string;
+      nombre_original: string;
+      tamano: number;
+    }
+  | { tipo: "nuevo"; origen: string };
+
 /** Lo que se manda para crear o editar un evento. */
 export interface EventoNuevo {
   grupo_id: number;
@@ -112,6 +147,9 @@ export interface EventoNuevo {
   descripcion: string | null;
   ubicacion: string | null;
   url: string | null;
+  imagen: ImagenPedida;
+  /** La lista completa que tiene que quedar, no un cambio sobre la anterior. */
+  adjuntos: AdjuntoPedido[];
   rrule: string | null;
   recordatorio_min: number | null;
 }

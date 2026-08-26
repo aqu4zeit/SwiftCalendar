@@ -82,6 +82,34 @@ fn desde_fila(fila: &Row) -> Result<Evento, Error> {
     })
 }
 
+pub fn adjuntos_de(conexion: &Connection, evento_id: i64) -> Result<Vec<Adjunto>, Error> {
+    let mut c = conexion.prepare("SELECT * FROM adjunto WHERE evento_id = ?1 ORDER BY id")?;
+    let filas = c.query_map([evento_id], |f| {
+        Ok(Adjunto {
+            ruta: f.get("ruta")?,
+            nombre_original: f.get("nombre_original")?,
+            tamano: f.get("tamano")?,
+        })
+    })?;
+    Ok(filas.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+/// El identificador lo pone la base: ninguna otra tabla apunta a un adjunto.
+fn insertar_adjuntos(
+    conexion: &Connection,
+    evento_id: i64,
+    adjuntos: &[Adjunto],
+) -> Result<(), Error> {
+    for a in adjuntos {
+        conexion.execute(
+            "INSERT INTO adjunto (evento_id, ruta, nombre_original, tamano)
+             VALUES (?1, ?2, ?3, ?4)",
+            params![evento_id, a.ruta, a.nombre_original, a.tamano],
+        )?;
+    }
+    Ok(())
+}
+
 fn notificaciones_de(conexion: &Connection, evento_id: i64) -> Result<Vec<Notificacion>, Error> {
     let mut c = conexion.prepare("SELECT * FROM notificacion WHERE evento_id = ?1")?;
     let filas = c.query_map([evento_id], |f| {
@@ -202,21 +230,33 @@ pub fn insertar(conexion: &Connection, nuevo: EventoNuevo) -> Result<i64, Error>
         ],
     )?;
 
-    Ok(conexion.last_insert_rowid())
+    let id = conexion.last_insert_rowid();
+    insertar_adjuntos(conexion, id, &nuevo.adjuntos)?;
+
+    Ok(id)
 }
 
-/// Crea un evento como acción del historial.
-pub fn crear(conexion: &Connection, nuevo: EventoNuevo) -> Result<Accion, Error> {
-    Ok(Accion::EventoCreado {
-        id: insertar(conexion, nuevo)?,
-    })
+/// Crea un evento y devuelve su identificador junto con la acción.
+///
+/// Es la que abre la transacción: `insertar` escribe en dos tablas y no puede
+/// abrirla ella, porque quien crea una ocurrencia suelta ya está dentro de una.
+pub fn crear(conexion: &Connection, nuevo: EventoNuevo) -> Result<(i64, Accion), Error> {
+    let tx = conexion.unchecked_transaction()?;
+    let id = insertar(&tx, nuevo)?;
+    tx.commit()?;
+
+    Ok((id, Accion::EventoCreado { id }))
 }
 
 /// Escribe un evento completo y devuelve cómo estaba antes.
+/// La lista de adjuntos no es opcional: la interfaz siempre declara cuál quiere
+/// que quede, igual que declara la imagen. El `Option` de las notificaciones
+/// existe porque esa decisión la toma Rust y tiene que poder no opinar.
 pub fn escribir(
     conexion: &Connection,
     evento: &Evento,
     notificaciones: Option<&[Notificacion]>,
+    adjuntos: &[Adjunto],
 ) -> Result<Accion, Error> {
     let antes = leer(conexion, evento.id)?;
     let tx = conexion.unchecked_transaction()?;
@@ -266,16 +306,25 @@ pub fn escribir(
         }
     };
 
+    let adjuntos_previos = adjuntos_de(&tx, evento.id)?;
+    tx.execute("DELETE FROM adjunto WHERE evento_id = ?1", [evento.id])?;
+    insertar_adjuntos(&tx, evento.id, adjuntos)?;
+
     tx.commit()?;
 
     Ok(Accion::EventoEditado {
         antes,
         notificaciones: capturadas,
+        adjuntos: adjuntos_previos,
     })
 }
 
 /// Edita un evento desde la interfaz.
-pub fn editar(conexion: &Connection, evento: &Evento) -> Result<Accion, Error> {
+pub fn editar(
+    conexion: &Connection,
+    evento: &Evento,
+    adjuntos: &[Adjunto],
+) -> Result<Accion, Error> {
     let antes = leer(conexion, evento.id)?;
 
     let mut con_marca = evento.clone();
@@ -287,25 +336,14 @@ pub fn editar(conexion: &Connection, evento: &Evento) -> Result<Accion, Error> {
         None
     };
 
-    escribir(conexion, &con_marca, notificaciones)
+    escribir(conexion, &con_marca, notificaciones, adjuntos)
 }
 
 /// Un evento con todo lo que cuelga de él. No abre transacción.
 pub fn capturar(conexion: &Connection, id: i64) -> Result<EventoCompleto, Error> {
     let evento = leer(conexion, id)?;
 
-    let adjuntos: Vec<Adjunto> = {
-        let mut c = conexion.prepare("SELECT * FROM adjunto WHERE evento_id = ?1")?;
-        let filas = c.query_map([id], |f| {
-            Ok(Adjunto {
-                id: f.get("id")?,
-                ruta: f.get("ruta")?,
-                nombre_original: f.get("nombre_original")?,
-                tamano: f.get("tamano")?,
-            })
-        })?;
-        filas.collect::<rusqlite::Result<Vec<_>>>()?
-    };
+    let adjuntos = adjuntos_de(conexion, id)?;
 
     let excepciones: Vec<Excepcion> = {
         let mut c = conexion.prepare("SELECT * FROM excepcion WHERE evento_id = ?1")?;
@@ -379,13 +417,7 @@ pub fn insertar_completo(conexion: &Connection, completo: &EventoCompleto) -> Re
         ],
     )?;
 
-    for a in &completo.adjuntos {
-        conexion.execute(
-            "INSERT INTO adjunto (id, evento_id, ruta, nombre_original, tamano)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![a.id, evento.id, a.ruta, a.nombre_original, a.tamano],
-        )?;
-    }
+    insertar_adjuntos(conexion, evento.id, &completo.adjuntos)?;
 
     for e in &completo.excepciones {
         conexion.execute(
@@ -446,13 +478,7 @@ mod pruebas {
             imagen: None,
             rrule: None,
             recordatorio_min: Some(30),
-        }
-    }
-
-    fn id_de(accion: &Accion) -> i64 {
-        match accion {
-            Accion::EventoCreado { id } => *id,
-            otro => panic!("se esperaba EventoCreado, llegó {otro:?}"),
+            adjuntos: Vec::new(),
         }
     }
 
@@ -461,7 +487,7 @@ mod pruebas {
         let c = db::en_memoria();
         let g = grupo_defecto(&c);
 
-        let id = id_de(&crear(&c, minimo(g)).unwrap());
+        let id = crear(&c, minimo(g)).unwrap().0;
         let leido = leer(&c, id).unwrap();
 
         assert_eq!(leido.titulo, "Entrega informe HPC");
@@ -481,7 +507,7 @@ mod pruebas {
         for cuando in [Cuando::Fija, Cuando::TodoElDia, Cuando::Adaptable(Tokyo)] {
             let mut nuevo = minimo(g);
             nuevo.cuando = cuando;
-            let id = id_de(&crear(&c, nuevo).unwrap());
+            let id = crear(&c, nuevo).unwrap().0;
 
             assert_eq!(leer(&c, id).unwrap().cuando, cuando);
         }
@@ -499,7 +525,7 @@ mod pruebas {
         nuevo.inicio = momento(2026, 8, 7, 0, 0);
         nuevo.fin = Some(momento(2026, 8, 9, 0, 0));
 
-        let id = id_de(&crear(&c, nuevo).unwrap());
+        let id = crear(&c, nuevo).unwrap().0;
         let leido = leer(&c, id).unwrap();
 
         assert_eq!(leido.inicio.date(), momento(2026, 8, 7, 0, 0).date());
@@ -512,12 +538,12 @@ mod pruebas {
         let mut h = Historial::default();
         let g = grupo_defecto(&c);
 
-        let id = id_de(&crear(&c, minimo(g)).unwrap());
+        let id = crear(&c, minimo(g)).unwrap().0;
 
         let mut cambiado = leer(&c, id).unwrap();
         cambiado.titulo = "Entrega postergada".to_string();
         cambiado.importancia = Importancia::Comun;
-        h.registrar(editar(&c, &cambiado).unwrap());
+        h.registrar(editar(&c, &cambiado, &[]).unwrap());
 
         h.deshacer(&c).unwrap();
         let vuelto = leer(&c, id).unwrap();
@@ -535,7 +561,7 @@ mod pruebas {
         let mut h = Historial::default();
         let g = grupo_defecto(&c);
 
-        let id = id_de(&crear(&c, minimo(g)).unwrap());
+        let id = crear(&c, minimo(g)).unwrap().0;
         let antes = leer(&c, id).unwrap();
 
         h.registrar(borrar(&c, id).unwrap());
@@ -554,7 +580,7 @@ mod pruebas {
 
         let mut serie = minimo(g);
         serie.rrule = Some("FREQ=WEEKLY;BYDAY=MO".to_string());
-        let id = id_de(&crear(&c, serie).unwrap());
+        let id = crear(&c, serie).unwrap().0;
 
         c.execute(
             "INSERT INTO excepcion (evento_id, fecha_original, override_id)
@@ -583,7 +609,7 @@ mod pruebas {
         let mut h = Historial::default();
         let g = grupo_defecto(&c);
 
-        let id = id_de(&crear(&c, minimo(g)).unwrap());
+        let id = crear(&c, minimo(g)).unwrap().0;
 
         c.execute(
             "INSERT INTO adjunto (evento_id, ruta, nombre_original, tamano)
@@ -612,6 +638,91 @@ mod pruebas {
         assert_eq!(estado, "vista", "el estado visto no se pierde al deshacer");
     }
 
+    fn adjunto(nombre: &str) -> Adjunto {
+        Adjunto {
+            ruta: format!("assets/adjuntos/{nombre}"),
+            nombre_original: nombre.to_string(),
+            tamano: 1024,
+        }
+    }
+
+    fn adjuntos_guardados(conexion: &Connection, evento_id: i64) -> Vec<String> {
+        adjuntos_de(conexion, evento_id)
+            .unwrap()
+            .into_iter()
+            .map(|a| a.nombre_original)
+            .collect()
+    }
+
+    /// Los adjuntos entran junto con la fila, en la misma escritura.
+    #[test]
+    fn crear_un_evento_guarda_sus_adjuntos() {
+        let c = db::en_memoria();
+        let g = grupo_defecto(&c);
+
+        let mut nuevo = minimo(g);
+        nuevo.adjuntos = vec![adjunto("rubrica.pdf"), adjunto("planilla.xlsx")];
+        let id = crear(&c, nuevo).unwrap().0;
+
+        assert_eq!(adjuntos_guardados(&c, id), ["rubrica.pdf", "planilla.xlsx"]);
+    }
+
+    /// Editar declara la lista completa: lo que no viene, se va.
+    #[test]
+    fn editar_reemplaza_la_lista_entera() {
+        let c = db::en_memoria();
+        let g = grupo_defecto(&c);
+
+        let mut nuevo = minimo(g);
+        nuevo.adjuntos = vec![adjunto("vieja.pdf"), adjunto("otra.pdf")];
+        let id = crear(&c, nuevo).unwrap().0;
+
+        let evento = leer(&c, id).unwrap();
+        editar(&c, &evento, &[adjunto("nueva.pdf")]).unwrap();
+
+        assert_eq!(adjuntos_guardados(&c, id), ["nueva.pdf"]);
+    }
+
+    /// Deshacer una edición devuelve los adjuntos que había antes.
+    #[test]
+    fn deshacer_una_edicion_devuelve_los_adjuntos() {
+        let c = db::en_memoria();
+        let mut h = Historial::default();
+        let g = grupo_defecto(&c);
+
+        let mut nuevo = minimo(g);
+        nuevo.adjuntos = vec![adjunto("rubrica.pdf")];
+        let id = crear(&c, nuevo).unwrap().0;
+
+        let mut cambiado = leer(&c, id).unwrap();
+        cambiado.titulo = "Otro título".to_string();
+        h.registrar(editar(&c, &cambiado, &[]).unwrap());
+        assert!(adjuntos_guardados(&c, id).is_empty());
+
+        h.deshacer(&c).unwrap();
+        assert_eq!(adjuntos_guardados(&c, id), ["rubrica.pdf"]);
+
+        h.rehacer(&c).unwrap();
+        assert!(adjuntos_guardados(&c, id).is_empty(), "rehacer los vuelve a sacar");
+    }
+
+    /// Restaurar no conserva identificadores: nada apunta a un adjunto.
+    #[test]
+    fn los_adjuntos_restaurados_reciben_identificador_nuevo() {
+        let c = db::en_memoria();
+        let mut h = Historial::default();
+        let g = grupo_defecto(&c);
+
+        let mut nuevo = minimo(g);
+        nuevo.adjuntos = vec![adjunto("rubrica.pdf")];
+        let id = crear(&c, nuevo).unwrap().0;
+
+        h.registrar(borrar(&c, id).unwrap());
+        h.deshacer(&c).unwrap();
+
+        assert_eq!(adjuntos_guardados(&c, id), ["rubrica.pdf"]);
+    }
+
     fn notificar(conexion: &Connection, evento_id: i64, ocurrencia: &str) {
         conexion
             .execute(
@@ -634,14 +745,14 @@ mod pruebas {
         let c = db::en_memoria();
         let g = grupo_defecto(&c);
 
-        let id = id_de(&crear(&c, minimo(g)).unwrap());
+        let id = crear(&c, minimo(g)).unwrap().0;
         notificar(&c, id, "2026-08-12 18:00");
 
         // Mover un evento mueve sus dos extremos.
         let mut movido = leer(&c, id).unwrap();
         movido.inicio = momento(2026, 8, 14, 18, 0);
         movido.fin = Some(momento(2026, 8, 14, 20, 0));
-        editar(&c, &movido).unwrap();
+        editar(&c, &movido, &[]).unwrap();
 
         assert_eq!(cuantas_notificaciones(&c), 0);
     }
@@ -652,12 +763,12 @@ mod pruebas {
         let c = db::en_memoria();
         let g = grupo_defecto(&c);
 
-        let id = id_de(&crear(&c, minimo(g)).unwrap());
+        let id = crear(&c, minimo(g)).unwrap().0;
         notificar(&c, id, "2026-08-12 18:00");
 
         let mut cambiado = leer(&c, id).unwrap();
         cambiado.recordatorio_min = Some(120);
-        editar(&c, &cambiado).unwrap();
+        editar(&c, &cambiado, &[]).unwrap();
 
         assert_eq!(cuantas_notificaciones(&c), 0);
     }
@@ -668,13 +779,13 @@ mod pruebas {
         let c = db::en_memoria();
         let g = grupo_defecto(&c);
 
-        let id = id_de(&crear(&c, minimo(g)).unwrap());
+        let id = crear(&c, minimo(g)).unwrap().0;
         notificar(&c, id, "2026-08-12 18:00");
 
         let mut cambiado = leer(&c, id).unwrap();
         cambiado.titulo = "Entrega informe HPC (final)".to_string();
         cambiado.descripcion = Some("Subir el PDF".to_string());
-        editar(&c, &cambiado).unwrap();
+        editar(&c, &cambiado, &[]).unwrap();
 
         assert_eq!(cuantas_notificaciones(&c), 1);
     }
@@ -686,13 +797,13 @@ mod pruebas {
         let mut h = Historial::default();
         let g = grupo_defecto(&c);
 
-        let id = id_de(&crear(&c, minimo(g)).unwrap());
+        let id = crear(&c, minimo(g)).unwrap().0;
         notificar(&c, id, "2026-08-12 18:00");
 
         let mut movido = leer(&c, id).unwrap();
         movido.inicio = momento(2026, 8, 14, 18, 0);
         movido.fin = Some(momento(2026, 8, 14, 20, 0));
-        h.registrar(editar(&c, &movido).unwrap());
+        h.registrar(editar(&c, &movido, &[]).unwrap());
         assert_eq!(cuantas_notificaciones(&c), 0);
 
         h.deshacer(&c).unwrap();

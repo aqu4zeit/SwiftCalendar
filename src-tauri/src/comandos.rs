@@ -14,7 +14,7 @@ use crate::grupo;
 use crate::historial::{Accion, Pila};
 use crate::hora;
 use crate::modelo::{
-    self, Cuando, Evento, EventoNuevo, Grupo, GrupoNuevo, Imagen, Importancia, FORMATO,
+    self, Adjunto, Cuando, Evento, EventoNuevo, Grupo, GrupoNuevo, Imagen, Importancia, FORMATO,
 };
 use crate::ocurrencia;
 use crate::rango::{self, Filtros, Instancia};
@@ -199,6 +199,24 @@ pub enum ImagenPedida {
     Nueva { origen: String },
 }
 
+/// Qué adjunto tiene que quedar guardado.
+///
+/// Las dos formas son las mismas de la imagen, menos la de "sin": eso es la
+/// lista vacía. Un evento editado manda su lista completa, así que un adjunto
+/// que ya estaba viaja como `Guardado` y no se vuelve a copiar.
+#[derive(Debug, Deserialize)]
+#[serde(tag = "tipo", rename_all = "lowercase")]
+pub enum AdjuntoPedido {
+    Guardado {
+        ruta: String,
+        nombre_original: String,
+        tamano: i64,
+    },
+    Nuevo {
+        origen: String,
+    },
+}
+
 /// Lo que manda la interfaz para crear o editar un evento.
 #[derive(Debug, Deserialize)]
 pub struct EventoDeLaInterfaz {
@@ -212,6 +230,7 @@ pub struct EventoDeLaInterfaz {
     ubicacion: Option<String>,
     url: Option<String>,
     imagen: ImagenPedida,
+    adjuntos: Vec<AdjuntoPedido>,
     rrule: Option<String>,
     recordatorio_min: Option<i64>,
 }
@@ -233,8 +252,33 @@ fn resolver_imagen(carpeta: &Carpeta, pedida: ImagenPedida) -> Result<Option<Ima
     }
 }
 
+/// Copia los archivos que hagan falta y devuelve la lista que se guarda.
+fn resolver_adjuntos(
+    carpeta: &Carpeta,
+    pedidos: Vec<AdjuntoPedido>,
+) -> Result<Vec<Adjunto>, String> {
+    pedidos
+        .into_iter()
+        .map(|pedido| match pedido {
+            AdjuntoPedido::Guardado {
+                ruta,
+                nombre_original,
+                tamano,
+            } => Ok(Adjunto {
+                ruta,
+                nombre_original,
+                tamano,
+            }),
+            AdjuntoPedido::Nuevo { origen } => {
+                archivo::guardar_adjunto(&carpeta.0, origen.as_ref()).map_err(|e| e.to_string())
+            }
+        })
+        .collect()
+}
+
 fn a_evento_nuevo(e: EventoDeLaInterfaz, carpeta: &Carpeta) -> Result<EventoNuevo, String> {
     let imagen = resolver_imagen(carpeta, e.imagen)?;
+    let adjuntos = resolver_adjuntos(carpeta, e.adjuntos)?;
 
     Ok(EventoNuevo {
         grupo_id: e.grupo_id,
@@ -250,6 +294,7 @@ fn a_evento_nuevo(e: EventoDeLaInterfaz, carpeta: &Carpeta) -> Result<EventoNuev
         imagen,
         rrule: e.rrule,
         recordatorio_min: e.recordatorio_min,
+        adjuntos,
     })
 }
 
@@ -276,8 +321,18 @@ pub struct EventoDetalle {
     /// Falso si el archivo ya no está en la carpeta. La carpeta es del usuario
     /// y puede vaciarla a mano; la ficha lo dice en vez de dibujar un hueco.
     imagen_existe: bool,
+    adjuntos: Vec<AdjuntoDetalle>,
     rrule: Option<String>,
     recordatorio_min: Option<i64>,
+}
+
+/// Un adjunto como lo pide la ficha, con la misma advertencia que la imagen.
+#[derive(Debug, Serialize)]
+pub struct AdjuntoDetalle {
+    ruta: String,
+    nombre_original: String,
+    tamano: i64,
+    existe: bool,
 }
 
 /// Un evento por su identificador.
@@ -295,6 +350,17 @@ pub fn leer_evento(
         .as_ref()
         .is_some_and(|i| archivo::existe(&carpeta.0, &i.original));
 
+    let adjuntos = evento::adjuntos_de(&conexion, id)
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .map(|a| AdjuntoDetalle {
+            existe: archivo::existe(&carpeta.0, &a.ruta),
+            ruta: a.ruta,
+            nombre_original: a.nombre_original,
+            tamano: a.tamano,
+        })
+        .collect();
+
     Ok(EventoDetalle {
         id: e.id,
         grupo_id: e.grupo_id,
@@ -309,6 +375,7 @@ pub fn leer_evento(
         imagen: e.imagen.as_ref().map(|i| i.original.clone()),
         miniatura: e.imagen.as_ref().map(|i| i.miniatura.clone()),
         imagen_existe,
+        adjuntos,
         rrule: e.rrule,
         recordatorio_min: e.recordatorio_min,
     })
@@ -325,12 +392,12 @@ pub fn crear_evento(
     let nuevo = a_evento_nuevo(evento, &carpeta)?;
 
     let conexion = base.0.lock().expect("la conexión quedó envenenada");
-    let id = evento::insertar(&conexion, nuevo).map_err(|e| e.to_string())?;
+    let (id, accion) = evento::crear(&conexion, nuevo).map_err(|e| e.to_string())?;
 
     pila.0
         .lock()
         .expect("el historial quedó envenenado")
-        .registrar(Accion::EventoCreado { id });
+        .registrar(accion);
 
     Ok(id)
 }
@@ -366,7 +433,7 @@ pub fn editar_evento(
     ocurrencia: Option<String>,
     evento: EventoDeLaInterfaz,
 ) -> Result<(), String> {
-    let nuevo = a_evento_nuevo(evento, &carpeta)?;
+    let mut nuevo = a_evento_nuevo(evento, &carpeta)?;
     let conexion = base.0.lock().expect("la conexión quedó envenenada");
 
     let accion = match ocurrencia {
@@ -379,7 +446,8 @@ pub fn editar_evento(
         }
         None => {
             let actual = evento::leer(&conexion, id).map_err(|e| e.to_string())?;
-            evento::editar(&conexion, &con_los_campos(actual, nuevo))
+            let adjuntos = std::mem::take(&mut nuevo.adjuntos);
+            evento::editar(&conexion, &con_los_campos(actual, nuevo), &adjuntos)
         }
     }
     .map_err(|e| e.to_string())?;
@@ -417,4 +485,65 @@ pub fn borrar_evento(
         .registrar(accion);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+
+    /// El JSON exacto que arma `Formulario.tsx` al guardar.
+    ///
+    /// Es la prueba que faltaba: las demás llaman a `evento::insertar` sin cruzar
+    /// el borde, así que un campo agregado acá y no en la interfaz pasaba
+    /// desapercibido hasta que alguien apretaba Guardar.
+    const CUERPO: &str = r#"{
+        "grupo_id": 1,
+        "titulo": "Reunión",
+        "inicio": "2026-08-26 09:00",
+        "fin": null,
+        "cuando": "fija",
+        "importancia": "comun",
+        "descripcion": null,
+        "ubicacion": null,
+        "url": null,
+        "imagen": { "tipo": "sin" },
+        "adjuntos": [],
+        "rrule": null,
+        "recordatorio_min": null
+    }"#;
+
+    #[test]
+    fn el_cuerpo_de_la_interfaz_se_deserializa() {
+        let e: EventoDeLaInterfaz = serde_json::from_str(CUERPO).unwrap();
+
+        assert_eq!(e.titulo, "Reunión");
+        assert!(matches!(e.imagen, ImagenPedida::Sin));
+        assert!(e.adjuntos.is_empty());
+    }
+
+    /// Un campo que la interfaz no manda tiene que fallar acá, no en producción.
+    #[test]
+    fn falta_un_campo_y_no_se_deserializa() {
+        let sin_adjuntos = CUERPO.replace(r#""adjuntos": [],"#, "");
+
+        assert!(serde_json::from_str::<EventoDeLaInterfaz>(&sin_adjuntos).is_err());
+    }
+
+    /// Las dos formas de pedir un adjunto llegan distinguidas.
+    #[test]
+    fn los_adjuntos_llegan_con_su_forma() {
+        let con_adjuntos = CUERPO.replace(
+            r#""adjuntos": [],"#,
+            r#""adjuntos": [
+                { "tipo": "guardado", "ruta": "assets/adjuntos/1.pdf",
+                  "nombre_original": "rubrica.pdf", "tamano": 2048 },
+                { "tipo": "nuevo", "origen": "C:\\Users\\yo\\notas.txt" }
+            ],"#,
+        );
+
+        let e: EventoDeLaInterfaz = serde_json::from_str(&con_adjuntos).unwrap();
+
+        assert!(matches!(e.adjuntos[0], AdjuntoPedido::Guardado { .. }));
+        assert!(matches!(e.adjuntos[1], AdjuntoPedido::Nuevo { .. }));
+    }
 }

@@ -8,7 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use image::{DynamicImage, ImageFormat};
 
-use crate::modelo::{Error, Imagen};
+use crate::modelo::{Adjunto, Error, Imagen};
 
 /// Lado mayor del original al copiarlo. Decisión 52.
 const LADO_ORIGINAL: u32 = 1920;
@@ -20,6 +20,22 @@ const LADO_MINIATURA: u32 = 320;
 /// archivo `.calev`, donde la imagen viaja codificada.
 const CALIDAD_JPEG: u8 = 85;
 
+/// Lo máximo que puede pesar un archivo que entra a la carpeta de datos.
+///
+/// La carpeta se respalda entera en un solo comprimido, y la copia bloquea la
+/// interfaz sin barra de progreso.
+const MAXIMO_BYTES: u64 = 500 * 1024 * 1024;
+
+/// Lo máximo que puede medir una imagen, en píxeles totales.
+///
+/// El peso del archivo no dice cuánta memoria pide abrirlo: un JPEG comprime
+/// tanto que medio giga en disco puede ser una imagen de cientos de millones de
+/// píxeles, y descomprimirla ocupa cuatro bytes por cada uno. `image::open`
+/// descomprime entera antes de encoger, así que sin este tope una imagen
+/// extrema cierra la aplicación en vez de dar un error. A cuatro bytes por
+/// píxel, esto son unos 600 MB de memoria en el peor caso.
+const MAXIMO_PIXELES: u64 = 150_000_000;
+
 /// La carpeta de datos, guardada como estado de la aplicación.
 pub struct Carpeta(pub PathBuf);
 
@@ -30,14 +46,53 @@ fn falla(que: &str, e: impl std::fmt::Display) -> Error {
 /// Un nombre que no puede chocar con otro, con la extensión pedida.
 ///
 /// No conserva el nombre original: dos archivos que se llamen igual tienen que
-/// poder convivir, y el nombre para mostrar se guarda aparte en la base.
-fn nombre_unico(extension: &str) -> String {
+/// poder convivir, y el nombre para mostrar se guarda aparte en la base. Sin
+/// extensión no lleva punto: un adjunto puede no tenerla.
+fn nombre_unico(extension: Option<&str>) -> String {
     let marca = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("el reloj del sistema está antes de 1970")
         .as_nanos();
 
-    format!("{marca}.{extension}")
+    match extension {
+        Some(e) => format!("{marca}.{e}"),
+        None => marca.to_string(),
+    }
+}
+
+/// Cuánto pesa el archivo, o un error si no se puede saber.
+///
+/// Se pregunta antes de leer el contenido: es una llamada al sistema y no abre
+/// el archivo. Un archivo que no cabe falla sin haber copiado ni decodificado
+/// nada.
+fn comprobar_peso(origen: &Path) -> Result<u64, Error> {
+    let bytes = std::fs::metadata(origen)
+        .map_err(|e| falla(&format!("no se pudo leer {}", origen.display()), e))?
+        .len();
+
+    if bytes > MAXIMO_BYTES {
+        return Err(Error::Archivo(format!(
+            "«{}» pesa {} y el máximo son {}",
+            nombre_de(origen)?,
+            en_megas(bytes),
+            en_megas(MAXIMO_BYTES)
+        )));
+    }
+
+    Ok(bytes)
+}
+
+/// El nombre del archivo tal como lo ve el usuario.
+fn nombre_de(origen: &Path) -> Result<String, Error> {
+    origen
+        .file_name()
+        .and_then(|n| n.to_str())
+        .map(|n| n.to_string())
+        .ok_or_else(|| Error::Archivo(format!("{} no nombra un archivo", origen.display())))
+}
+
+fn en_megas(bytes: u64) -> String {
+    format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
 }
 
 /// Encoge la imagen si su lado mayor pasa del límite. Si no, la deja igual.
@@ -75,11 +130,14 @@ fn escribir(imagen: &DynamicImage, destino: &Path, con_alfa: bool) -> Result<(),
 /// Devuelve las dos rutas, relativas a la raíz de la carpeta. Van siempre
 /// juntas: el esquema no acepta una sin la otra.
 pub fn guardar_imagen(carpeta: &Path, origen: &Path) -> Result<Imagen, Error> {
+    comprobar_peso(origen)?;
+    comprobar_pixeles(origen)?;
+
     let imagen = image::open(origen)
         .map_err(|e| falla(&format!("no se pudo leer {}", origen.display()), e))?;
 
     let con_alfa = imagen.color().has_alpha();
-    let extension = if con_alfa { "png" } else { "jpg" };
+    let extension = Some(if con_alfa { "png" } else { "jpg" });
 
     let relativa_original = format!("assets/imagenes/{}", nombre_unico(extension));
     let relativa_miniatura = format!("assets/miniaturas/{}", nombre_unico(extension));
@@ -94,6 +152,47 @@ pub fn guardar_imagen(carpeta: &Path, origen: &Path) -> Result<Imagen, Error> {
     Ok(Imagen {
         original: relativa_original,
         miniatura: relativa_miniatura,
+    })
+}
+
+/// Cuántos píxeles mide la imagen, leídos de la cabecera.
+///
+/// Preguntar el tamaño no decodifica el contenido, así que una imagen que no
+/// cabe en memoria se rechaza sin haberla cargado.
+fn comprobar_pixeles(origen: &Path) -> Result<(), Error> {
+    let (ancho, alto) = image::image_dimensions(origen)
+        .map_err(|e| falla(&format!("no se pudo leer {}", origen.display()), e))?;
+
+    let total = u64::from(ancho) * u64::from(alto);
+    if total > MAXIMO_PIXELES {
+        return Err(Error::Archivo(format!(
+            "«{}» mide {ancho}×{alto} y el máximo son {} megapíxeles",
+            nombre_de(origen)?,
+            MAXIMO_PIXELES / 1_000_000
+        )));
+    }
+
+    Ok(())
+}
+
+/// Copia un archivo a la carpeta de datos tal cual.
+///
+/// A diferencia de la imagen, el contenido no se toca: un adjunto se abre después
+/// con el programa que le corresponda, y para eso conserva su extensión.
+pub fn guardar_adjunto(carpeta: &Path, origen: &Path) -> Result<Adjunto, Error> {
+    let tamano = comprobar_peso(origen)?;
+    let nombre_original = nombre_de(origen)?;
+
+    let extension = origen.extension().and_then(|e| e.to_str());
+    let ruta = format!("assets/adjuntos/{}", nombre_unico(extension));
+
+    std::fs::copy(origen, carpeta.join(&ruta))
+        .map_err(|e| falla(&format!("no se pudo copiar «{nombre_original}»"), e))?;
+
+    Ok(Adjunto {
+        ruta,
+        nombre_original,
+        tamano: tamano as i64,
     })
 }
 
@@ -262,5 +361,130 @@ mod pruebas {
 
         assert!(!existe(&carpeta, &imagen.original));
         assert!(existe(&carpeta, &imagen.miniatura));
+    }
+
+    /// Un archivo cualquiera con el contenido pedido.
+    fn archivo(carpeta: &Path, nombre: &str, bytes: usize) -> PathBuf {
+        let ruta = carpeta.join(nombre);
+        std::fs::write(&ruta, vec![b'x'; bytes]).unwrap();
+        ruta
+    }
+
+    /// El adjunto se copia entero y sin tocarle el contenido.
+    #[test]
+    fn un_adjunto_se_copia_tal_cual() {
+        let carpeta = carpeta_temporal("adjunto");
+        let origen = archivo(&carpeta, "rubrica.pdf", 2048);
+
+        let adjunto = guardar_adjunto(&carpeta, &origen).unwrap();
+
+        assert_eq!(adjunto.nombre_original, "rubrica.pdf");
+        assert_eq!(adjunto.tamano, 2048);
+        assert!(existe(&carpeta, &adjunto.ruta));
+        assert_eq!(
+            std::fs::read(carpeta.join(&adjunto.ruta)).unwrap(),
+            std::fs::read(&origen).unwrap()
+        );
+    }
+
+    /// La extensión se conserva: es lo que le dice a Windows con qué abrirlo.
+    #[test]
+    fn un_adjunto_conserva_su_extension() {
+        let carpeta = carpeta_temporal("extension");
+        let origen = archivo(&carpeta, "planilla.xlsx", 16);
+
+        let adjunto = guardar_adjunto(&carpeta, &origen).unwrap();
+
+        assert!(adjunto.ruta.ends_with(".xlsx"));
+        assert!(adjunto.ruta.starts_with("assets/adjuntos/"));
+    }
+
+    /// El nombre guardado no es el original: dos archivos iguales conviven.
+    #[test]
+    fn dos_adjuntos_con_el_mismo_nombre_conviven() {
+        let carpeta = carpeta_temporal("homonimos");
+        let origen = archivo(&carpeta, "notas.txt", 8);
+
+        let uno = guardar_adjunto(&carpeta, &origen).unwrap();
+        let otro = guardar_adjunto(&carpeta, &origen).unwrap();
+
+        assert_ne!(uno.ruta, otro.ruta);
+        assert_eq!(uno.nombre_original, otro.nombre_original);
+        assert!(existe(&carpeta, &uno.ruta));
+        assert!(existe(&carpeta, &otro.ruta));
+    }
+
+    /// Sin extensión el nombre guardado no lleva punto suelto.
+    #[test]
+    fn un_adjunto_sin_extension_se_guarda_igual() {
+        let carpeta = carpeta_temporal("sin-extension");
+        let origen = archivo(&carpeta, "LEEME", 4);
+
+        let adjunto = guardar_adjunto(&carpeta, &origen).unwrap();
+
+        assert!(!adjunto.ruta.ends_with('.'));
+        assert_eq!(adjunto.nombre_original, "LEEME");
+        assert!(existe(&carpeta, &adjunto.ruta));
+    }
+
+    /// El peso se comprueba antes de copiar: nada entra a la carpeta.
+    #[test]
+    fn un_archivo_demasiado_pesado_no_se_copia() {
+        let carpeta = carpeta_temporal("pesado");
+        let origen = carpeta.join("enorme.bin");
+
+        // Un archivo disperso: ocupa el tamaño declarado sin escribir los bytes.
+        let f = std::fs::File::create(&origen).unwrap();
+        f.set_len(MAXIMO_BYTES + 1).unwrap();
+        drop(f);
+
+        assert!(matches!(
+            guardar_adjunto(&carpeta, &origen),
+            Err(Error::Archivo(_))
+        ));
+
+        let copiados = std::fs::read_dir(carpeta.join("assets/adjuntos"))
+            .unwrap()
+            .count();
+        assert_eq!(copiados, 0, "no alcanzó a copiar nada");
+    }
+
+    /// El límite de píxeles se comprueba en la cabecera, sin decodificar.
+    #[test]
+    fn una_imagen_con_demasiados_pixeles_se_rechaza() {
+        let carpeta = carpeta_temporal("gigante");
+        let ruta = carpeta.join("gigante.png");
+
+        // Un PNG que declara 20000×20000 y no trae ni un píxel. Decodificarlo
+        // pediría 1,6 GB de memoria; leer sus medidas no cuesta nada.
+        //
+        // Los tres chunks van completos y con su CRC. El lector recorre hasta
+        // IDAT antes de entregar las medidas, así que un archivo cortado en
+        // IHDR falla por final inesperado y la prueba pasaría sin haber medido
+        // nada.
+        let mut png: Vec<u8> = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
+
+        png.extend_from_slice(&13u32.to_be_bytes());
+        png.extend_from_slice(b"IHDR");
+        png.extend_from_slice(&20000u32.to_be_bytes());
+        png.extend_from_slice(&20000u32.to_be_bytes());
+        png.extend_from_slice(&[8, 2, 0, 0, 0]);
+        png.extend_from_slice(&0x6c12_d16e_u32.to_be_bytes());
+
+        png.extend_from_slice(&0u32.to_be_bytes());
+        png.extend_from_slice(b"IDAT");
+        png.extend_from_slice(&0x35af_061e_u32.to_be_bytes());
+
+        png.extend_from_slice(&0u32.to_be_bytes());
+        png.extend_from_slice(b"IEND");
+        png.extend_from_slice(&0xae42_6082_u32.to_be_bytes());
+
+        std::fs::write(&ruta, png).unwrap();
+
+        let error = guardar_imagen(&carpeta, &ruta).unwrap_err();
+        let Error::Archivo(texto) = error else {
+            panic!("el error tiene que ser de archivo");
+        };
+        assert!(texto.contains("megapíxeles"), "rechazada por el tamaño: {texto}");
     }
 }

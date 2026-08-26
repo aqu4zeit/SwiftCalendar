@@ -4,8 +4,10 @@ import {
   crearEvento,
   editarEvento,
   type Cuando,
+  type AdjuntoPedido,
   type Edicion,
   type EventoNuevo,
+  type ImagenPedida,
   type Grupos,
   type Importancia,
 } from "./api";
@@ -33,6 +35,34 @@ import {
 export type Apertura =
   | { modo: "crear"; fecha: string }
   | { modo: "editar"; edicion: Edicion };
+
+/**
+ * La imagen que ya tenía el evento, para que editarlo no la borre.
+ *
+ * El formulario todavía no la muestra ni la deja cambiar, pero el evento sí
+ * puede tenerla: la escritura declara la imagen completa, así que omitirla
+ * equivaldría a quitarla.
+ */
+function imagenActual(edicion: Edicion | null): ImagenPedida {
+  const detalle = edicion?.detalle;
+  if (!detalle?.imagen || !detalle.miniatura) return { tipo: "sin" };
+
+  return {
+    tipo: "guardada",
+    original: detalle.imagen,
+    miniatura: detalle.miniatura,
+  };
+}
+
+/** Los adjuntos que ya tenía, por la misma razón que la imagen. */
+function adjuntosActuales(edicion: Edicion | null): AdjuntoPedido[] {
+  return (edicion?.detalle.adjuntos ?? []).map((a) => ({
+    tipo: "guardado",
+    ruta: a.ruta,
+    nombre_original: a.nombre_original,
+    tamano: a.tamano,
+  }));
+}
 
 interface Props {
   grupos: Grupos;
@@ -260,6 +290,10 @@ export function Formulario({
         ubicacion:
           campos.ubicacion.trim() === "" ? null : campos.ubicacion.trim(),
         url: campos.url.trim() === "" ? null : campos.url.trim(),
+        // Todavía no hay campo para elegirlos: se conserva lo que ya tenía el
+        // evento. La interfaz de imagen y adjuntos llega en la etapa 12.
+        imagen: imagenActual(edicion),
+        adjuntos: adjuntosActuales(edicion),
         rrule: aRrule(campos.repeticion),
         recordatorio_min: campos.recordatorio,
       };
