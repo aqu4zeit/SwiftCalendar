@@ -1,0 +1,2218 @@
+/* Variables del tema. Son las mismas de los bocetos. */
+
+:root {
+  --bg: #131110;
+  --cell: #1a1817;
+  --cell-out: #171514;
+  --panel: #201e1c;
+  --raised: #262322;
+  --campo: #1c1a19;
+  --line: #2c2927;
+  --line-2: #3a3634;
+  --tx: #eae6e0;
+  --tx-2: #9c968d;
+  --tx-3: #6a655e;
+  --hoy: #d0503c;
+  --ancho-filtros: 224px;
+  --scroll: #3a3634;
+  --scroll-activo: #4f4a46;
+
+  /* Alturas de las filas de la celda: mínimo, máximo y tope de la tarjeta. */
+  --fila-min: 24px;
+  --fila-max: 38px;
+  --tarjeta-max: 126px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Barra de scroll global, con los colores del tema. */
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scroll);
+  /* El borde transparente recortado al contenido deja aire a los lados sin */
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 5px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-activo);
+  background-clip: content-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* Los controles no heredan la altura de línea: la traen del navegador. */
+button,
+input,
+textarea,
+select {
+  line-height: inherit;
+}
+
+body {
+  background: var(--bg);
+  color: var(--tx);
+  font-family: Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /*
+   * La caja de un texto mide exactamente su texto.
+   *
+   * Con la altura de línea por defecto cada tamaño reserva un espacio distinto
+   * arriba y abajo, según lo que pide el tipo de letra. Centrar esas cajas
+   * centra el espacio reservado, no lo que se ve, y por eso un ícono junto a un
+   * texto, o dos textos de tamaños distintos, quedaban descuadrados. Acá la
+   * caja es el texto. La prosa declara la suya, porque necesita aire entre
+   * líneas y nunca se alinea contra un ícono.
+   */
+  line-height: 1;
+  /* La ventana no es un documento: no se arrastra el texto ni se selecciona por */
+  user-select: none;
+  cursor: default;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* --- barra superior --- */
+
+.barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+
+.titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* --- selector de mes y año --- */
+
+.selector {
+  position: relative;
+}
+
+.selector-boton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 7px 12px;
+  margin-left: -12px;
+  border-radius: 6px;
+  color: inherit;
+  font-family: inherit;
+  cursor: default;
+}
+
+.selector-boton:hover {
+  background: var(--raised);
+}
+
+.selector-boton h1 {
+  font-size: 26px;
+  /* A 26 px la caja del texto se queda corta y la cola de la ge toca el borde
+     de la caja que aparece al pasar el mouse. */
+  line-height: 1.2;
+  font-weight: 300;
+  letter-spacing: -0.5px;
+}
+
+.caret {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  stroke: var(--tx-2);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.caret.abierto {
+  transform: rotate(180deg);
+}
+
+.selector-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: -12px;
+  z-index: 10;
+  width: 190px;
+  max-height: 330px;
+  overflow-y: auto;
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  padding: 5px;
+}
+
+.selector-anio {
+  font-size: 10.5px;
+  letter-spacing: 0.8px;
+  color: var(--tx-3);
+  padding: 9px 11px 5px;
+}
+
+.selector-mes {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  padding: 7px 11px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--tx-2);
+  cursor: default;
+}
+
+.selector-mes:hover {
+  background: #2f2b29;
+  color: var(--tx);
+}
+
+.selector-mes.activo {
+  background: #3b3633;
+  color: var(--tx);
+}
+
+/* --- el día de hoy, que además lleva a hoy --- */
+
+.boton-hoy {
+  background: none;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  padding: 5px 11px;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--tx-2);
+  cursor: default;
+}
+
+.boton-hoy:hover {
+  background: var(--raised);
+  color: var(--tx);
+}
+
+/* --- cuadrícula --- */
+
+.calendario {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cabecera-semana {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+
+.cabecera-semana span {
+  padding: 9px 0 9px 11px;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  color: var(--tx-3);
+}
+
+.rejilla {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  /* Siempre seis filas: el tamaño de celda no cambia al navegar entre meses. */
+  grid-template-rows: repeat(6, minmax(112px, 1fr));
+}
+
+.celda {
+  background: var(--cell);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 6px;
+  overflow: hidden;
+}
+
+.celda:nth-child(7n) {
+  border-right: none;
+}
+
+.numero {
+  display: block;
+  font-size: 12px;
+  color: var(--tx-2);
+  padding: 1px 4px 5px;
+}
+
+.fuera {
+  background: var(--cell-out);
+}
+
+.fuera .numero {
+  color: #4a453f;
+}
+
+/* Marca de la semana actual: marco alrededor de las siete celdas. */
+
+.semana {
+  background: #201d1b;
+  box-shadow:
+    inset 0 1px 0 var(--line-2),
+    inset 0 -1px 0 var(--line-2);
+}
+
+.rejilla .semana:nth-child(7n + 1) {
+  box-shadow:
+    inset 0 1px 0 var(--line-2),
+    inset 0 -1px 0 var(--line-2),
+    inset 1px 0 0 var(--line-2);
+}
+
+.rejilla .semana:nth-child(7n) {
+  box-shadow:
+    inset 0 1px 0 var(--line-2),
+    inset 0 -1px 0 var(--line-2),
+    inset -1px 0 0 var(--line-2);
+}
+
+/* El día actual va después: su marco reemplaza al de la semana, no se suma. */
+
+.rejilla .celda.hoy {
+  background: #241d1b;
+  box-shadow: inset 0 0 0 1.5px var(--hoy);
+}
+
+.hoy .numero {
+  color: #fff;
+}
+
+/* --- contenido de la celda --- */
+
+.celda {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  /* La celda es el contenedor contra el que se mide si la hora de fin cabe. Es */
+  container-type: inline-size;
+}
+
+.eventos {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  /* La barra de scroll de la celda solo aparece al pasar el mouse: siete barras */
+  scrollbar-width: none;
+}
+
+.eventos::-webkit-scrollbar {
+  width: 0;
+}
+
+.celda:hover .eventos::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* La barra izquierda: la forma dice la importancia, el color dice el grupo. */
+
+.marca {
+  width: 5px;
+  align-self: stretch;
+  flex: none;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.titulo-ev {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.continuidad {
+  color: var(--tx-3);
+  font-size: 10px;
+  flex: none;
+}
+
+/* La hora no se recorta; el que cede ancho es el título. */
+
+.hora {
+  color: var(--tx-2);
+  font-size: 11px;
+  flex: none;
+  white-space: nowrap;
+}
+
+@container (max-width: 172px) {
+  .hora-fin {
+    display: none;
+  }
+}
+
+/* Fila compacta, desde dos eventos. */
+
+.ev {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #232120;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 11.5px;
+  color: var(--tx);
+  white-space: nowrap;
+  overflow: hidden;
+  /* Crece para repartirse la celda, nunca encoge por debajo del mínimo. Que no */
+  flex: 1 0 auto;
+  min-height: var(--fila-min);
+  max-height: var(--fila-max);
+}
+
+/* La tarjeta de un solo evento tiene más tope: también muestra la descripción. */
+
+.ev-solo {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  background: #232120;
+  border-radius: 5px;
+  padding: 7px;
+  overflow: hidden;
+  flex: 1 0 auto;
+  min-height: var(--fila-min);
+  max-height: var(--tarjeta-max);
+}
+
+/* Sin descripción, el título sube de tamaño y se centra. */
+
+.ev-solo.centrado {
+  align-items: center;
+  max-height: var(--fila-max);
+}
+
+.ev-solo.centrado .titulo-ev {
+  font-size: 12.5px;
+}
+
+.ev-solo .texto {
+  min-width: 0;
+  flex: 1;
+}
+
+.ev-solo .linea-titulo {
+  /* Centrado, igual que la fila compacta: el par título y contador es el mismo
+     par en las dos disposiciones y no puede alinearse con dos criterios. */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ev-solo .hora {
+  display: block;
+  margin-top: 2px;
+}
+
+.ev-solo .titulo-ev {
+  display: block;
+  font-size: 11.5px;
+}
+
+.ev-solo .descripcion {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 10.5px;
+  color: var(--tx-2);
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+/* El indicador dice que hay más, sin decir cuántos. */
+
+.hay-mas {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 20px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 2px;
+  pointer-events: none;
+  background: linear-gradient(transparent, var(--cell) 72%);
+}
+
+.semana .hay-mas {
+  background: linear-gradient(transparent, #201d1b 72%);
+}
+
+.hoy .hay-mas {
+  background: linear-gradient(transparent, #241d1b 72%);
+}
+
+.fuera .hay-mas {
+  background: linear-gradient(transparent, var(--cell-out) 72%);
+}
+
+.hay-mas i {
+  width: 7px;
+  height: 7px;
+  border-right: 1.4px solid var(--tx-3);
+  border-bottom: 1.4px solid var(--tx-3);
+  transform: rotate(45deg);
+  margin-bottom: 3px;
+}
+
+/* --- densidad --- */
+/* Densidad: cambia el aire de las filas, nunca qué se muestra. */
+
+.app[data-densidad="compacta"] {
+  --fila-min: 20px;
+  --fila-max: 28px;
+  --tarjeta-max: 96px;
+}
+
+.app[data-densidad="compacta"] .ev {
+  padding: 2px 5px;
+  font-size: 11px;
+}
+
+.app[data-densidad="compacta"] .eventos {
+  gap: 2px;
+}
+
+.app[data-densidad="compacta"] .numero {
+  padding: 0 4px 3px;
+}
+
+/* --- error --- */
+
+.error {
+  margin: 24px;
+  padding: 14px 16px;
+  border: 1px solid #5c3a35;
+  border-radius: 7px;
+  background: #2b2320;
+  color: #d98a7c;
+  font-size: 13px;
+  line-height: 1.5;
+  user-select: text;
+}
+
+/* --- botón de nuevo evento --- */
+
+.nuevo-evento {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 9px 13px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--tx);
+  cursor: default;
+}
+
+.nuevo-evento span {
+  color: var(--tx-2);
+}
+
+.nuevo-evento:hover {
+  background: #302c2a;
+}
+
+.nuevo-evento:disabled {
+  opacity: 0.4;
+}
+
+/* --- ventanas flotantes --- */
+
+/* El velo no cierra el formulario al hacer clic: tiene texto sin guardar. */
+
+.velo {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(9, 8, 7, 0.62);
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.velo.interno {
+  background: rgba(9, 8, 7, 0.5);
+  /* Por encima de los paneles emergentes: lo último que se abre manda. */
+  z-index: 70;
+}
+
+.modal {
+  width: 452px;
+  max-width: 100%;
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+
+.modal.angosto {
+  width: 340px;
+}
+
+.modal-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+
+.modal-cab h2 {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.cerrar {
+  background: none;
+  border: none;
+  color: var(--tx-3);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: default;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.cerrar:hover {
+  color: var(--tx);
+}
+
+.modal-cuerpo {
+  padding: 16px 18px;
+  overflow-y: auto;
+}
+
+.modal-pie {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding: 13px 18px;
+  border-top: 1px solid var(--line);
+  background: #221f1e;
+  flex: none;
+}
+
+.parrafo {
+  font-size: 13px;
+  color: var(--tx-2);
+  line-height: 1.6;
+}
+
+/* --- botones --- */
+
+.btn {
+  font-size: 13px;
+  padding: 9px 15px;
+  border-radius: 6px;
+  border: 1px solid var(--line-2);
+  background: none;
+  color: var(--tx-2);
+  font-family: inherit;
+  cursor: default;
+}
+
+.btn:hover {
+  color: var(--tx);
+}
+
+.btn.pri {
+  background: #3b3633;
+  color: var(--tx);
+  border-color: #4a4542;
+}
+
+/* El botón inactivo se ve, no se esconde. */
+
+.btn.inactivo {
+  background: #242120;
+  color: #4f4a45;
+  border-color: #302c2a;
+}
+
+.btn.malo {
+  border-color: #5c3a35;
+  color: #d98a7c;
+}
+
+/* --- campos del formulario --- */
+
+/*
+ * El foco se marca en la caja, no en el elemento que escribe.
+ *
+ * El navegador dibuja su anillo ajustado al `input`, que vive dentro de la caja
+ * y es más chico que ella: el resultado es un recuadro claro que corta el texto
+ * y no calza con ningún borde. Se apaga en todas partes y el borde de la caja
+ * pasa a decir dónde está el foco.
+ */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+button:focus {
+  outline: none;
+}
+
+/*
+ * El teclado sí necesita ver dónde está parado, así que los botones conservan
+ * una marca, en los colores del tema y por fuera del borde. `focus-visible`
+ * solo se activa navegando con teclado, no al hacer clic.
+ */
+button:focus-visible {
+  outline: 1px solid var(--tx-3);
+  outline-offset: 2px;
+}
+
+.campo:focus-within,
+.campo-titulo:focus,
+.area:focus {
+  border-color: var(--line-2);
+}
+
+/* Un campo con error mantiene su borde rojo aunque tenga el foco. */
+.campo.malo:focus-within,
+.campo-titulo.malo:focus {
+  border-color: #7a4038;
+}
+
+/* El título es un campo más, solo que más grande. */
+
+.campo-titulo {
+  width: 100%;
+  background: var(--campo);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 11px 10px;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--tx);
+}
+
+.campo-titulo::placeholder {
+  color: var(--tx-3);
+}
+
+.campo-titulo.malo {
+  border-color: #7a4038;
+}
+
+.msg-error {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #d98a7c;
+  margin-top: 7px;
+}
+
+.fila-campo {
+  margin-bottom: 15px;
+}
+
+.fila-campo label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  color: var(--tx-3);
+  margin-bottom: 7px;
+}
+
+.campo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--campo);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 10px;
+}
+
+.campo.malo {
+  border-color: #7a4038;
+}
+
+.campo input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--tx);
+}
+
+.campo input::placeholder {
+  color: var(--tx-3);
+}
+
+/* El campo que además es botón: el selector de grupo. */
+
+.campo.como-boton {
+  width: 100%;
+  cursor: default;
+  color: var(--tx);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.campo.como-boton .nombre {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campo.como-boton .caret {
+  width: 14px;
+  height: 14px;
+}
+
+.desplegable {
+  position: relative;
+}
+
+.punto {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.par {
+  display: flex;
+  gap: 10px;
+}
+
+.campo-fecha {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.campo.hora {
+  width: 104px;
+  flex: none;
+}
+
+.borrar-campo {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  flex: none;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--tx-3);
+  cursor: default;
+}
+
+.borrar-campo:hover {
+  color: var(--tx);
+}
+
+.icono-cal {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: default;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.icono-cal svg {
+  width: 15px;
+  height: 15px;
+  stroke: var(--tx-3);
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.icono-cal:hover svg {
+  stroke: var(--tx);
+}
+
+/* --- segmentado de importancia --- */
+
+.segmentado {
+  display: flex;
+  gap: 3px;
+  background: var(--campo);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px;
+}
+
+.segmentado button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 4px;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--tx-2);
+  cursor: default;
+}
+
+.segmentado button.on {
+  background: #332f2d;
+  color: var(--tx);
+}
+
+.segmentado .marca {
+  width: 5px;
+  height: 13px;
+  align-self: auto;
+}
+
+/* --- interruptor --- */
+
+.fila-campo.interruptor {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--tx-2);
+}
+
+.sw {
+  width: 30px;
+  height: 17px;
+  border-radius: 9px;
+  background: #302c2a;
+  border: 1px solid var(--line-2);
+  position: relative;
+  flex: none;
+  padding: 0;
+  cursor: default;
+}
+
+.sw i {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--tx-3);
+}
+
+.sw.on {
+  background: #4a4542;
+}
+
+.sw.on i {
+  left: auto;
+  right: 2px;
+  background: var(--tx);
+}
+
+.area {
+  width: 100%;
+  line-height: 1.5;
+  min-height: 58px;
+  resize: vertical;
+  background: var(--campo);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 9px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--tx);
+}
+
+.area::placeholder {
+  color: var(--tx-3);
+}
+
+/* --- mini calendario --- */
+
+/* Paneles emergentes con posición fija, para que el scroll no los recorte. */
+
+.flotante {
+  position: fixed;
+  z-index: 60;
+}
+
+.lista-opciones {
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  padding: 5px;
+  overflow-y: auto;
+}
+
+.fila-opcion {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  padding: 9px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--tx-2);
+  text-align: left;
+  cursor: default;
+}
+
+.fila-opcion:hover {
+  background: #2f2b29;
+  color: var(--tx);
+}
+
+.fila-opcion.on {
+  background: #3b3633;
+  color: var(--tx);
+}
+
+.mini-cal {
+  width: 232px;
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.mini-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--tx);
+  padding: 2px 2px 8px;
+}
+
+.mini-paso {
+  width: 22px;
+  height: 22px;
+  background: none;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  color: var(--tx-2);
+  font-family: inherit;
+  line-height: 1;
+  cursor: default;
+}
+
+.mini-paso:hover {
+  background: #2f2b29;
+  color: var(--tx);
+}
+
+.mini-dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 3px;
+}
+
+.mini-dow span {
+  text-align: center;
+  font-size: 10px;
+  color: var(--tx-3);
+}
+
+.mini-rejilla {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+}
+
+.mini-dia {
+  aspect-ratio: 1;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: var(--tx);
+  cursor: default;
+}
+
+.mini-dia:hover {
+  background: #2f2b29;
+}
+
+.mini-dia.fuera {
+  color: #4a453f;
+}
+
+.mini-dia.es-hoy {
+  box-shadow: inset 0 0 0 1px var(--hoy);
+}
+
+.mini-dia.elegido {
+  background: #3b3633;
+  color: var(--tx);
+}
+
+/* --- más opciones --- */
+
+.mas-opciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--line);
+  padding: 12px 0 3px;
+  margin-top: 4px;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--tx-2);
+  cursor: default;
+}
+
+.mas-opciones:hover {
+  color: var(--tx);
+}
+
+.mas-opciones .caret {
+  width: 14px;
+  height: 14px;
+  stroke: var(--tx-2);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bloque-opciones {
+  padding-top: 15px;
+}
+
+.campo .fijo {
+  font-size: 13px;
+  color: var(--tx-2);
+  flex: none;
+}
+
+.campo input.numerito {
+  width: 46px;
+  flex: none;
+  text-align: center;
+}
+
+.nota {
+  font-size: 11px;
+  color: var(--tx-3);
+  line-height: 1.5;
+  margin-top: 7px;
+}
+
+.aviso {
+  display: flex;
+  gap: 10px;
+  background: #2b2320;
+  border: 1px solid #4d3b33;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-top: 15px;
+  font-size: 12px;
+  color: #d9b8a5;
+  line-height: 1.5;
+}
+
+/* --- ficha del evento --- */
+
+/* Se cierra haciendo clic fuera, al revés que el formulario: acá no hay nada
+   escrito que se pueda perder. */
+
+.ficha {
+  width: 470px;
+  max-width: 100%;
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  position: relative;
+}
+
+.ficha-cab {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+}
+
+.ficha-cuerpo {
+  padding: 18px;
+  overflow-y: auto;
+}
+
+.ficha-cuerpo h1 {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.3;
+  padding-right: 34px;
+  margin-bottom: 9px;
+}
+
+.ficha-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--tx-2);
+  margin-bottom: 10px;
+}
+
+.ficha-meta .sep {
+  color: #443f3a;
+  margin-right: 7px;
+}
+
+.ficha-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--campo);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  color: var(--tx-2);
+}
+
+.marca-chip {
+  width: 5px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  flex: none;
+}
+
+.ficha-desc {
+  font-size: 13px;
+  color: var(--tx-2);
+  line-height: 1.62;
+  padding-top: 13px;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  white-space: pre-wrap;
+}
+
+.ficha-lista {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.ficha-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--tx);
+}
+
+.ficha-fila svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--tx-3);
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+.ficha-pie {
+  display: flex;
+  justify-content: space-between;
+  padding: 13px 18px;
+  border-top: 1px solid var(--line);
+  background: #221f1e;
+}
+
+.ficha-error {
+  padding: 18px;
+}
+
+/* --- elegir el alcance en un evento repetido --- */
+
+.opcion {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  background: var(--campo);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 11px 12px;
+  margin-top: 9px;
+  color: var(--tx);
+  font: inherit;
+  cursor: default;
+}
+
+.opcion:hover {
+  border-color: var(--line-2);
+}
+
+.opcion.on {
+  border-color: #4a4542;
+  background: #2e2a28;
+}
+
+.opcion .radio {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  flex: none;
+  margin-top: 2px;
+  display: grid;
+  place-items: center;
+}
+
+.opcion.on .radio {
+  border-color: var(--tx-2);
+}
+
+.opcion.on .radio::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tx-2);
+}
+
+.opcion-t {
+  font-size: 13px;
+  display: block;
+}
+
+.opcion-s {
+  font-size: 11.5px;
+  color: var(--tx-3);
+  margin-top: 3px;
+  line-height: 1.45;
+  display: block;
+}
+
+/* Los eventos de la celda se abren, así que responden al puntero. */
+
+.ev,
+.ev-solo {
+  cursor: default;
+}
+
+.ev:hover,
+.ev-solo:hover {
+  background: #2b2827;
+}
+
+/* --- vista día --- */
+
+.vista-dia {
+  width: 392px;
+  max-width: 100%;
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+
+.dia-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dia-cab h2 {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dia-acciones {
+  display: flex;
+  gap: 4px;
+}
+
+.icono-chico {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: var(--tx-3);
+  font-size: 15px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: default;
+}
+
+.icono-chico:hover {
+  background: #302c2a;
+  color: var(--tx);
+}
+
+/* La caja existe para colgar el degradado del borde inferior de la lista. */
+.dia-lista-caja {
+  position: relative;
+}
+
+.dia-lista {
+  padding: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.hay-mas.dia {
+  height: 30px;
+  padding-bottom: 5px;
+  background: linear-gradient(transparent, var(--raised) 72%);
+}
+
+.dia-ev {
+  display: flex;
+  gap: 10px;
+  background: var(--cell);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 9px 11px;
+  align-items: flex-start;
+  cursor: default;
+}
+
+.dia-ev:hover {
+  border-color: var(--line-2);
+}
+
+.dia-ev .marca {
+  width: 5px;
+  align-self: stretch;
+  border-radius: 2px;
+  flex: none;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.dia-txt {
+  min-width: 0;
+  flex: 1;
+}
+
+.dia-tit {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dia-hr {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--tx-2);
+  margin-top: 3px;
+}
+
+.dia-hr .sep {
+  color: #443f3a;
+  margin: 0 5px;
+}
+
+.dia-ds {
+  font-size: 11.5px;
+  color: var(--tx-3);
+  margin-top: 4px;
+  line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dia-txt .chip {
+  margin-top: 5px;
+  font-size: 10.5px;
+  padding: 2px 6px;
+  color: var(--tx-3);
+}
+
+.dia-vacio {
+  padding: 34px 20px;
+  text-align: center;
+}
+
+.vacio-t {
+  font-size: 13px;
+  color: var(--tx-2);
+}
+
+.vacio-s {
+  font-size: 11.5px;
+  color: var(--tx-3);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.dia-vacio .btn {
+  margin-top: 14px;
+}
+
+/* La celda entera abre el día, así que responde al puntero. */
+.celda {
+  cursor: default;
+}
+
+/* --- cuerpo y panel de filtros --- */
+
+.cuerpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  /* Recorta el panel de filtros mientras entra desde el borde. */
+  overflow: hidden;
+}
+
+.cuerpo .calendario {
+  min-width: 0;
+  position: relative;
+}
+
+.acciones {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icono {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: var(--tx-2);
+  background: none;
+  border: none;
+  position: relative;
+  cursor: default;
+}
+
+.icono:hover {
+  background: var(--raised);
+  color: var(--tx);
+}
+
+.icono.on {
+  background: var(--raised);
+  color: var(--tx);
+}
+
+.icono svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+/* Avisa que el filtro está escondiendo algo aunque el panel esté cerrado. */
+.icono .punto {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--hoy);
+  border: 1.5px solid var(--bg);
+}
+
+.panel-filtros {
+  width: var(--ancho-filtros);
+  flex: none;
+  border-left: 1px solid var(--line);
+  background: var(--panel);
+  padding: 14px 15px;
+  overflow-y: auto;
+}
+
+.panel-filtros h2 {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: var(--tx-2);
+  margin-bottom: 13px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.panel-filtros h2 svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.grupo-titulo {
+  font-size: 10.5px;
+  letter-spacing: 0.7px;
+  color: var(--tx-3);
+  margin: 16px 0 8px;
+}
+
+.grupo-titulo:first-of-type {
+  margin-top: 0;
+}
+
+.fila-filtro {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 0;
+  font-size: 12.5px;
+  color: var(--tx);
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.fila-filtro.apagada {
+  color: var(--tx-3);
+}
+
+.fila-filtro.apagada .swatch {
+  opacity: 0.5;
+}
+
+.box {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex: none;
+  border: 1px solid var(--line-2);
+  display: grid;
+  place-items: center;
+}
+
+.box.on {
+  background: var(--tx-2);
+  border-color: var(--tx-2);
+}
+
+.box.on::after {
+  content: "";
+  width: 7px;
+  height: 4px;
+  border-left: 1.5px solid var(--cell);
+  border-bottom: 1.5px solid var(--cell);
+  transform: rotate(-45deg);
+  margin-top: -2px;
+}
+
+.swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.ejemplo {
+  width: 5px;
+  height: 14px;
+  border-radius: 2px;
+  flex: none;
+  border: 1px solid transparent;
+}
+
+/* Un calendario en blanco por un filtro se lee como pérdida de datos. */
+.oculto-por-filtro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  text-align: center;
+  background: rgba(19, 17, 16, 0.86);
+}
+
+.oculto-por-filtro .vacio-s {
+  max-width: 260px;
+}
+
+/* --- grupos dentro del panel --- */
+
+.fila-grupo {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.fila-grupo.arrastrando {
+  opacity: 0.4;
+}
+
+.fila-grupo .fila-filtro {
+  flex: 1;
+  min-width: 0;
+}
+
+.etiqueta-filtro {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editar-grupo {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  color: var(--tx-3);
+  flex: none;
+  opacity: 0;
+  cursor: default;
+}
+
+.editar-grupo svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fila-grupo:hover .editar-grupo {
+  opacity: 1;
+}
+
+.editar-grupo:hover {
+  background: var(--raised);
+  color: var(--tx);
+}
+
+.asa {
+  color: #4a453f;
+  font-size: 12px;
+  letter-spacing: 1px;
+  flex: none;
+  cursor: grab;
+  padding: 0 2px;
+}
+
+.nuevo-grupo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 0;
+  font-size: 12px;
+  color: var(--tx-3);
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: default;
+}
+
+.nuevo-grupo:hover {
+  color: var(--tx-2);
+}
+
+/* --- formulario de grupo --- */
+
+.paleta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.muestra {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  border: none;
+  cursor: default;
+}
+
+.muestra.elegida {
+  box-shadow:
+    0 0 0 1.5px var(--tx),
+    0 0 0 3.5px var(--raised);
+}
+
+.selector-color {
+  position: relative;
+}
+
+.color-libre {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  border: 1px dashed var(--line-2);
+  background: none;
+  color: var(--tx-3);
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+  cursor: default;
+}
+
+.color-libre:hover {
+  border-color: var(--tx-3);
+  color: var(--tx-2);
+}
+
+/* --- selector de color propio --- */
+
+.panel-color {
+  width: 212px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cuadro-color {
+  height: 122px;
+  border-radius: 5px;
+  position: relative;
+  touch-action: none;
+  /* Blanco hacia la izquierda y negro hacia abajo, sobre el tono puro. */
+  background-image:
+    linear-gradient(to top, #000, transparent),
+    linear-gradient(to right, #fff, transparent);
+}
+
+.barra-tono {
+  height: 12px;
+  border-radius: 6px;
+  position: relative;
+  touch-action: none;
+  background: linear-gradient(
+    to right,
+    #f00 0%,
+    #ff0 17%,
+    #0f0 33%,
+    #0ff 50%,
+    #00f 67%,
+    #f0f 83%,
+    #f00 100%
+  );
+}
+
+.tirador {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.fila-hex {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.previa-hex {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  flex: none;
+  border: 1px solid var(--line-2);
+}
+
+.fila-hex .campo {
+  flex: 1;
+  min-width: 0;
+}
+
+.previa {
+  background: var(--cell);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.previa .ev {
+  margin: 0;
+}
+
+.modal-pie.entre {
+  justify-content: space-between;
+}
+
+.par-botones {
+  display: flex;
+  gap: 9px;
+}
+
+/* La fila que hace algo en vez de elegir un valor. */
+.fila-opcion.accion {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  padding-top: 9px;
+  color: var(--tx-3);
+}
+
+.campo input:disabled {
+  color: var(--tx-3);
+}
+
+/* ==========================================================================
+   MOVIMIENTO
+
+   Tres duraciones y nada más. Entrar 140, salir 100, y 120 para lo que
+   responde al puntero. Salir es más rápido que entrar a propósito: cuando
+   cierras algo ya decidiste, y esperar molesta.
+
+   Los milisegundos de salida están también en `presencia.ts` y `flotante.ts`,
+   que son los que mantienen viva la ventana mientras se va. Describen la misma
+   animación: si uno cambia, el otro también.
+   ========================================================================== */
+
+:root {
+  --entra: 190ms;
+  --sale: 120ms;
+  --entra-panel: 150ms;
+  --sale-panel: 110ms;
+  --responde: 140ms;
+  --curva-entra: cubic-bezier(0.16, 1, 0.3, 1);
+  --curva-sale: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* --- ventanas flotantes --- */
+
+@keyframes velo-entra {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes velo-sale {
+  to {
+    opacity: 0;
+  }
+}
+
+/*
+ * Solo desplazamiento, nunca escala.
+ *
+ * Escalar una caja con texto adentro lo deja en coordenadas fraccionarias, y
+ * mientras dura la animación la X, las etiquetas y los campos se ven temblar.
+ * Un desplazamiento entero no toca el tamaño de nada.
+ */
+@keyframes ventana-entra {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes ventana-sale {
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.velo {
+  animation: velo-entra var(--entra) ease-out;
+}
+
+.velo > .modal,
+.velo > .ficha,
+.velo > .vista-dia {
+  animation: ventana-entra var(--entra) var(--curva-entra);
+}
+
+.velo.saliendo {
+  animation: velo-sale var(--sale) var(--curva-sale) forwards;
+}
+
+.velo.saliendo > .modal,
+.velo.saliendo > .ficha,
+.velo.saliendo > .vista-dia {
+  animation: ventana-sale var(--sale) var(--curva-sale) forwards;
+}
+
+/* --- paneles emergentes --- */
+
+/* Nacen pegados a su campo, así que crecen desde arriba y no desde el centro. */
+@keyframes panel-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes panel-sale {
+  to {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+
+.flotante {
+  animation: panel-entra var(--entra-panel) var(--curva-entra);
+}
+
+.flotante.saliendo {
+  animation: panel-sale var(--sale-panel) var(--curva-sale) forwards;
+}
+
+/* --- panel de filtros --- */
+
+/*
+ * El panel entra desde el borde derecho abriendo su propio espacio.
+ *
+ * El margen negativo lo saca fuera del cuerpo, que lo recorta, y al volver a
+ * cero el calendario se angosta al mismo ritmo. Deslizarlo con `transform`
+ * sería más barato, pero el sitio ya estaría reservado desde el primer cuadro y
+ * se vería el hueco esperándolo.
+ */
+@keyframes filtros-entra {
+  from {
+    opacity: 0;
+    margin-right: calc(var(--ancho-filtros) * -1);
+  }
+}
+
+.panel-filtros {
+  animation: filtros-entra var(--entra) var(--curva-entra);
+}
+
+@keyframes filtros-sale {
+  to {
+    opacity: 0;
+    margin-right: calc(var(--ancho-filtros) * -1);
+  }
+}
+
+.panel-filtros.saliendo {
+  animation: filtros-sale var(--sale) var(--curva-sale) forwards;
+}
+
+/* --- lista de meses --- */
+
+/* Cuelga del botón, así que crece desde arriba, igual que los desplegables. */
+.selector-panel {
+  animation: panel-entra var(--entra-panel) var(--curva-entra);
+}
+
+.selector-panel.saliendo {
+  animation: panel-sale var(--sale-panel) var(--curva-sale) forwards;
+}
+
+/* --- cuadrícula del mes --- */
+
+@keyframes mes-entra {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.rejilla {
+  animation: mes-entra var(--entra) var(--curva-entra);
+}
+
+/* --- eventos --- */
+
+/* Aparecen al crearlos y al volver de un filtro apagado. */
+@keyframes evento-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+
+/* La salida es la entrada al revés, hacia el lado contrario. */
+@keyframes evento-sale {
+  to {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+}
+
+.ev,
+.ev-solo,
+.dia-ev {
+  animation: evento-entra var(--entra-panel) var(--curva-entra);
+}
+
+.ev.saliendo,
+.ev-solo.saliendo,
+.dia-ev.saliendo {
+  animation: evento-sale var(--sale) var(--curva-sale) forwards;
+  /* Deja de responder mientras se va: ya no está. */
+  pointer-events: none;
+}
+
+/* --- respuesta al puntero --- */
+
+.celda,
+.ev,
+.ev-solo,
+.dia-ev,
+.btn,
+.icono,
+.icono-chico,
+.cerrar,
+.fila-opcion,
+.fila-filtro,
+.editar-grupo,
+.nuevo-grupo,
+.nuevo-evento,
+.muestra,
+.color-libre,
+.mini-dia,
+.mini-paso,
+.selector-mes,
+.selector-boton,
+.boton-hoy,
+.segmentado button,
+.opcion {
+  transition:
+    background-color var(--responde) ease,
+    border-color var(--responde) ease,
+    color var(--responde) ease,
+    opacity var(--responde) ease;
+}
+
+/* El campo marca el foco en su borde, así que ese cambio también se acompaña. */
+.campo,
+.campo-titulo,
+.area {
+  transition: border-color var(--responde) ease;
+}
+
+.sw,
+.sw i {
+  transition:
+    background-color var(--responde) ease,
+    left var(--responde) var(--curva-entra),
+    right var(--responde) var(--curva-entra);
+}
+
+.caret {
+  transition: transform var(--responde) ease;
+}
+
+/* --- quien pidió menos movimiento --- */
+
+/*
+ * El sistema puede pedir que nada se mueva, por mareo o por preferencia. Se
+ * respeta apagándolo todo de una vez, no animación por animación: una lista
+ * escrita a mano se desactualiza en cuanto se agrega la siguiente.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

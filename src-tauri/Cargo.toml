@@ -1,0 +1,43 @@
+[package]
+name = "swiftcalendar"
+version = "0.1.0"
+description = "A Tauri App"
+authors = ["you"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "swiftcalendar_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = "0.4.45"
+chrono-tz = "0.10.4"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+# Da el nombre IANA de la zona instalada en el equipo. `chrono::Local` sabe
+# convertir, pero no sabe cómo se llama la zona, y `zona_origen` se guarda por
+# nombre.
+iana-time-zone = "0.1"
+# Decodifica, redimensiona y vuelve a escribir la imagen del evento. Sin los
+# formatos que no se usan, para no cargar el binario con lo que nadie abre.
+image = { version = "0.25", default-features = false, features = [
+  "png",
+  "jpeg",
+  "gif",
+  "bmp",
+  "webp",
+] }
+# Abre el selector de archivos de Windows para elegir la imagen.
+tauri-plugin-dialog = "2"
+
