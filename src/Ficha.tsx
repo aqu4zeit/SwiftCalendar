@@ -46,6 +46,15 @@ const NOMBRE_IMPORTANCIA = {
 /** Qué se hace cuando el evento se repite. */
 type Alcance = "solo_esta" | "todas";
 
+/**
+ * Desde qué proporción una imagen va ancha arriba en vez de al costado.
+ *
+ * Arriba tiene el ancho de la ficha y un tope de alto, así que una imagen que
+ * no sea claramente panorámica se recortaría por la mitad para caber. Al costado
+ * entra completa, y los datos ocupan lo que queda.
+ */
+const PANORAMICA = 1.6;
+
 export function Ficha({
   instancia,
   grupos,
@@ -68,12 +77,12 @@ export function Ficha({
   const [borrando, setBorrando] = useState(false);
 
   // Dónde va la imagen. La proporción no está en la base, así que la dice el
-  // archivo al cargarse: una apaisada va ancha arriba, el resto al costado.
+  // archivo al cargarse.
   const [ancha, setAncha] = useState<boolean | null>(null);
 
   function medir(e: React.SyntheticEvent<HTMLImageElement>) {
     const img = e.currentTarget;
-    setAncha(img.naturalWidth > img.naturalHeight);
+    setAncha(img.naturalWidth / img.naturalHeight >= PANORAMICA);
   }
 
   useEffect(() => {
@@ -180,30 +189,16 @@ export function Ficha({
         {detalle && (
           <>
             <div className="ficha-cuerpo">
-              {imagen === "ancha" && (
-                <img
-                  className="ficha-banner"
-                  src={urlDeArchivo(carpeta, detalle.imagen as string)}
-                  alt=""
-                  onLoad={medir}
-                />
-              )}
+              {/* Un solo elemento, siempre el mismo, que cambia de sitio
+                  cambiando la dirección del contenedor. Montar uno para medir y
+                  otro para dibujar hacía que el archivo se decodificara dos
+                  veces, y la primera vez con una imagen grande se nota.
 
-              <div className={imagen === "lado" ? "ficha-con-lado" : undefined}>
-                {imagen === "lado" && (
+                  Mientras no se sabe la proporción no se dibuja: elegir un sitio
+                  y moverla después es un salto. */}
+              <div className={`ficha-imagen ${imagen}`}>
+                {imagen !== "no" && (
                   <img
-                    className="ficha-cuadro"
-                    src={urlDeArchivo(carpeta, detalle.imagen as string)}
-                    alt=""
-                    onLoad={medir}
-                  />
-                )}
-
-                {/* Mientras no se sabe la proporción, la imagen se carga sin
-                    dibujarse: elegir un sitio y moverla después es un salto. */}
-                {imagen === "midiendo" && (
-                  <img
-                    className="ficha-midiendo"
                     src={urlDeArchivo(carpeta, detalle.imagen as string)}
                     alt=""
                     onLoad={medir}
