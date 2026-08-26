@@ -11,6 +11,7 @@ import {
   type Grupos,
   type Importancia,
 } from "./api";
+import { Archivos } from "./Archivos";
 import { BotonBorrar } from "./BotonBorrar";
 import { CampoFecha } from "./CampoFecha";
 import { Desplegable } from "./Desplegable";
@@ -36,13 +37,7 @@ export type Apertura =
   | { modo: "crear"; fecha: string }
   | { modo: "editar"; edicion: Edicion };
 
-/**
- * La imagen que ya tenía el evento, para que editarlo no la borre.
- *
- * El formulario todavía no la muestra ni la deja cambiar, pero el evento sí
- * puede tenerla: la escritura declara la imagen completa, así que omitirla
- * equivaldría a quitarla.
- */
+/** Con qué imagen abre el formulario: la que ya tenía el evento, o ninguna. */
 function imagenActual(edicion: Edicion | null): ImagenPedida {
   const detalle = edicion?.detalle;
   if (!detalle?.imagen || !detalle.miniatura) return { tipo: "sin" };
@@ -54,7 +49,7 @@ function imagenActual(edicion: Edicion | null): ImagenPedida {
   };
 }
 
-/** Los adjuntos que ya tenía, por la misma razón que la imagen. */
+/** Con qué archivos abre, por la misma razón que la imagen. */
 function adjuntosActuales(edicion: Edicion | null): AdjuntoPedido[] {
   return (edicion?.detalle.adjuntos ?? []).map((a) => ({
     tipo: "guardado",
@@ -67,6 +62,8 @@ function adjuntosActuales(edicion: Edicion | null): AdjuntoPedido[] {
 interface Props {
   grupos: Grupos;
   apertura: Apertura;
+  /** La carpeta de datos, para mostrar una imagen que ya está guardada. */
+  carpeta: string;
   /** Falso si hay otra ventana encima: el teclado lo cierra a él, no a este. */
   activo: boolean;
   /** Verdadero mientras se está yendo. */
@@ -99,6 +96,8 @@ interface Campos {
   adaptable: boolean;
   ubicacion: string;
   url: string;
+  imagen: ImagenPedida;
+  adjuntos: AdjuntoPedido[];
 }
 
 /** El formulario en blanco, sobre un día concreto. */
@@ -118,6 +117,8 @@ function enBlanco(grupoId: number, fecha: string): Campos {
     adaptable: false,
     ubicacion: "",
     url: "",
+    imagen: { tipo: "sin" },
+    adjuntos: [],
   };
 }
 
@@ -155,12 +156,15 @@ function desdeEdicion(edicion: Edicion): Campos {
     adaptable: detalle.cuando === "adaptable",
     ubicacion: detalle.ubicacion ?? "",
     url: detalle.url ?? "",
+    imagen: imagenActual(edicion),
+    adjuntos: adjuntosActuales(edicion),
   };
 }
 
 export function Formulario({
   grupos,
   apertura,
+  carpeta,
   activo,
   saliendo,
   onCerrar,
@@ -290,10 +294,8 @@ export function Formulario({
         ubicacion:
           campos.ubicacion.trim() === "" ? null : campos.ubicacion.trim(),
         url: campos.url.trim() === "" ? null : campos.url.trim(),
-        // Todavía no hay campo para elegirlos: se conserva lo que ya tenía el
-        // evento. La interfaz de imagen y adjuntos llega en la etapa 12.
-        imagen: imagenActual(edicion),
-        adjuntos: adjuntosActuales(edicion),
+        imagen: campos.imagen,
+        adjuntos: campos.adjuntos,
         rrule: aRrule(campos.repeticion),
         recordatorio_min: campos.recordatorio,
       };
@@ -471,6 +473,14 @@ export function Formulario({
               onChange={(e) => set({ descripcion: e.target.value })}
             />
           </div>
+
+          <Archivos
+            carpeta={carpeta}
+            imagen={campos.imagen}
+            onImagen={(imagen) => set({ imagen })}
+            adjuntos={campos.adjuntos}
+            onAdjuntos={(adjuntos) => set({ adjuntos })}
+          />
 
           <MasOpciones
             abierto={masAbierto}

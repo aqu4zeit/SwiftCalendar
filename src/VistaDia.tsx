@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import type { Instancia } from "./api";
+import { urlDeArchivo, type Instancia } from "./api";
 import {
   duracion,
   fechaDe,
@@ -18,6 +18,8 @@ interface Props {
   fecha: Date;
   eventos: Instancia[];
   formatoHora: FormatoHora;
+  /** La carpeta de datos: lo guardado es relativo a ella. */
+  carpeta: string;
   /** Falso si hay otra ventana encima: el teclado lo cierra a él, no a este. */
   activo: boolean;
   /** Verdadero mientras se está yendo. */
@@ -31,6 +33,7 @@ export function VistaDia({
   fecha,
   eventos,
   formatoHora,
+  carpeta,
   activo,
   saliendo,
   onCerrar,
@@ -117,6 +120,7 @@ export function VistaDia({
                   instancia={item}
                   saliendo={yendose}
                   formato={formatoHora}
+                  carpeta={carpeta}
                   onAbrir={onAbrir}
                 />
               ))}
@@ -137,10 +141,11 @@ interface FilaProps {
   instancia: Instancia;
   saliendo: boolean;
   formato: FormatoHora;
+  carpeta: string;
   onAbrir: (instancia: Instancia) => void;
 }
 
-function Fila({ instancia, saliendo, formato, onAbrir }: FilaProps) {
+function Fila({ instancia, saliendo, formato, carpeta, onAbrir }: FilaProps) {
   const estilo =
     instancia.importancia === "urgente"
       ? { background: instancia.color }
@@ -154,6 +159,16 @@ function Fila({ instancia, saliendo, formato, onAbrir }: FilaProps) {
       onClick={() => onAbrir(instancia)}
     >
       <span className="marca" style={estilo} />
+      {/* La celda del mes no la dibuja (decisión 63), pero la vista día sí:
+          acá hay ancho y el evento se está mirando de cerca. Una ocurrencia
+          separada de su serie comparte el archivo con la maestra. */}
+      {instancia.miniatura && (
+        <img
+          className="dia-mini"
+          src={urlDeArchivo(carpeta, instancia.miniatura)}
+          alt=""
+        />
+      )}
       <div className="dia-txt">
         <div className="dia-tit">{instancia.titulo}</div>
         <div className="dia-hr">

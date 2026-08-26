@@ -116,6 +116,18 @@ impl<'de> Deserialize<'de> for Importancia {
     }
 }
 
+/// Qué parte de la imagen se conserva, en fracciones de 0 a 1.
+///
+/// Va en fracciones y no en píxeles porque quien lo elige mira una versión
+/// reducida: los píxeles de esa vista no son los del archivo.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Recorte {
+    pub x: f32,
+    pub y: f32,
+    pub ancho: f32,
+    pub alto: f32,
+}
+
 /// La imagen del evento y su miniatura, que van siempre juntas.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Imagen {

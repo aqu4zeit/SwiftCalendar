@@ -38,6 +38,8 @@ pub fn run() {
             comandos::borrar_grupo,
             comandos::reordenar_grupos,
             comandos::listar_ajustes,
+            comandos::carpeta_de_datos,
+            comandos::vista_previa_imagen,
             comandos::leer_evento,
             comandos::crear_evento,
             comandos::editar_evento,

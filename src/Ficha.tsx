@@ -1,8 +1,11 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { openPath } from "@tauri-apps/plugin-opener";
 
 import {
   borrarEvento,
   leerEvento,
+  tamanoLegible,
+  urlDeArchivo,
   type Edicion,
   type EventoDetalle,
   type Grupos,
@@ -22,6 +25,8 @@ import { desdeRrule, textoRepeticion } from "./rrule";
 interface Props {
   instancia: Instancia;
   grupos: Grupos;
+  /** La carpeta de datos: lo guardado es relativo a ella. */
+  carpeta: string;
   formatoHora: FormatoHora;
   /** Falso si hay otra ventana encima: el teclado lo cierra a él, no a este. */
   activo: boolean;
@@ -44,6 +49,7 @@ type Alcance = "solo_esta" | "todas";
 export function Ficha({
   instancia,
   grupos,
+  carpeta,
   formatoHora,
   activo,
   saliendo,
@@ -60,6 +66,15 @@ export function Ficha({
   );
   const [alcance, setAlcance] = useState<Alcance>("solo_esta");
   const [borrando, setBorrando] = useState(false);
+
+  // Dónde va la imagen. La proporción no está en la base, así que la dice el
+  // archivo al cargarse: una apaisada va ancha arriba, el resto al costado.
+  const [ancha, setAncha] = useState<boolean | null>(null);
+
+  function medir(e: React.SyntheticEvent<HTMLImageElement>) {
+    const img = e.currentTarget;
+    setAncha(img.naturalWidth > img.naturalHeight);
+  }
 
   useEffect(() => {
     let vigente = true;
@@ -87,6 +102,15 @@ export function Ficha({
   });
 
   const grupo = grupos.todos.find((g) => g.id === instancia.grupo_id);
+
+  const hayImagen = Boolean(detalle?.imagen) && detalle?.imagen_existe === true;
+  const imagen = !hayImagen
+    ? "no"
+    : ancha === null
+      ? "midiendo"
+      : ancha
+        ? "ancha"
+        : "lado";
   const esSerie = detalle?.rrule != null;
 
   /**
@@ -156,13 +180,44 @@ export function Ficha({
         {detalle && (
           <>
             <div className="ficha-cuerpo">
-              <h1>{detalle.titulo}</h1>
+              {imagen === "ancha" && (
+                <img
+                  className="ficha-banner"
+                  src={urlDeArchivo(carpeta, detalle.imagen as string)}
+                  alt=""
+                  onLoad={medir}
+                />
+              )}
 
-              <div className="ficha-meta">
-                <Cuando instancia={instancia} formato={formatoHora} />
-              </div>
+              <div className={imagen === "lado" ? "ficha-con-lado" : undefined}>
+                {imagen === "lado" && (
+                  <img
+                    className="ficha-cuadro"
+                    src={urlDeArchivo(carpeta, detalle.imagen as string)}
+                    alt=""
+                    onLoad={medir}
+                  />
+                )}
 
-              <div className="ficha-chips">
+                {/* Mientras no se sabe la proporción, la imagen se carga sin
+                    dibujarse: elegir un sitio y moverla después es un salto. */}
+                {imagen === "midiendo" && (
+                  <img
+                    className="ficha-midiendo"
+                    src={urlDeArchivo(carpeta, detalle.imagen as string)}
+                    alt=""
+                    onLoad={medir}
+                  />
+                )}
+
+                <div className="ficha-datos">
+                  <h1>{detalle.titulo}</h1>
+
+                  <div className="ficha-meta">
+                    <Cuando instancia={instancia} formato={formatoHora} />
+                  </div>
+
+                  <div className="ficha-chips">
                 {grupo && (
                   <span className="chip">
                     <span
@@ -187,18 +242,26 @@ export function Ficha({
                   </span>
                 )}
 
-                {instancia.de > 1 && (
-                  <span className="chip">
-                    Día {instancia.dia} de {instancia.de}
-                  </span>
-                )}
+                    {instancia.de > 1 && (
+                      <span className="chip">
+                        Día {instancia.dia} de {instancia.de}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              {detalle.imagen && !detalle.imagen_existe && (
+                <p className="ficha-falta">
+                  La imagen ya no está en la carpeta de datos.
+                </p>
+              )}
 
               {detalle.descripcion && (
                 <p className="ficha-desc">{detalle.descripcion}</p>
               )}
 
-              <Detalles detalle={detalle} />
+              <Detalles detalle={detalle} carpeta={carpeta} />
             </div>
 
             <div className="ficha-pie">
@@ -341,7 +404,13 @@ function Cuando({
 }
 
 /** Las filas que solo aparecen si su campo tiene algo. */
-function Detalles({ detalle }: { detalle: EventoDetalle }) {
+function Detalles({
+  detalle,
+  carpeta,
+}: {
+  detalle: EventoDetalle;
+  carpeta: string;
+}) {
   const recordatorio =
     detalle.recordatorio_min === null
       ? null
@@ -400,7 +469,7 @@ function Detalles({ detalle }: { detalle: EventoDetalle }) {
     });
   }
 
-  if (filas.length === 0) return null;
+  if (filas.length === 0 && detalle.adjuntos.length === 0) return null;
 
   return (
     <div className="ficha-lista">
@@ -411,6 +480,32 @@ function Detalles({ detalle }: { detalle: EventoDetalle }) {
           </svg>
           <span>{fila.texto}</span>
         </div>
+      ))}
+
+      {/* El clic lo abre con el programa que le corresponda, no lo descarga:
+          el archivo ya está en el disco del usuario.
+
+          Uno que ya no está se muestra igual, apagado. La carpeta es del
+          usuario y puede vaciarla; callarlo sería perder el dato de que
+          existió. */}
+      {detalle.adjuntos.map((adjunto) => (
+        <button
+          type="button"
+          className={
+            adjunto.existe ? "ficha-fila archivo" : "ficha-fila archivo falta"
+          }
+          key={adjunto.ruta}
+          disabled={!adjunto.existe}
+          onClick={() => void openPath(`${carpeta}/${adjunto.ruta}`)}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+          </svg>
+          <span>{adjunto.nombre_original}</span>
+          <span className="peso">
+            {adjunto.existe ? tamanoLegible(adjunto.tamano) : "ya no está"}
+          </span>
+        </button>
       ))}
     </div>
   );

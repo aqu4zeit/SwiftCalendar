@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   agruparGrupos,
+  carpetaDeDatos,
   eventosEnRango,
   listarAjustes,
   listarGrupos,
@@ -34,6 +35,7 @@ export default function App() {
   const [grupos, setGrupos] = useState<Grupos | null>(null);
   const [densidad, setDensidad] = useState<Densidad>("comoda");
   const [formatoHora, setFormatoHora] = useState<FormatoHora>("24");
+  const [carpeta, setCarpeta] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Los filtros. Listas explícitas: vacía significa que no se muestra nada.
@@ -63,13 +65,17 @@ export default function App() {
   // Sube cada vez que algo cambia en la base, para volver a pedir el mes.
   const [version, setVersion] = useState(0);
 
-  // Los ajustes se piden una vez.
+  // Los ajustes y la carpeta se piden una vez: ninguno cambia mientras corre.
   useEffect(() => {
     listarAjustes()
       .then((ajustes) => {
         if (ajustes.densidad === "compacta") setDensidad("compacta");
         if (ajustes.formato_hora === "12") setFormatoHora("12");
       })
+      .catch((e: unknown) => setError(String(e)));
+
+    carpetaDeDatos()
+      .then(setCarpeta)
       .catch((e: unknown) => setError(String(e)));
   }, []);
 
@@ -250,11 +256,12 @@ export default function App() {
         </div>
       )}
 
-      {diaVisible.valor && (
+      {diaVisible.valor && carpeta && (
         <VistaDia
           fecha={diaVisible.valor}
           eventos={porDia[clave(diaVisible.valor)] ?? []}
           formatoHora={formatoHora}
+          carpeta={carpeta}
           activo={arriba === "dia"}
           saliendo={diaVisible.saliendo}
           onCerrar={() => setDia(null)}
@@ -268,10 +275,11 @@ export default function App() {
         />
       )}
 
-      {fichaVisible.valor && grupos && (
+      {fichaVisible.valor && grupos && carpeta && (
         <Ficha
           instancia={fichaVisible.valor}
           grupos={grupos}
+          carpeta={carpeta}
           formatoHora={formatoHora}
           activo={arriba === "ficha"}
           saliendo={fichaVisible.saliendo}
@@ -284,10 +292,11 @@ export default function App() {
         />
       )}
 
-      {formularioVisible.valor && grupos && (
+      {formularioVisible.valor && grupos && carpeta && (
         <Formulario
           grupos={grupos}
           apertura={formularioVisible.valor}
+          carpeta={carpeta}
           activo={arriba === "formulario"}
           saliendo={formularioVisible.saliendo}
           onCerrar={() => setFormulario(null)}

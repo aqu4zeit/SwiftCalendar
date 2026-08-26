@@ -1203,6 +1203,23 @@ button:focus-visible {
   z-index: 2;
 }
 
+/* Va encima de la imagen, así que necesita su propio fondo. Sin él, el aspa
+   queda suelta sobre la foto y se pierde según qué haya debajo. */
+
+.ficha-cab .cerrar {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  background: rgba(19, 17, 16, 0.72);
+  color: var(--tx-2);
+}
+
+.ficha-cab .cerrar:hover {
+  background: rgba(19, 17, 16, 0.88);
+  color: var(--tx);
+}
+
 .ficha-cuerpo {
   padding: 18px;
   overflow-y: auto;
@@ -2215,4 +2232,354 @@ button:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
+}
+
+/* --- imagen y archivos del formulario --- */
+
+/* El campo vacío mide lo mismo que ubicación o enlace: una línea. Lo que
+   crece es lo elegido, no el sitio donde se elige. */
+
+.campo.suelta {
+  width: 100%;
+  cursor: default;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--tx-3);
+  border-style: dashed;
+}
+
+.campo.suelta:hover {
+  border-color: var(--line-2);
+}
+
+.campo.suelta.encima {
+  border-color: var(--tx-3);
+  border-style: solid;
+  background: var(--raised);
+  color: var(--tx-2);
+}
+
+.campo.suelta .nombre {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campo.suelta .mas {
+  color: var(--tx-3);
+}
+
+.lista-archivos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.elegido {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--campo);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12.5px;
+}
+
+.elegido.encima {
+  border-color: var(--tx-3);
+}
+
+.elegido svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--tx-3);
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+.elegido .nombre {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.elegido .peso {
+  color: var(--tx-3);
+  font-size: 11.5px;
+  flex: none;
+}
+
+.elegido .quitar {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--tx-3);
+  font-size: 11px;
+  line-height: 1;
+  border-radius: 4px;
+  cursor: default;
+}
+
+.elegido .quitar:hover {
+  background: var(--line);
+  color: var(--tx);
+}
+
+/* La miniatura de una imagen recién elegida todavía no existe en disco: se
+   copia al guardar el evento. El hueco ocupa su lugar. */
+
+.mini {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex: none;
+}
+
+.mini.vacia {
+  background: var(--line);
+}
+
+/* --- la imagen en la ficha --- */
+
+/* El mismo elemento en los tres estados. Lo que cambia es la dirección del
+   contenedor y el tamaño de la imagen, no qué elemento existe. */
+
+.ficha-imagen {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.ficha-imagen.no,
+.ficha-imagen.midiendo,
+.ficha-imagen.ancha {
+  flex-direction: column;
+  gap: 13px;
+}
+
+.ficha-imagen.ancha img {
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+  border-radius: 7px;
+  display: block;
+}
+
+.ficha-imagen.lado img {
+  width: 132px;
+  height: 132px;
+  object-fit: cover;
+  border-radius: 7px;
+  flex: none;
+}
+
+/* Se carga para poder medirla, sin ocupar sitio mientras tanto. */
+
+.ficha-imagen.midiendo img {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ficha-datos {
+  min-width: 0;
+  flex: 1;
+  width: 100%;
+}
+
+.ficha-falta {
+  font-size: 12px;
+  color: var(--tx-3);
+  margin-top: 10px;
+}
+
+.ficha-fila.archivo {
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  color: var(--tx);
+  cursor: default;
+}
+
+.ficha-fila.archivo span:first-of-type {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ficha-fila.archivo .peso {
+  color: var(--tx-3);
+  font-size: 11.5px;
+  flex: none;
+}
+
+.ficha-fila.archivo:not(:disabled):hover span:first-of-type {
+  text-decoration: underline;
+}
+
+.ficha-fila.archivo.falta {
+  color: var(--tx-3);
+}
+
+/* --- la miniatura en la vista día --- */
+
+.dia-mini {
+  width: 40px;
+  height: 40px;
+  border-radius: 5px;
+  object-fit: cover;
+  flex: none;
+}
+
+/* --- encuadrar la imagen antes de guardarla --- */
+
+.modal.ancho {
+  width: 720px;
+}
+
+.encuadre {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.encuadre-lienzo {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border-radius: 7px;
+  overflow: hidden;
+  user-select: none;
+}
+
+.encuadre-lienzo img {
+  display: block;
+  width: 100%;
+  max-height: 340px;
+  object-fit: contain;
+}
+
+/* Cuatro bandas alrededor del marco, no una sombra encima: así el interior no
+   lleva nada delante y se ve el color real de la imagen. */
+
+.sombra {
+  position: absolute;
+  background: rgba(19, 17, 16, 0.6);
+  pointer-events: none;
+}
+
+.marco {
+  position: absolute;
+  border: 1px solid var(--tx);
+  cursor: move;
+}
+
+.tirador {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--tx);
+  border-radius: 2px;
+}
+
+.tirador.no {
+  left: -6px;
+  top: -6px;
+  cursor: nwse-resize;
+}
+
+.tirador.ne {
+  right: -6px;
+  top: -6px;
+  cursor: nesw-resize;
+}
+
+.tirador.so {
+  left: -6px;
+  bottom: -6px;
+  cursor: nesw-resize;
+}
+
+.tirador.se {
+  right: -6px;
+  bottom: -6px;
+  cursor: nwse-resize;
+}
+
+.encuadre-vistas {
+  width: 210px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.encuadre-nota {
+  font-size: 12px;
+  color: var(--tx-3);
+  line-height: 1.5;
+}
+
+.muestra-sitio {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.muestra-t {
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  color: var(--tx-3);
+}
+
+/* Cada muestra tiene la forma exacta del sitio que representa, y usa el mismo
+   object-fit que la vista real. */
+
+.muestra {
+  background: var(--campo);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.muestra img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.muestra.ancha {
+  width: 100%;
+  height: 118px;
+}
+
+.muestra.lado {
+  width: 84px;
+  height: 84px;
+}
+
+.muestra.dia {
+  width: 40px;
+  height: 40px;
 }

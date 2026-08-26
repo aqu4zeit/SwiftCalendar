@@ -8,13 +8,20 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use image::{DynamicImage, ImageFormat};
 
-use crate::modelo::{Adjunto, Error, Imagen};
+use crate::modelo::{Adjunto, Error, Imagen, Recorte};
 
 /// Lado mayor del original al copiarlo. Decisión 52.
 const LADO_ORIGINAL: u32 = 1920;
 
 /// Lado mayor de la miniatura. Decisión 52.
 const LADO_MINIATURA: u32 = 320;
+
+/// Lado mayor de la vista que se usa para elegir el encuadre.
+///
+/// No es el archivo: es lo que se dibuja para poder mover el marco encima. Que
+/// sea chica es el punto, porque la imagen elegida puede pesar cientos de megas
+/// y la interfaz no tiene por qué cargarla entera para recortarla.
+const LADO_VISTA: u32 = 900;
 
 /// Calidad del JPEG. Suficiente para una foto en pantalla, sin engordar el
 /// archivo `.calev`, donde la imagen viaja codificada.
@@ -125,17 +132,90 @@ fn escribir(imagen: &DynamicImage, destino: &Path, con_alfa: bool) -> Result<(),
         .map_err(|e| falla("no se pudo escribir el JPEG", e))
 }
 
-/// Copia una imagen a la carpeta de datos y genera su miniatura.
+/// Se queda con la parte pedida de la imagen. Sin recorte, la deja igual.
 ///
-/// Devuelve las dos rutas, relativas a la raíz de la carpeta. Van siempre
-/// juntas: el esquema no acepta una sin la otra.
-pub fn guardar_imagen(carpeta: &Path, origen: &Path) -> Result<Imagen, Error> {
+/// El rectángulo llega en fracciones y se convierte acá: es el único sitio que
+/// conoce las medidas reales del archivo.
+fn recortar(imagen: &DynamicImage, recorte: Option<Recorte>) -> DynamicImage {
+    let Some(r) = recorte else {
+        return imagen.clone();
+    };
+
+    let ancho = imagen.width() as f32;
+    let alto = imagen.height() as f32;
+
+    // Un rectángulo de cero píxeles no es una imagen. Redondear hacia abajo
+    // puede producirlo cuando el marco queda muy fino.
+    let w = ((r.ancho * ancho).round() as u32).max(1).min(imagen.width());
+    let h = ((r.alto * alto).round() as u32).max(1).min(imagen.height());
+    let x = ((r.x * ancho).round() as u32).min(imagen.width() - w);
+    let y = ((r.y * alto).round() as u32).min(imagen.height() - h);
+
+    imagen.crop_imm(x, y, w, h)
+}
+
+/// Una versión reducida de la imagen, para elegir el encuadre antes de guardarla.
+///
+/// Vuelve como texto porque el archivo elegido está fuera de la carpeta de datos
+/// y el protocolo de archivos no lo sirve. Abrirle el alcance a todo el disco
+/// para esto sería un permiso permanente por una vista temporal.
+pub fn vista_previa(origen: &Path) -> Result<String, Error> {
     comprobar_peso(origen)?;
     comprobar_pixeles(origen)?;
 
     let imagen = image::open(origen)
         .map_err(|e| falla(&format!("no se pudo leer {}", origen.display()), e))?;
 
+    let reducida = ajustar(&imagen, LADO_VISTA);
+    let mut bytes: Vec<u8> = Vec::new();
+
+    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes, CALIDAD_JPEG)
+        .encode_image(&reducida.to_rgb8())
+        .map_err(|e| falla("no se pudo preparar la vista previa", e))?;
+
+    Ok(format!("data:image/jpeg;base64,{}", base64(&bytes)))
+}
+
+/// Codifica en base64 sin traer una dependencia por veinte líneas.
+fn base64(bytes: &[u8]) -> String {
+    const ALFABETO: &[u8; 64] =
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    let mut salida = String::with_capacity(bytes.len().div_ceil(3) * 4);
+
+    for grupo in bytes.chunks(3) {
+        let b = [grupo[0], *grupo.get(1).unwrap_or(&0), *grupo.get(2).unwrap_or(&0)];
+        let junto = u32::from(b[0]) << 16 | u32::from(b[1]) << 8 | u32::from(b[2]);
+
+        for i in 0..4 {
+            if i <= grupo.len() {
+                let indice = (junto >> (18 - i * 6)) & 0b11_1111;
+                salida.push(ALFABETO[indice as usize] as char);
+            } else {
+                salida.push('=');
+            }
+        }
+    }
+
+    salida
+}
+
+/// Copia una imagen a la carpeta de datos y genera su miniatura.
+///
+/// Devuelve las dos rutas, relativas a la raíz de la carpeta. Van siempre
+/// juntas: el esquema no acepta una sin la otra.
+pub fn guardar_imagen(
+    carpeta: &Path,
+    origen: &Path,
+    recorte: Option<Recorte>,
+) -> Result<Imagen, Error> {
+    comprobar_peso(origen)?;
+    comprobar_pixeles(origen)?;
+
+    let entera = image::open(origen)
+        .map_err(|e| falla(&format!("no se pudo leer {}", origen.display()), e))?;
+
+    let imagen = recortar(&entera, recorte);
     let con_alfa = imagen.color().has_alpha();
     let extension = Some(if con_alfa { "png" } else { "jpg" });
 
@@ -252,7 +332,7 @@ mod pruebas {
         let carpeta = carpeta_temporal("grande");
         let origen = foto(&carpeta, 3000, 2000);
 
-        let imagen = guardar_imagen(&carpeta, &origen).unwrap();
+        let imagen = guardar_imagen(&carpeta, &origen, None).unwrap();
 
         assert_eq!(medir(&carpeta, &imagen.original), (1920, 1280));
         assert_eq!(medir(&carpeta, &imagen.miniatura), (320, 213));
@@ -264,7 +344,7 @@ mod pruebas {
         let carpeta = carpeta_temporal("chica");
         let origen = foto(&carpeta, 400, 250);
 
-        let imagen = guardar_imagen(&carpeta, &origen).unwrap();
+        let imagen = guardar_imagen(&carpeta, &origen, None).unwrap();
 
         assert_eq!(medir(&carpeta, &imagen.original), (400, 250));
         assert_eq!(medir(&carpeta, &imagen.miniatura), (320, 200));
@@ -276,7 +356,7 @@ mod pruebas {
         let carpeta = carpeta_temporal("vertical");
         let origen = foto(&carpeta, 1000, 4000);
 
-        let imagen = guardar_imagen(&carpeta, &origen).unwrap();
+        let imagen = guardar_imagen(&carpeta, &origen, None).unwrap();
 
         assert_eq!(medir(&carpeta, &imagen.original), (480, 1920));
         assert_eq!(medir(&carpeta, &imagen.miniatura), (80, 320));
@@ -288,7 +368,7 @@ mod pruebas {
         let carpeta = carpeta_temporal("alfa");
         let origen = con_transparencia(&carpeta, 500);
 
-        let imagen = guardar_imagen(&carpeta, &origen).unwrap();
+        let imagen = guardar_imagen(&carpeta, &origen, None).unwrap();
 
         assert!(imagen.original.ends_with(".png"));
         assert!(imagen.miniatura.ends_with(".png"));
@@ -304,7 +384,7 @@ mod pruebas {
         let carpeta = carpeta_temporal("jpeg");
         let origen = foto(&carpeta, 800, 600);
 
-        let imagen = guardar_imagen(&carpeta, &origen).unwrap();
+        let imagen = guardar_imagen(&carpeta, &origen, None).unwrap();
 
         assert!(imagen.original.ends_with(".jpg"));
         assert!(imagen.miniatura.ends_with(".jpg"));
@@ -316,7 +396,7 @@ mod pruebas {
         let carpeta = carpeta_temporal("nombres");
         let origen = foto(&carpeta, 600, 600);
 
-        let imagen = guardar_imagen(&carpeta, &origen).unwrap();
+        let imagen = guardar_imagen(&carpeta, &origen, None).unwrap();
 
         assert_ne!(imagen.original, imagen.miniatura);
         assert!(existe(&carpeta, &imagen.original));
@@ -329,8 +409,8 @@ mod pruebas {
         let carpeta = carpeta_temporal("dos");
         let origen = foto(&carpeta, 300, 300);
 
-        let una = guardar_imagen(&carpeta, &origen).unwrap();
-        let otra = guardar_imagen(&carpeta, &origen).unwrap();
+        let una = guardar_imagen(&carpeta, &origen, None).unwrap();
+        let otra = guardar_imagen(&carpeta, &origen, None).unwrap();
 
         assert_ne!(una.original, otra.original);
         assert!(existe(&carpeta, &una.original));
@@ -345,7 +425,7 @@ mod pruebas {
         std::fs::write(&ruta, b"esto no es una imagen").unwrap();
 
         assert!(matches!(
-            guardar_imagen(&carpeta, &ruta),
+            guardar_imagen(&carpeta, &ruta, None),
             Err(Error::Archivo(_))
         ));
     }
@@ -355,12 +435,105 @@ mod pruebas {
     fn una_imagen_borrada_a_mano_deja_de_existir() {
         let carpeta = carpeta_temporal("borrada");
         let origen = foto(&carpeta, 300, 300);
-        let imagen = guardar_imagen(&carpeta, &origen).unwrap();
+        let imagen = guardar_imagen(&carpeta, &origen, None).unwrap();
 
         std::fs::remove_file(carpeta.join(&imagen.original)).unwrap();
 
         assert!(!existe(&carpeta, &imagen.original));
         assert!(existe(&carpeta, &imagen.miniatura));
+    }
+
+    /// Recortar la mitad de cada lado deja un cuarto de la imagen.
+    #[test]
+    fn el_recorte_se_aplica_antes_de_encoger() {
+        let carpeta = carpeta_temporal("recorte");
+        let origen = foto(&carpeta, 800, 400);
+
+        let imagen = guardar_imagen(
+            &carpeta,
+            &origen,
+            Some(Recorte { x: 0.0, y: 0.0, ancho: 0.5, alto: 0.5 }),
+        )
+        .unwrap();
+
+        assert_eq!(medir(&carpeta, &imagen.original), (400, 200));
+    }
+
+    /// Sin recorte la imagen sale igual que antes de que el recorte existiera.
+    #[test]
+    fn sin_recorte_la_imagen_no_cambia() {
+        let carpeta = carpeta_temporal("sin-recorte");
+        let origen = foto(&carpeta, 800, 400);
+
+        let imagen = guardar_imagen(&carpeta, &origen, None).unwrap();
+
+        assert_eq!(medir(&carpeta, &imagen.original), (800, 400));
+    }
+
+    /// Un marco muy fino no puede producir una imagen de cero píxeles.
+    #[test]
+    fn un_recorte_diminuto_deja_al_menos_un_pixel() {
+        let carpeta = carpeta_temporal("fino");
+        let origen = foto(&carpeta, 600, 600);
+
+        let imagen = guardar_imagen(
+            &carpeta,
+            &origen,
+            Some(Recorte { x: 0.5, y: 0.5, ancho: 0.0, alto: 0.0 }),
+        )
+        .unwrap();
+
+        assert_eq!(medir(&carpeta, &imagen.original), (1, 1));
+    }
+
+    /// Un marco pegado al borde no se sale de la imagen.
+    #[test]
+    fn un_recorte_en_el_borde_no_se_pasa() {
+        let carpeta = carpeta_temporal("borde");
+        let origen = foto(&carpeta, 400, 300);
+
+        let imagen = guardar_imagen(
+            &carpeta,
+            &origen,
+            Some(Recorte { x: 0.9, y: 0.9, ancho: 0.5, alto: 0.5 }),
+        )
+        .unwrap();
+
+        let (ancho, alto) = medir(&carpeta, &imagen.original);
+        assert!(ancho <= 400 && alto <= 300, "cabe dentro: {ancho}x{alto}");
+    }
+
+    /// La vista previa se reduce y vuelve como texto que el navegador entiende.
+    #[test]
+    fn la_vista_previa_es_una_imagen_reducida() {
+        let carpeta = carpeta_temporal("vista");
+        let origen = foto(&carpeta, 3000, 1500);
+
+        let texto = vista_previa(&origen).unwrap();
+
+        assert!(texto.starts_with("data:image/jpeg;base64,"));
+        assert!(texto.len() > 100, "trae contenido");
+    }
+
+    /// Una imagen que no cabe se rechaza al elegirla, no al guardarla.
+    #[test]
+    fn la_vista_previa_comprueba_los_limites() {
+        let carpeta = carpeta_temporal("vista-mala");
+        let ruta = carpeta.join("no-es-imagen.jpg");
+        std::fs::write(&ruta, b"esto no es una imagen").unwrap();
+
+        assert!(matches!(vista_previa(&ruta), Err(Error::Archivo(_))));
+    }
+
+    /// Los tres restos posibles al dividir en grupos de tres bytes.
+    #[test]
+    fn base64_rellena_bien_los_grupos_incompletos() {
+        assert_eq!(base64(b"abc"), "YWJj");
+        assert_eq!(base64(b"ab"), "YWI=");
+        assert_eq!(base64(b"a"), "YQ==");
+        assert_eq!(base64(b""), "");
+        assert_eq!(base64(&[255, 255, 255]), "////");
+        assert_eq!(base64(&[0, 0, 0]), "AAAA");
     }
 
     /// Un archivo cualquiera con el contenido pedido.
@@ -481,7 +654,7 @@ mod pruebas {
 
         std::fs::write(&ruta, png).unwrap();
 
-        let error = guardar_imagen(&carpeta, &ruta).unwrap_err();
+        let error = guardar_imagen(&carpeta, &ruta, None).unwrap_err();
         let Error::Archivo(texto) = error else {
             panic!("el error tiene que ser de archivo");
         };

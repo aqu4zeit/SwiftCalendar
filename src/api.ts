@@ -1,6 +1,6 @@
 // El único archivo que habla con el lado nativo.
 
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 
 export type Importancia = "comun" | "importante" | "urgente";
 
@@ -120,10 +120,18 @@ export const TODAS_LAS_IMPORTANCIAS: Importancia[] = [
  * Las tres formas son estados distintos. Con una ruta opcional habría que
  * adivinar si es la que ya estaba o una nueva por copiar.
  */
+/** El rectángulo que se conserva de la imagen, en fracciones de 0 a 1. */
+export interface Recorte {
+  x: number;
+  y: number;
+  ancho: number;
+  alto: number;
+}
+
 export type ImagenPedida =
   | { tipo: "sin" }
   | { tipo: "guardada"; original: string; miniatura: string }
-  | { tipo: "nueva"; origen: string };
+  | { tipo: "nueva"; origen: string; recorte: Recorte | null };
 
 /** Las mismas formas del adjunto, menos "sin": eso es la lista vacía. */
 export type AdjuntoPedido =
@@ -187,6 +195,38 @@ export type Densidad = "comoda" | "compacta";
 
 export function listarAjustes(): Promise<Ajustes> {
   return invoke("listar_ajustes");
+}
+
+/**
+ * La carpeta de datos, en absoluto. Se pide una vez al arrancar.
+ *
+ * Lo guardado es siempre relativo a esta carpeta, así que mostrar un archivo
+ * necesita las dos partes.
+ */
+export function carpetaDeDatos(): Promise<string> {
+  return invoke("carpeta_de_datos");
+}
+
+/**
+ * Una versión reducida de la imagen elegida, para encuadrarla antes de guardar.
+ *
+ * Vuelve como texto porque el archivo está fuera de la carpeta de datos y el
+ * protocolo de archivos no lo sirve. De paso comprueba que el archivo cabe.
+ */
+export function vistaPreviaImagen(origen: string): Promise<string> {
+  return invoke("vista_previa_imagen", { origen });
+}
+
+/** La dirección con la que la interfaz puede pedir un archivo de la carpeta. */
+export function urlDeArchivo(carpeta: string, relativa: string): string {
+  return convertFileSrc(`${carpeta}/${relativa}`);
+}
+
+/** El tamaño de un archivo, tal como se muestra. */
+export function tamanoLegible(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function listarGrupos(): Promise<Grupo[]> {

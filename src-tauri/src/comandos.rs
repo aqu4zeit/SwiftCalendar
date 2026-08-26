@@ -14,7 +14,8 @@ use crate::grupo;
 use crate::historial::{Accion, Pila};
 use crate::hora;
 use crate::modelo::{
-    self, Adjunto, Cuando, Evento, EventoNuevo, Grupo, GrupoNuevo, Imagen, Importancia, FORMATO,
+    self, Adjunto, Cuando, Evento, EventoNuevo, Grupo, GrupoNuevo, Imagen, Importancia, Recorte,
+    FORMATO,
 };
 use crate::ocurrencia;
 use crate::rango::{self, Filtros, Instancia};
@@ -195,8 +196,21 @@ pub enum ImagenPedida {
     Sin,
     /// La que ya está en la carpeta de datos, tal cual.
     Guardada { original: String, miniatura: String },
-    /// Un archivo del disco que hay que copiar y del que hay que sacar la miniatura.
-    Nueva { origen: String },
+    /// Un archivo del disco que hay que copiar y del que hay que sacar la
+    /// miniatura. `recorte` nulo guarda la imagen entera.
+    Nueva {
+        origen: String,
+        recorte: Option<RecorteDeLaInterfaz>,
+    },
+}
+
+/// El rectángulo que se conserva, en fracciones de 0 a 1.
+#[derive(Debug, Deserialize)]
+pub struct RecorteDeLaInterfaz {
+    x: f32,
+    y: f32,
+    ancho: f32,
+    alto: f32,
 }
 
 /// Qué adjunto tiene que quedar guardado.
@@ -246,9 +260,18 @@ fn resolver_imagen(carpeta: &Carpeta, pedida: ImagenPedida) -> Result<Option<Ima
             original,
             miniatura,
         })),
-        ImagenPedida::Nueva { origen } => archivo::guardar_imagen(&carpeta.0, origen.as_ref())
-            .map(Some)
-            .map_err(|e| e.to_string()),
+        ImagenPedida::Nueva { origen, recorte } => archivo::guardar_imagen(
+            &carpeta.0,
+            origen.as_ref(),
+            recorte.map(|r| Recorte {
+                x: r.x,
+                y: r.y,
+                ancho: r.ancho,
+                alto: r.alto,
+            }),
+        )
+        .map(Some)
+        .map_err(|e| e.to_string()),
     }
 }
 
@@ -333,6 +356,25 @@ pub struct AdjuntoDetalle {
     nombre_original: String,
     tamano: i64,
     existe: bool,
+}
+
+/// La carpeta de datos, en absoluto.
+///
+/// La base guarda rutas relativas, y la interfaz necesita la absoluta para
+/// pedirle el archivo al protocolo de archivos. Se pregunta una vez al arrancar:
+/// la carpeta es fija y no se configura.
+#[tauri::command]
+pub fn carpeta_de_datos(carpeta: State<'_, Carpeta>) -> String {
+    carpeta.0.to_string_lossy().to_string()
+}
+
+/// Una versión reducida de la imagen elegida, para encuadrarla antes de guardar.
+///
+/// Comprueba de paso que el archivo cabe: así un archivo imposible falla al
+/// elegirlo y no después de llenar el formulario entero.
+#[tauri::command]
+pub fn vista_previa_imagen(origen: String) -> Result<String, String> {
+    archivo::vista_previa(origen.as_ref()).map_err(|e| e.to_string())
 }
 
 /// Un evento por su identificador.
