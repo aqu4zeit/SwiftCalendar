@@ -265,3 +265,76 @@ export function eventosEnRango(
 ): Promise<PorDia> {
   return invoke("eventos_en_rango", { desde, hasta, filtros });
 }
+
+/** Una notificación tal como la muestra el panel. */
+export interface Aviso {
+  id: number;
+  evento_id: number;
+  titulo: string;
+  grupo_id: number;
+  importancia: Importancia;
+  /** La ocurrencia que la originó. */
+  ocurrencia: string;
+  /** Cuándo debía aparecer. */
+  momento: string;
+  vista: boolean;
+}
+
+/**
+ * Genera lo que faltaba desde la última pasada y devuelve cuántas nacieron.
+ *
+ * La interfaz lo llama al arrancar. Mientras la app vive, el temporizador nativo
+ * hace lo mismo cada minuto y avisa por su cuenta.
+ */
+export function generarNotificaciones(): Promise<number> {
+  return invoke("generar_notificaciones");
+}
+
+/**
+ * La instancia de una ocurrencia, para abrir su ficha desde una notificación.
+ *
+ * El aviso guarda el evento y la fecha; la ficha necesita el tramo ya resuelto.
+ * Buscarla entre los eventos del mes cargado no sirve: la ocurrencia puede caer
+ * en otro mes.
+ */
+export function instanciaDe(
+  evento_id: number,
+  ocurrencia: string,
+): Promise<Instancia> {
+  return invoke("instancia_de", { eventoId: evento_id, ocurrencia });
+}
+
+export function listarNotificaciones(): Promise<Aviso[]> {
+  return invoke("listar_notificaciones");
+}
+
+export function contarPendientes(): Promise<number> {
+  return invoke("contar_pendientes");
+}
+
+export function marcarVista(id: number): Promise<void> {
+  return invoke("marcar_vista", { id });
+}
+
+/** Devuelve cuántas pendientes había. */
+export function marcarTodasVistas(): Promise<number> {
+  return invoke("marcar_todas_vistas");
+}
+
+/**
+ * Borra una notificación ya vista.
+ *
+ * Solo las vistas: una pendiente todavía no la miró nadie, y poder borrarla
+ * desde la lista permitiría descartarla sin leerla de un clic mal puesto.
+ */
+export function borrarNotificacion(id: number): Promise<void> {
+  return invoke("borrar_notificacion", { id });
+}
+
+/** Borra todas las vistas y devuelve cuántas eran. */
+export function borrarNotificacionesVistas(): Promise<number> {
+  return invoke("borrar_notificaciones_vistas");
+}
+
+/** El aviso que emite el temporizador nativo cuando nacen notificaciones. */
+export const NACIERON = "notificaciones://nuevas";

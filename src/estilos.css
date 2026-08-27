@@ -1753,6 +1753,9 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: 2px;
+  /* Al reordenar, la fila se desliza hasta su sitio nuevo. La distancia la
+     calcula el panel y la escribe en el elemento; acá vive el cómo. */
+  transition: transform var(--entra-panel) var(--curva-entra);
 }
 
 .fila-grupo.arrastrando {
@@ -1810,23 +1813,39 @@ button:focus-visible {
   flex: none;
   cursor: grab;
   padding: 0 2px;
+  /* Sin esto, arrastrar el asa selecciona el texto de las filas de al lado. */
+  user-select: none;
 }
+
+.asa:active {
+  cursor: grabbing;
+}
+
+/* La misma forma que el campo de archivos del formulario: ancho completo, borde
+   punteado y el signo a la derecha. Suelto y sin caja se leía como una etiqueta
+   más de la lista, no como algo que se puede apretar. */
 
 .nuevo-grupo {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
-  margin-top: 8px;
-  padding: 6px 0;
+  width: 100%;
+  margin-top: 10px;
+  padding: 7px 9px;
   font-size: 12px;
   color: var(--tx-3);
   background: none;
-  border: none;
+  border: 1px dashed var(--line-2);
+  border-radius: 6px;
   font-family: inherit;
+  text-align: left;
   cursor: default;
 }
 
 .nuevo-grupo:hover {
+  border-color: var(--tx-3);
+  background: var(--campo);
   color: var(--tx-2);
 }
 
@@ -2192,6 +2211,9 @@ button:focus-visible {
 .segmentado button,
 .opcion,
 .campo.suelta,
+.aviso,
+.aviso-ok,
+.avisos-link,
 .elegido,
 .elegido .quitar,
 .ficha-fila.archivo {
@@ -2729,4 +2751,189 @@ button:focus-visible {
 .cajon.abierto {
   grid-template-rows: 1fr;
   visibility: visible;
+}
+
+/* --- panel de notificaciones --- */
+
+/* Cuelga de su botón en vez de flotar contra la ventana: la campana está fija
+   en la barra, así que el panel siempre cabe debajo. */
+
+.con-panel {
+  position: relative;
+}
+
+.panel-avisos {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  width: 340px;
+  max-height: 460px;
+  display: flex;
+  flex-direction: column;
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  overflow: hidden;
+  animation: panel-entra var(--entra-panel) var(--curva-entra);
+}
+
+.panel-avisos.saliendo {
+  animation: panel-sale var(--sale-panel) var(--curva-sale) forwards;
+  pointer-events: none;
+}
+
+.avisos-cab {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 14px 10px;
+}
+
+.avisos-cab h2 {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tx);
+}
+
+.avisos-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: var(--tx-3);
+  cursor: default;
+}
+
+.avisos-link:hover {
+  color: var(--tx-2);
+}
+
+.avisos-vacio {
+  padding: 4px 14px 18px;
+  font-size: 12.5px;
+  color: var(--tx-3);
+}
+
+.avisos-lista {
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+
+.avisos-sec {
+  padding: 10px 14px 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.7px;
+  color: var(--tx-3);
+}
+
+/* Una vista se ve apagada pero sigue estando: el historial no se borra. */
+
+/* El resaltado va en la fila entera, no en su parte izquierda: con el fondo solo
+   detrás del texto, el visto bueno quedaba fuera y el rectángulo no llegaba a
+   los bordes. */
+
+.aviso {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 6px;
+  padding: 2px 4px 2px 8px;
+  border-radius: 7px;
+  animation: archivo-entra var(--entra-panel) var(--curva-entra);
+}
+
+.aviso:hover {
+  background: var(--campo);
+}
+
+.aviso.saliendo {
+  animation: archivo-sale var(--sale-panel) var(--curva-sale) forwards;
+  pointer-events: none;
+}
+
+.aviso.vista {
+  opacity: 0.55;
+}
+
+.aviso-cuerpo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: none;
+  padding: 7px 0;
+  font-family: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.aviso .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.aviso-txt {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aviso-txt .t {
+  font-size: 12.5px;
+  color: var(--tx);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aviso-txt .h {
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.aviso-ok {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  color: var(--tx-3);
+  cursor: default;
+}
+
+.aviso-ok svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Sobre un fondo que ya cambió, el suyo tiene que ser otro para notarse. */
+
+.aviso-ok:hover {
+  background: var(--line);
+  color: var(--tx);
+}
+
+/* La cruz que borra una notificación vista. Ocupa el sitio del visto bueno,
+   porque una vez vista la acción que queda es quitarla. */
+
+.aviso-ok.borrar:hover {
+  background: var(--line);
+  /* El mismo tono que el botón de borrar de la ficha. */
+  color: #d98a7c;
 }

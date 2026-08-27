@@ -1,9 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { listen } from "@tauri-apps/api/event";
 
 import {
   agruparGrupos,
   carpetaDeDatos,
+  contarPendientes,
+  generarNotificaciones,
+  instanciaDe,
+  NACIERON,
   eventosEnRango,
   listarAjustes,
   listarGrupos,
@@ -16,10 +21,11 @@ import {
   type Instancia,
   type PorDia,
 } from "./api";
-import { clave, fechaLarga, rejilla, type FormatoHora } from "./fecha";
+import { clave, fechaDe, fechaLarga, rejilla, type FormatoHora } from "./fecha";
 import { Ficha } from "./Ficha";
 import { Formulario, type Apertura } from "./Formulario";
 import { FormularioGrupo } from "./FormularioGrupo";
+import { PanelAvisos } from "./PanelAvisos";
 import { usePresencia } from "./presencia";
 import { hayFiltroApagado, PanelFiltros } from "./PanelFiltros";
 import { SelectorMes } from "./SelectorMes";
@@ -37,18 +43,34 @@ export default function App() {
   const [densidad, setDensidad] = useState<Densidad>("comoda");
   const [formatoHora, setFormatoHora] = useState<FormatoHora>("24");
   const [carpeta, setCarpeta] = useState<string | null>(null);
+  const [pendientes, setPendientes] = useState(0);
+  const [avisosAbiertos, setAvisosAbiertos] = useState(false);
+
+  // Sube cada vez que algo cambia en las notificaciones, para que el panel
+  // vuelva a pedir la lista sin que haya que pasarle los datos ya cargados.
+  const [versionAvisos, setVersionAvisos] = useState(0);
+  const avisos = usePresencia(avisosAbiertos ? true : null);
   const [error, setError] = useState<string | null>(null);
 
   // Los filtros. Listas explícitas: vacía significa que no se muestra nada.
-  const [gruposActivos, setGruposActivos] = useState<number[]>([]);
   const [importanciasActivas, setImportanciasActivas] = useState<Importancia[]>(
     TODAS_LAS_IMPORTANCIAS,
   );
   const [panelAbierto, setPanelAbierto] = useState(false);
 
-  // Los grupos que ya se vieron alguna vez, para distinguir "recién creado" de
-  // "desmarcado a propósito" cuando vuelve a llegar la lista.
-  const conocidos = useRef<Set<number>>(new Set());
+  /*
+   * Los grupos escondidos a mano.
+   *
+   * Se guarda lo apagado y no lo encendido: así un grupo que la lista todavía no
+   * había traído nace visible sin que haya que preguntarle a nadie si es nuevo.
+   *
+   * La forma anterior comparaba contra un conjunto de "ya conocidos" que se
+   * escribía al instante mientras el estado de los filtros se aplicaba después.
+   * Con los efectos corriendo dos veces —que es lo que hace React en desarrollo—
+   * la segunda pasada veía todos los grupos como conocidos y ninguno como
+   * marcado, y apagaba el calendario entero.
+   */
+  const [ocultos, setOcultos] = useState<number[]>([]);
 
   // Las ventanas flotantes se apilan en este orden: el día sobre el mes, y la
   // ficha o el formulario sobre el día. Cerrar la de arriba deja la de abajo.
@@ -80,6 +102,35 @@ export default function App() {
       .catch((e: unknown) => setError(String(e)));
   }, []);
 
+  /*
+   * Las notificaciones que faltaban se generan al abrir, no solo mientras la app
+   * corre: si estuvo apagada tres días, esta pasada crea los tres. Después manda
+   * el temporizador nativo, que avisa cuando nace alguna.
+   */
+  useEffect(() => {
+    let vigente = true;
+
+    const refrescar = () =>
+      contarPendientes()
+        .then((n) => {
+          if (!vigente) return;
+          setPendientes(n);
+          setVersionAvisos((v) => v + 1);
+        })
+        .catch((e: unknown) => vigente && setError(String(e)));
+
+    generarNotificaciones()
+      .then(refrescar)
+      .catch((e: unknown) => vigente && setError(String(e)));
+
+    const quitar = listen(NACIERON, () => void refrescar());
+
+    return () => {
+      vigente = false;
+      void quitar.then((f) => f());
+    };
+  }, []);
+
   // F11 pone y quita la pantalla completa.
   //
   // La ventana lleva la barra de Windows, así que maximizar ya se puede desde
@@ -98,21 +149,17 @@ export default function App() {
     return () => document.removeEventListener("keydown", tecla);
   }, []);
 
-  // Un grupo nuevo nace visible. Los que ya existían conservan su casilla, así
-  // que crear uno no deshace el filtro que estaba puesto.
   useEffect(() => {
     listarGrupos()
-      .then((lista) => {
-        setGrupos(agruparGrupos(lista));
-        setGruposActivos((antes) =>
-          lista
-            .filter((g) => antes.includes(g.id) || !conocidos.current.has(g.id))
-            .map((g) => g.id),
-        );
-        conocidos.current = new Set(lista.map((g) => g.id));
-      })
+      .then((lista) => setGrupos(agruparGrupos(lista)))
       .catch((e: unknown) => setError(String(e)));
   }, [version]);
+
+  // Los visibles salen de la lista completa menos los apagados. Un grupo que
+  // acaba de nacer no está en `ocultos`, así que aparece marcado sin más.
+  const gruposActivos = grupos
+    ? grupos.todos.filter((g) => !ocultos.includes(g.id)).map((g) => g.id)
+    : [];
 
   useEffect(() => {
     if (!grupos) return;
@@ -143,12 +190,30 @@ export default function App() {
     return () => {
       vigente = false;
     };
-  }, [anio, mes, grupos, gruposActivos, importanciasActivas, version]);
+    // `gruposActivos` se deriva de los dos que sí son estado.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anio, mes, grupos, ocultos, importanciasActivas, version]);
 
   function ir(anioDestino: number, mesDestino: number) {
     setAnio(anioDestino);
     setMes(mesDestino);
     setDia(null);
+  }
+
+  /**
+   * Abrir la ficha de la ocurrencia que originó una notificación.
+   *
+   * El mes de fondo se mueve al de la ocurrencia: cerrar la ficha tiene que dejar
+   * al usuario mirando el día del que vino, no el mes donde estaba antes.
+   */
+  function abrirDesdeAviso(evento_id: number, ocurrencia: string) {
+    const fecha = fechaDe(ocurrencia);
+    setAnio(fecha.getFullYear());
+    setMes(fecha.getMonth() + 1);
+
+    instanciaDe(evento_id, ocurrencia)
+      .then(setAbierto)
+      .catch((e: unknown) => setError(String(e)));
   }
 
   /**
@@ -165,7 +230,7 @@ export default function App() {
 
   function mostrarTodos() {
     if (!grupos) return;
-    setGruposActivos(grupos.todos.map((g) => g.id));
+    setOcultos([]);
     setImportanciasActivas(TODAS_LAS_IMPORTANCIAS);
   }
 
@@ -232,6 +297,46 @@ export default function App() {
             {filtrado && <span className="punto" />}
           </button>
 
+          <div className="con-panel">
+            <button
+              className={avisosAbiertos ? "icono on" : "icono"}
+              onClick={() => setAvisosAbiertos(!avisosAbiertos)}
+              title={
+                pendientes === 0
+                  ? "Notificaciones"
+                  : `${pendientes} ${pendientes === 1 ? "pendiente" : "pendientes"}`
+              }
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8M13.7 21a2 2 0 01-3.4 0" />
+              </svg>
+              {pendientes > 0 && <span className="punto" />}
+            </button>
+
+            {avisos.valor && grupos && (
+              <PanelAvisos
+                grupos={grupos}
+                formatoHora={formatoHora}
+                version={versionAvisos}
+                saliendo={avisos.saliendo}
+                onCambio={() =>
+                  void contarPendientes()
+                    .then((n) => {
+                      setPendientes(n);
+                      setVersionAvisos((v) => v + 1);
+                    })
+                    .catch((e: unknown) => setError(String(e)))
+                }
+                onAbrirEvento={(evento_id, ocurrencia) => {
+                  setAvisosAbiertos(false);
+                  abrirDesdeAviso(evento_id, ocurrencia);
+                }}
+                onError={setError}
+                onCerrar={() => setAvisosAbiertos(false)}
+              />
+            )}
+          </div>
+
           <button
             className="nuevo-evento"
             onClick={() => setFormulario({ modo: "crear", fecha: clave(HOY) })}
@@ -265,7 +370,13 @@ export default function App() {
               saliendo={filtrosVisible.saliendo}
               gruposActivos={gruposActivos}
               importanciasActivas={importanciasActivas}
-              onGrupos={setGruposActivos}
+              onGrupos={(activos) =>
+                setOcultos(
+                  grupos.todos
+                    .filter((g) => !activos.includes(g.id))
+                    .map((g) => g.id),
+                )
+              }
               onImportancias={setImportanciasActivas}
               onEditarGrupo={(g) => setGrupoAbierto({ editando: g })}
               onNuevoGrupo={() => setGrupoAbierto({})}

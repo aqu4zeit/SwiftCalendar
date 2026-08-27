@@ -12,6 +12,7 @@ use crate::db::Base;
 use crate::evento;
 use crate::grupo;
 use crate::historial::{Accion, Pila};
+use crate::notificacion;
 use crate::hora;
 use crate::modelo::{
     self, Adjunto, Cuando, Evento, EventoNuevo, Grupo, GrupoNuevo, Imagen, Importancia, Recorte,
@@ -527,6 +528,95 @@ pub fn borrar_evento(
         .registrar(accion);
 
     Ok(())
+}
+
+/// Una notificación tal como la pinta el panel.
+#[derive(Debug, Serialize)]
+pub struct AvisoDetalle {
+    id: i64,
+    evento_id: i64,
+    titulo: String,
+    grupo_id: i64,
+    importancia: &'static str,
+    ocurrencia: String,
+    momento: String,
+    vista: bool,
+}
+
+/// Corre el generador y devuelve cuántas notificaciones nacieron.
+///
+/// La interfaz lo llama al arrancar. Mientras la app vive, el temporizador
+/// nativo hace lo mismo cada minuto sin pasar por acá.
+#[tauri::command]
+pub fn generar_notificaciones(base: State<'_, Base>) -> Result<usize, String> {
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+    notificacion::pasada(&conexion).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn borrar_notificacion(base: State<'_, Base>, id: i64) -> Result<(), String> {
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+    notificacion::borrar(&conexion, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn borrar_notificaciones_vistas(base: State<'_, Base>) -> Result<usize, String> {
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+    notificacion::borrar_vistas(&conexion).map_err(|e| e.to_string())
+}
+
+/// La instancia de una ocurrencia, para abrir su ficha desde una notificación.
+#[tauri::command]
+pub fn instancia_de(
+    base: State<'_, Base>,
+    evento_id: i64,
+    ocurrencia: String,
+) -> Result<Instancia, String> {
+    let momento = NaiveDateTime::parse_from_str(&ocurrencia, FORMATO)
+        .map_err(|_| format!("la ocurrencia '{ocurrencia}' no es una fecha"))?;
+
+    let zona = hora::zona_del_equipo().map_err(|e| e.to_string())?;
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+
+    rango::instancia(&conexion, evento_id, momento, zona).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn listar_notificaciones(base: State<'_, Base>) -> Result<Vec<AvisoDetalle>, String> {
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+
+    Ok(notificacion::listar(&conexion)
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .map(|a| AvisoDetalle {
+            id: a.id,
+            evento_id: a.evento_id,
+            titulo: a.titulo,
+            grupo_id: a.grupo_id,
+            importancia: a.importancia.como_texto(),
+            ocurrencia: a.ocurrencia.format(FORMATO).to_string(),
+            momento: a.momento.format(FORMATO).to_string(),
+            vista: a.vista,
+        })
+        .collect())
+}
+
+#[tauri::command]
+pub fn contar_pendientes(base: State<'_, Base>) -> Result<i64, String> {
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+    notificacion::pendientes(&conexion).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn marcar_vista(base: State<'_, Base>, id: i64) -> Result<(), String> {
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+    notificacion::marcar_vista(&conexion, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn marcar_todas_vistas(base: State<'_, Base>) -> Result<usize, String> {
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+    notificacion::marcar_todas_vistas(&conexion).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

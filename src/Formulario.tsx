@@ -113,7 +113,9 @@ function enBlanco(grupoId: number, fecha: string): Campos {
     todoElDia: false,
     descripcion: "",
     repeticion: SIN_REPETICION,
-    recordatorio: null,
+    // Un evento nuevo avisa por defecto. Lo que uno agenda es porque quiere que
+    // le avisen; no avisar es la excepción y por eso es lo que hay que elegir.
+    recordatorio: 0,
     adaptable: false,
     ubicacion: "",
     url: "",

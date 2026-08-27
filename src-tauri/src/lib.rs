@@ -7,11 +7,37 @@ mod grupo;
 mod historial;
 mod hora;
 mod modelo;
+mod notificacion;
 mod ocurrencia;
 mod rango;
 mod recurrencia;
 
-use tauri::Manager;
+use std::time::Duration;
+
+use chrono::Timelike;
+use tauri::{Emitter, Manager};
+
+/// Lo que falta para el próximo cambio de minuto.
+///
+/// Dormir sesenta segundos fijos deja el hilo desfasado respecto al reloj: si la
+/// aplicación abrió a las 10:37:38, todas las pasadas caen en el segundo 38 y un
+/// aviso de las 10:38:00 espera treinta y ocho segundos de más. Durmiendo hasta
+/// el borde del minuto, el aviso aparece apenas llega su hora.
+///
+/// Se calcula contra el reloj en cada vuelta y no se acumula: si el equipo se
+/// suspende, al despertar el cálculo vuelve a partir de la hora real.
+fn hasta_el_proximo_minuto() -> Duration {
+    let ahora = chrono::Local::now();
+
+    let transcurridos =
+        u64::from(ahora.second()) * 1000 + u64::from(ahora.nanosecond()) / 1_000_000;
+
+    // El mínimo evita un giro en vacío si el cálculo cae justo en el borde.
+    Duration::from_millis((60_000 - transcurridos.min(59_950)).max(50))
+}
+
+/// El aviso que la interfaz escucha para refrescar la campana.
+const NACIERON: &str = "notificaciones://nuevas";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -28,6 +54,8 @@ pub fn run() {
 
             // El historial vive del lado nativo para sobrevivir al minimizar.
             app.manage(historial::Pila(Default::default()));
+
+            arrancar_temporizador(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -43,8 +71,48 @@ pub fn run() {
             comandos::leer_evento,
             comandos::crear_evento,
             comandos::editar_evento,
-            comandos::borrar_evento
+            comandos::borrar_evento,
+            comandos::generar_notificaciones,
+            comandos::listar_notificaciones,
+            comandos::instancia_de,
+            comandos::contar_pendientes,
+            comandos::marcar_vista,
+            comandos::marcar_todas_vistas,
+            comandos::borrar_notificacion,
+            comandos::borrar_notificaciones_vistas
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// El hilo que genera notificaciones mientras la aplicación vive.
+///
+/// Vive del lado nativo y no en la interfaz porque al minimizar a la bandeja la
+/// ventana se destruye y este temporizador tiene que seguir corriendo. Que la
+/// interfaz lo hiciera obligaría a escribirlo dos veces.
+///
+/// Si una pasada falla no se corta el hilo: la próxima vuelve a intentarlo, y lo
+/// que no se generó ahora se genera entonces, porque el rango se calcula desde la
+/// marca guardada y no desde la última vez que salió bien.
+fn arrancar_temporizador(app: tauri::AppHandle) {
+    std::thread::spawn(move || loop {
+        std::thread::sleep(hasta_el_proximo_minuto());
+
+        let base = app.state::<db::Base>();
+        let creadas = {
+            let conexion = base.0.lock().expect("la conexión quedó envenenada");
+            notificacion::pasada(&conexion)
+        };
+
+        match creadas {
+            Ok(0) => {}
+            Ok(cuantas) => {
+                // La interfaz puede no estar: al minimizar, la ventana se destruye
+                // y no hay a quién avisarle. Los registros ya están en la base, así
+                // que se leen al restaurarla.
+                let _ = app.emit(NACIERON, cuantas);
+            }
+            Err(e) => eprintln!("no se pudieron generar notificaciones: {e}"),
+        }
+    });
 }

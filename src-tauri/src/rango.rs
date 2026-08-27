@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::evento;
 use crate::grupo;
 use crate::hora::{self, Tramo};
-use crate::modelo::{self, Cuando, Error, Importancia};
+use crate::modelo::{self, Cuando, Error, Evento, Importancia};
 use crate::recurrencia;
 
 /// Días leídos de más a cada lado del rango pedido, por los eventos adaptables.
@@ -123,22 +123,16 @@ pub fn eventos_en_rango(
                     continue;
                 }
 
-                por_dia.entry(dia).or_default().push(Instancia {
-                    evento_id: e.id,
+                por_dia.entry(dia).or_default().push(armar(
+                    &e,
                     ocurrencia,
-                    titulo: e.titulo.clone(),
-                    descripcion: e.descripcion.clone(),
-                    miniatura: e.imagen.as_ref().map(|i| i.miniatura.clone()),
-                    grupo_id: e.grupo_id,
-                    color: e.color.clone().unwrap_or_else(|| color_grupo.clone()),
-                    orden_grupo: *orden_grupo,
-                    importancia: e.importancia,
-                    inicio: resuelto.inicio,
-                    fin: resuelto.fin,
+                    color_grupo,
+                    *orden_grupo,
+                    &resuelto,
                     todo_el_dia,
-                    dia: (n + 1) as u32,
-                    de: total as u32,
-                });
+                    (n + 1) as u32,
+                    total as u32,
+                ));
             }
         }
     }
@@ -155,6 +149,96 @@ pub fn eventos_en_rango(
     }
 
     Ok(por_dia)
+}
+
+/// Una instancia a partir de su evento y su ocurrencia ya resuelta.
+///
+/// Está aparte para que la consulta de rango y la búsqueda de una sola instancia
+/// construyan lo mismo. Dos sitios armando este tipo a mano se desincronizan en
+/// cuanto se le agrega un campo.
+#[allow(clippy::too_many_arguments)]
+fn armar(
+    e: &Evento,
+    ocurrencia: NaiveDateTime,
+    color_grupo: &str,
+    orden_grupo: i64,
+    resuelto: &hora::TramoResuelto,
+    todo_el_dia: bool,
+    dia: u32,
+    de: u32,
+) -> Instancia {
+    Instancia {
+        evento_id: e.id,
+        ocurrencia,
+        titulo: e.titulo.clone(),
+        descripcion: e.descripcion.clone(),
+        miniatura: e.imagen.as_ref().map(|i| i.miniatura.clone()),
+        grupo_id: e.grupo_id,
+        color: e.color.clone().unwrap_or_else(|| color_grupo.to_string()),
+        orden_grupo,
+        importancia: e.importancia,
+        inicio: resuelto.inicio,
+        fin: resuelto.fin,
+        todo_el_dia,
+        dia,
+        de,
+    }
+}
+
+/// La instancia de una ocurrencia concreta, sin pasar por un rango de días.
+///
+/// La usa el panel de notificaciones: un aviso guarda el evento y la ocurrencia,
+/// y para abrir la ficha hace falta el tramo ya resuelto. Buscarla dentro del mes
+/// cargado no serviría, porque la ocurrencia puede caer en otro mes.
+///
+/// Devuelve el primer día del tramo: es donde empieza el evento, que es lo que
+/// la ficha muestra cuando se llega desde un aviso.
+pub fn instancia(
+    conexion: &Connection,
+    evento_id: i64,
+    ocurrencia: NaiveDateTime,
+    zona_local: Tz,
+) -> Result<Instancia, Error> {
+    let e = evento::leer(conexion, evento_id)?;
+
+    let (color_grupo, orden_grupo) = grupo::listar(conexion)?
+        .into_iter()
+        .find(|g| g.id == e.grupo_id)
+        .map(|g| (g.color, g.orden))
+        .ok_or_else(|| {
+            Error::DatoCorrupto(format!(
+                "el evento {} apunta al grupo {}, que no existe",
+                e.id, e.grupo_id
+            ))
+        })?;
+
+    let duracion = match e.fin {
+        Some(fin) => fin - e.inicio,
+        None => Duration::zero(),
+    };
+
+    let todo_el_dia = e.cuando == Cuando::TodoElDia;
+    let resuelto = hora::resolver(
+        Tramo {
+            inicio: ocurrencia,
+            fin: e.fin.map(|_| ocurrencia + duracion),
+            cuando: e.cuando,
+        },
+        zona_local,
+    );
+
+    let total = (ultimo_dia(&resuelto, todo_el_dia) - resuelto.inicio.date()).num_days() + 1;
+
+    Ok(armar(
+        &e,
+        ocurrencia,
+        &color_grupo,
+        orden_grupo,
+        &resuelto,
+        todo_el_dia,
+        1,
+        total as u32,
+    ))
 }
 
 /// El último día que ocupa un tramo ya resuelto.

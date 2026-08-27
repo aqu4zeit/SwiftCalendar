@@ -32,7 +32,11 @@ fn columnas_de_cuando(cuando: Cuando) -> (i64, i64, Option<String>) {
     }
 }
 
-fn desde_fila(fila: &Row) -> Result<Evento, Error> {
+/// Un evento desde una fila de `SELECT *`.
+///
+/// Pública porque la generación de notificaciones consulta la tabla con su
+/// propio filtro y necesita leer las filas igual que el resto.
+pub fn desde_fila(fila: &Row) -> Result<Evento, Error> {
     let cuando = if fila.get::<_, i64>("todo_el_dia")? == 1 {
         Cuando::TodoElDia
     } else if fila.get::<_, i64>("hora_fija")? == 1 {
