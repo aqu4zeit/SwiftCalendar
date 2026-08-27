@@ -44,3 +44,11 @@ image = { version = "0.25", default-features = false, features = [
 # Abre el selector de archivos de Windows para elegir la imagen.
 tauri-plugin-dialog = "2"
 
+
+# Las dependencias se compilan optimizadas incluso en desarrollo.
+#
+# Sin esto, `image` corre sin optimizar y redimensionar una foto normal pasa de
+# menos de un segundo a decenas: la aplicación parece colgada al elegir una
+# imagen. El código propio sigue en depuración, que es donde sirven los símbolos.
+[profile.dev.package."*"]
+opt-level = 3

@@ -42,6 +42,11 @@ export function Archivos({
   // La imagen elegida que todavía no se confirmó: primero se encuadra.
   const [encuadrando, setEncuadrando] = useState<string | null>(null);
 
+  // Cómo quedó al encuadrarla. Una imagen recién elegida todavía no está en la
+  // carpeta de datos, así que no hay archivo que pedir: esto es lo único que
+  // permite verla antes de guardar el evento.
+  const [muestra, setMuestra] = useState<string | null>(null);
+
   // Los valores vivos, para que el listener del arrastre no se vuelva a
   // suscribir en cada cambio ni lea una lista de hace dos renders.
   const estado = useRef({ imagen, adjuntos, onImagen, onAdjuntos });
@@ -135,12 +140,15 @@ export function Archivos({
             <div
               className={encima === "imagen" ? "elegido encima" : "elegido"}
             >
-              <Vista carpeta={carpeta} imagen={imagen} />
+              <Vista carpeta={carpeta} imagen={imagen} muestra={muestra} />
               <span className="nombre">{nombreDeImagen(imagen)}</span>
               <button
                 type="button"
                 className="quitar"
-                onClick={() => onImagen({ tipo: "sin" })}
+                onClick={() => {
+                  onImagen({ tipo: "sin" });
+                  setMuestra(null);
+                }}
                 title="Quitar la imagen"
               >
                 ✕
@@ -190,8 +198,9 @@ export function Archivos({
         <Encuadre
           origen={encuadrando}
           onCerrar={() => setEncuadrando(null)}
-          onElegir={(recorte) => {
+          onElegir={(recorte, vista) => {
             onImagen({ tipo: "nueva", origen: encuadrando, recorte });
+            setMuestra(vista);
             setEncuadrando(null);
           }}
         />
@@ -203,20 +212,30 @@ export function Archivos({
 /**
  * La miniatura de la imagen elegida.
  *
- * Una que ya está guardada se pide a la carpeta de datos. Una recién elegida
- * todavía no se copió a ninguna parte, así que no hay nada que mostrar hasta
- * que se guarde el evento: en su lugar va el mismo hueco, con su nombre al lado.
+ * Una que ya está guardada se pide a la carpeta de datos. Una recién elegida no
+ * está en ninguna carpeta todavía, así que se usa lo que devolvió el encuadre,
+ * que es esa misma imagen ya recortada.
  */
-function Vista({ carpeta, imagen }: { carpeta: string; imagen: ImagenPedida }) {
-  if (imagen.tipo !== "guardada") return <span className="mini vacia" />;
+function Vista({
+  carpeta,
+  imagen,
+  muestra,
+}: {
+  carpeta: string;
+  imagen: ImagenPedida;
+  muestra: string | null;
+}) {
+  if (imagen.tipo === "guardada") {
+    return (
+      <img className="mini" src={urlDeArchivo(carpeta, imagen.miniatura)} alt="" />
+    );
+  }
 
-  return (
-    <img
-      className="mini"
-      src={urlDeArchivo(carpeta, imagen.miniatura)}
-      alt=""
-    />
-  );
+  if (imagen.tipo === "nueva" && muestra) {
+    return <img className="mini" src={muestra} alt="" />;
+  }
+
+  return <span className="mini vacia" />;
 }
 
 /** El nombre del archivo dentro de una ruta, sin importar el separador. */

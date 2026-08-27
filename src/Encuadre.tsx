@@ -5,8 +5,16 @@ import { vistaPreviaImagen, type Recorte } from "./api";
 /** El marco entero: lo que sale si no se toca nada. */
 const COMPLETA: Recorte = { x: 0, y: 0, ancho: 1, alto: 1 };
 
-/** Qué se está arrastrando. Las esquinas mueven un vértice; el centro, todo. */
-type Agarre = "centro" | "ne" | "no" | "se" | "so";
+/**
+ * Qué se está arrastrando: el marco entero, un lado o una esquina.
+ *
+ * Los puntos cardinales dicen qué borde se mueve. `no` mueve el izquierdo y el
+ * superior a la vez.
+ */
+type Agarre = "centro" | "n" | "s" | "e" | "o" | "no" | "ne" | "so" | "se";
+
+/** Los ocho tiradores, en el orden en que se dibujan. */
+const AGARRES = ["no", "n", "ne", "o", "e", "so", "s", "se"] as const;
 
 /** Lo mínimo que puede medir el marco, en fracción del lado. */
 const MINIMO = 0.05;
@@ -14,7 +22,8 @@ const MINIMO = 0.05;
 interface Props {
   origen: string;
   onCerrar: () => void;
-  onElegir: (recorte: Recorte | null) => void;
+  /** El recorte elegido y una miniatura de cómo quedó, para mostrarla ya. */
+  onElegir: (recorte: Recorte | null, muestra: string | null) => void;
 }
 
 /**
@@ -40,9 +49,12 @@ export function Encuadre({ origen, onCerrar, onElegir }: Props) {
   const [recortada, setRecortada] = useState<string | null>(null);
 
   const caja = useRef<HTMLDivElement>(null);
-  const arrastre = useRef<{ agarre: Agarre; x: number; y: number; desde: Recorte } | null>(
-    null,
-  );
+  const arrastre = useRef<{
+    agarre: Agarre;
+    x: number;
+    y: number;
+    desde: Recorte;
+  } | null>(null);
 
   useEffect(() => {
     let vigente = true;
@@ -127,62 +139,72 @@ export function Encuadre({ origen, onCerrar, onElegir }: Props) {
 
           {vista && (
             <div className="encuadre">
-              <div className="encuadre-lienzo" ref={caja}>
-                <img
-                  src={vista}
-                  alt=""
-                  draggable={false}
-                  onLoad={(e) =>
-                    setProporcion(
-                      e.currentTarget.naturalWidth / e.currentTarget.naturalHeight,
-                    )
-                  }
-                />
+              {/* El marco va en porcentajes de este contenedor, así que tiene
+                  que medir exactamente lo que la imagen: si sobrara margen, el
+                  marco quedaría corrido respecto a lo que se ve. */}
+              <div className="encuadre-caja">
+                <div className="encuadre-lienzo" ref={caja}>
+                  <img
+                    src={vista}
+                    alt=""
+                    draggable={false}
+                    onLoad={(e) =>
+                      setProporcion(
+                        e.currentTarget.naturalWidth /
+                          e.currentTarget.naturalHeight,
+                      )
+                    }
+                  />
 
-                {/* Lo de fuera del marco se apaga con cuatro bandas en vez de
+                  {/* Lo de fuera del marco se apaga con cuatro bandas en vez de
                     una sombra: así el interior queda sin nada encima y se ve el
                     color real. */}
-                <div className="sombra" style={{ inset: `0 0 ${(1 - marco.y) * 100}% 0` }} />
-                <div
-                  className="sombra"
-                  style={{ inset: `${(marco.y + marco.alto) * 100}% 0 0 0` }}
-                />
-                <div
-                  className="sombra"
-                  style={{
-                    inset: `${marco.y * 100}% ${(1 - marco.x) * 100}% ${(1 - marco.y - marco.alto) * 100}% 0`,
-                  }}
-                />
-                <div
-                  className="sombra"
-                  style={{
-                    inset: `${marco.y * 100}% 0 ${(1 - marco.y - marco.alto) * 100}% ${(marco.x + marco.ancho) * 100}%`,
-                  }}
-                />
+                  <div
+                    className="sombra"
+                    style={{ inset: `0 0 ${(1 - marco.y) * 100}% 0` }}
+                  />
+                  <div
+                    className="sombra"
+                    style={{ inset: `${(marco.y + marco.alto) * 100}% 0 0 0` }}
+                  />
+                  <div
+                    className="sombra"
+                    style={{
+                      inset: `${marco.y * 100}% ${(1 - marco.x) * 100}% ${(1 - marco.y - marco.alto) * 100}% 0`,
+                    }}
+                  />
+                  <div
+                    className="sombra"
+                    style={{
+                      inset: `${marco.y * 100}% 0 ${(1 - marco.y - marco.alto) * 100}% ${(marco.x + marco.ancho) * 100}%`,
+                    }}
+                  />
 
-                <div
-                  className="marco"
-                  style={{
-                    left: `${marco.x * 100}%`,
-                    top: `${marco.y * 100}%`,
-                    width: `${marco.ancho * 100}%`,
-                    height: `${marco.alto * 100}%`,
-                  }}
-                  onMouseDown={(e) => empezar("centro", e)}
-                >
-                  {(["no", "ne", "so", "se"] as const).map((esquina) => (
-                    <span
-                      key={esquina}
-                      className={`tirador ${esquina}`}
-                      onMouseDown={(e) => empezar(esquina, e)}
-                    />
-                  ))}
+                  <div
+                    className="marco"
+                    style={{
+                      left: `${marco.x * 100}%`,
+                      top: `${marco.y * 100}%`,
+                      width: `${marco.ancho * 100}%`,
+                      height: `${marco.alto * 100}%`,
+                    }}
+                    onMouseDown={(e) => empezar("centro", e)}
+                  >
+                    {AGARRES.map((agarre) => (
+                      <span
+                        key={agarre}
+                        className={`agarre ${agarre}`}
+                        onMouseDown={(e) => empezar(agarre, e)}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
 
               <div className="encuadre-vistas">
                 <p className="encuadre-nota">
-                  Arrastra el marco o sus esquinas. Así se va a ver:
+                  Arrastra el marco para moverlo, o sus bordes y esquinas para
+                  cambiar el tamaño. Así se va a ver:
                 </p>
 
                 <Muestra
@@ -209,7 +231,7 @@ export function Encuadre({ origen, onCerrar, onElegir }: Props) {
             type="button"
             className="btn pri"
             disabled={!vista}
-            onClick={() => onElegir(entera ? null : marco)}
+            onClick={() => onElegir(entera ? null : marco, recortada)}
           >
             Usar esta imagen
           </button>
@@ -241,11 +263,11 @@ function Muestra({
   const alCostado = panoramica === false;
 
   return (
-    <div className="muestra-sitio">
-      <span className="muestra-t">{titulo}</span>
+    <div className="sitio-caja">
+      <span className="sitio-t">{titulo}</span>
       <div
         className={
-          chica ? "muestra dia" : alCostado ? "muestra lado" : "muestra ancha"
+          chica ? "sitio dia" : alCostado ? "sitio lado" : "sitio ancha"
         }
       >
         {recortada && <img src={recortada} alt="" />}
@@ -283,20 +305,24 @@ function mover_marco(
     };
   }
 
-  const izquierda = agarre === "no" || agarre === "so";
-  const arriba = agarre === "no" || agarre === "ne";
+  // Qué bordes toca este agarre. Los que no toca se quedan donde estaban, que es
+  // lo que distingue arrastrar un lado de arrastrar una esquina.
+  const izquierda = agarre.includes("o");
+  const derecha = agarre.includes("e");
+  const arriba = agarre.startsWith("n");
+  const abajo = agarre.startsWith("s");
 
   const x1 = izquierda
     ? acotar(desde.x + dx, 0, desde.x + desde.ancho - MINIMO)
     : desde.x;
-  const x2 = izquierda
-    ? desde.x + desde.ancho
-    : acotar(desde.x + desde.ancho + dx, desde.x + MINIMO, 1);
+  const x2 = derecha
+    ? acotar(desde.x + desde.ancho + dx, x1 + MINIMO, 1)
+    : desde.x + desde.ancho;
 
   const y1 = arriba ? acotar(desde.y + dy, 0, desde.y + desde.alto - MINIMO) : desde.y;
-  const y2 = arriba
-    ? desde.y + desde.alto
-    : acotar(desde.y + desde.alto + dy, desde.y + MINIMO, 1);
+  const y2 = abajo
+    ? acotar(desde.y + desde.alto + dy, y1 + MINIMO, 1)
+    : desde.y + desde.alto;
 
   return { x: x1, y: y1, ancho: x2 - x1, alto: y2 - y1 };
 }

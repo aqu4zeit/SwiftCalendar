@@ -136,9 +136,11 @@ fn escribir(imagen: &DynamicImage, destino: &Path, con_alfa: bool) -> Result<(),
 ///
 /// El rectángulo llega en fracciones y se convierte acá: es el único sitio que
 /// conoce las medidas reales del archivo.
-fn recortar(imagen: &DynamicImage, recorte: Option<Recorte>) -> DynamicImage {
+fn recortar(imagen: DynamicImage, recorte: Option<Recorte>) -> DynamicImage {
+    // Por valor y no por referencia: sin recorte la imagen sigue de largo, en
+    // vez de copiarse entera para devolver lo mismo que entró.
     let Some(r) = recorte else {
-        return imagen.clone();
+        return imagen;
     };
 
     let ancho = imagen.width() as f32;
@@ -166,7 +168,15 @@ pub fn vista_previa(origen: &Path) -> Result<String, Error> {
     let imagen = image::open(origen)
         .map_err(|e| falla(&format!("no se pudo leer {}", origen.display()), e))?;
 
-    let reducida = ajustar(&imagen, LADO_VISTA);
+    // `thumbnail` en vez de `ajustar`: reduce en dos pasos y es varias veces más
+    // rápido. La diferencia de calidad no se ve en algo que solo sirve para
+    // colocar un marco encima y se descarta al cerrar el diálogo.
+    let reducida = if imagen.width() <= LADO_VISTA && imagen.height() <= LADO_VISTA {
+        imagen
+    } else {
+        imagen.thumbnail(LADO_VISTA, LADO_VISTA)
+    };
+
     let mut bytes: Vec<u8> = Vec::new();
 
     image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes, CALIDAD_JPEG)
@@ -215,19 +225,21 @@ pub fn guardar_imagen(
     let entera = image::open(origen)
         .map_err(|e| falla(&format!("no se pudo leer {}", origen.display()), e))?;
 
-    let imagen = recortar(&entera, recorte);
+    let imagen = recortar(entera, recorte);
     let con_alfa = imagen.color().has_alpha();
     let extension = Some(if con_alfa { "png" } else { "jpg" });
 
     let relativa_original = format!("assets/imagenes/{}", nombre_unico(extension));
     let relativa_miniatura = format!("assets/miniaturas/{}", nombre_unico(extension));
 
-    escribir(&ajustar(&imagen, LADO_ORIGINAL), &carpeta.join(&relativa_original), con_alfa)?;
-    escribir(
-        &ajustar(&imagen, LADO_MINIATURA),
-        &carpeta.join(&relativa_miniatura),
-        con_alfa,
-    )?;
+    // La miniatura sale de la reducida y no del archivo entero: bajar de 1920 a
+    // 320 recorre una fracción de los píxeles y el resultado es el mismo a
+    // simple vista.
+    let reducida = ajustar(&imagen, LADO_ORIGINAL);
+    let miniatura = ajustar(&reducida, LADO_MINIATURA);
+
+    escribir(&reducida, &carpeta.join(&relativa_original), con_alfa)?;
+    escribir(&miniatura, &carpeta.join(&relativa_miniatura), con_alfa)?;
 
     Ok(Imagen {
         original: relativa_original,
