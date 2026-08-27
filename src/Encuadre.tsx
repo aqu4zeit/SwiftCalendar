@@ -21,6 +21,8 @@ const MINIMO = 0.05;
 
 interface Props {
   origen: string;
+  /** Verdadero mientras el diálogo se va, para que alcance a animarse. */
+  saliendo: boolean;
   onCerrar: () => void;
   /** El recorte elegido y una miniatura de cómo quedó, para mostrarla ya. */
   onElegir: (recorte: Recorte | null, muestra: string | null) => void;
@@ -34,7 +36,7 @@ interface Props {
  * por separado permitiría reencuadrar, pero pondría la misma regla de recorte en
  * las tres vistas y en la base.
  */
-export function Encuadre({ origen, onCerrar, onElegir }: Props) {
+export function Encuadre({ origen, saliendo, onCerrar, onElegir }: Props) {
   const [vista, setVista] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [marco, setMarco] = useState<Recorte>(COMPLETA);
@@ -123,7 +125,10 @@ export function Encuadre({ origen, onCerrar, onElegir }: Props) {
   const entera = marco.ancho === 1 && marco.alto === 1;
 
   return (
-    <div className="velo interno" onClick={(e) => e.stopPropagation()}>
+    <div
+      className={saliendo ? "velo interno saliendo" : "velo interno"}
+      onClick={(e) => e.stopPropagation()}
+    >
       <div className="modal ancho">
         <div className="modal-cab">
           <h2>Encuadrar la imagen</h2>
@@ -138,7 +143,7 @@ export function Encuadre({ origen, onCerrar, onElegir }: Props) {
           {!error && !vista && <p className="parrafo">Preparando la imagen…</p>}
 
           {vista && (
-            <div className="encuadre">
+            <div className="encuadre aparece">
               {/* El marco va en porcentajes de este contenedor, así que tiene
                   que medir exactamente lo que la imagen: si sobrara margen, el
                   marco quedaría corrido respecto a lo que se ve. */}

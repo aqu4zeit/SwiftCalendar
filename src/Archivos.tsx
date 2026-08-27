@@ -9,6 +9,7 @@ import {
   type ImagenPedida,
 } from "./api";
 import { Encuadre } from "./Encuadre";
+import { useListaConSalida, usePresencia } from "./presencia";
 
 /** Los formatos que sabe decodificar el lado nativo. */
 const FORMATOS = ["png", "jpg", "jpeg", "gif", "bmp", "webp"];
@@ -46,6 +47,12 @@ export function Archivos({
   // carpeta de datos, así que no hay archivo que pedir: esto es lo único que
   // permite verla antes de guardar el evento.
   const [muestra, setMuestra] = useState<string | null>(null);
+
+  // El diálogo y la imagen se quedan puestos mientras se van. Sin esto React
+  // los desmonta en el mismo cuadro y no alcanzan a animar la salida.
+  const encuadre = usePresencia(encuadrando);
+  const elegida = usePresencia(imagen.tipo === "sin" ? null : imagen);
+  const enLista = useListaConSalida(adjuntos, claveDe);
 
   // Los valores vivos, para que el listener del arrastre no se vuelva a
   // suscribir en cada cambio ni lea una lista de hace dos renders.
@@ -127,10 +134,10 @@ export function Archivos({
       <div className="fila-campo">
         <label>IMAGEN</label>
         <div ref={zonaImagen}>
-          {imagen.tipo === "sin" ? (
+          {elegida.valor === null ? (
             <button
               type="button"
-              className={encima === "imagen" ? "campo suelta encima" : "campo suelta"}
+              className={clases("campo suelta", encima === "imagen" && "encima")}
               onClick={elegirImagen}
             >
               <span className="nombre">Arrastra una imagen o haz clic</span>
@@ -138,10 +145,18 @@ export function Archivos({
             </button>
           ) : (
             <div
-              className={encima === "imagen" ? "elegido encima" : "elegido"}
+              className={clases(
+                "elegido",
+                encima === "imagen" && "encima",
+                elegida.saliendo && "saliendo",
+              )}
             >
-              <Vista carpeta={carpeta} imagen={imagen} muestra={muestra} />
-              <span className="nombre">{nombreDeImagen(imagen)}</span>
+              <Vista
+                carpeta={carpeta}
+                imagen={elegida.valor}
+                muestra={muestra}
+              />
+              <span className="nombre">{nombreDeImagen(elegida.valor)}</span>
               <button
                 type="button"
                 className="quitar"
@@ -161,8 +176,11 @@ export function Archivos({
       <div className="fila-campo">
         <label>ARCHIVOS</label>
         <div ref={zonaAdjuntos} className="lista-archivos">
-          {adjuntos.map((adjunto, i) => (
-            <div className="elegido" key={claveDe(adjunto, i)}>
+          {enLista.map(({ item: adjunto, saliendo }) => (
+            <div
+              className={clases("elegido", saliendo && "saliendo")}
+              key={claveDe(adjunto)}
+            >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
               </svg>
@@ -173,7 +191,9 @@ export function Archivos({
               <button
                 type="button"
                 className="quitar"
-                onClick={() => onAdjuntos(adjuntos.filter((_, j) => j !== i))}
+                onClick={() =>
+                  onAdjuntos(adjuntos.filter((a) => claveDe(a) !== claveDe(adjunto)))
+                }
                 title="Quitar el archivo"
               >
                 ✕
@@ -194,12 +214,13 @@ export function Archivos({
         </div>
       </div>
 
-      {encuadrando && (
+      {encuadre.valor && (
         <Encuadre
-          origen={encuadrando}
+          origen={encuadre.valor}
+          saliendo={encuadre.saliendo}
           onCerrar={() => setEncuadrando(null)}
           onElegir={(recorte, vista) => {
-            onImagen({ tipo: "nueva", origen: encuadrando, recorte });
+            onImagen({ tipo: "nueva", origen: encuadre.valor as string, recorte });
             setMuestra(vista);
             setEncuadrando(null);
           }}
@@ -256,7 +277,18 @@ function nombreDeAdjunto(adjunto: AdjuntoPedido): string {
     : nombreDeRuta(adjunto.origen);
 }
 
-/** Dos archivos con el mismo nombre pueden convivir, así que la posición entra. */
-function claveDe(adjunto: AdjuntoPedido, i: number): string {
-  return `${i}-${adjunto.tipo === "guardado" ? adjunto.ruta : adjunto.origen}`;
+/**
+ * La clave de un adjunto para saber cuál se fue.
+ *
+ * Sale del archivo y no de la posición: si dependiera del índice, quitar uno del
+ * medio correría las claves de todos los siguientes y la animación de salida
+ * caería en el que no era.
+ */
+function claveDe(adjunto: AdjuntoPedido): string {
+  return adjunto.tipo === "guardado" ? adjunto.ruta : adjunto.origen;
+}
+
+/** Junta clases sin dejar espacios de las que no aplican. */
+function clases(...partes: (string | false | null | undefined)[]): string {
+  return partes.filter(Boolean).join(" ");
 }

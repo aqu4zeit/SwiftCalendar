@@ -62,7 +62,10 @@ export function MasOpciones(p: Props) {
         Más opciones
       </button>
 
-      {p.abierto && (
+      {/* Siempre montado, no dibujado condicionalmente: la altura solo se puede
+          animar si el contenido existe para poder medirlo. Cerrado queda a cero
+          y oculto, así que tampoco se llega a él con el tabulador. */}
+      <div className={p.abierto ? "cajon abierto" : "cajon"}>
         <div className="bloque-opciones">
           {p.permiteRepeticion && (
             <>
@@ -225,7 +228,7 @@ export function MasOpciones(p: Props) {
             </div>
           </div>
         </div>
-      )}
+      </div>
     </>
   );
 }

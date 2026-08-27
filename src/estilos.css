@@ -2190,7 +2190,11 @@ button:focus-visible {
 .selector-boton,
 .boton-hoy,
 .segmentado button,
-.opcion {
+.opcion,
+.campo.suelta,
+.elegido,
+.elegido .quitar,
+.ficha-fila.archivo {
   transition:
     background-color var(--responde) ease,
     border-color var(--responde) ease,
@@ -2659,4 +2663,70 @@ button:focus-visible {
 .sitio.dia {
   width: 40px;
   height: 40px;
+}
+
+/* --- lo que aparece y desaparece dentro del formulario --- */
+
+/*
+ * La imagen y cada archivo entran y salen igual que una ventana, con su propia
+ * curva. Sin esto el hueco cambia de contenido entre dos cuadros y el ojo lo
+ * lee como un parpadeo, no como algo que llegó.
+ */
+
+@keyframes archivo-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes archivo-sale {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.elegido {
+  animation: archivo-entra var(--entra-panel) var(--curva-entra);
+}
+
+.elegido.saliendo {
+  animation: archivo-sale var(--sale-panel) var(--curva-sale) forwards;
+  pointer-events: none;
+}
+
+/* El contenido del encuadre llega después que la ventana: la imagen reducida la
+   prepara el lado nativo. Entra por su cuenta en vez de aparecer de golpe
+   dentro de una ventana que ya estaba quieta. */
+
+.encuadre.aparece {
+  animation: archivo-entra var(--entra) var(--curva-entra);
+}
+
+/* --- el cajón de "Más opciones" --- */
+
+/*
+ * La altura se anima con la fila de una rejilla, que es lo único que sabe
+ * interpolar entre "lo que mida el contenido" y cero. Con `height` habría que
+ * medirlo desde JavaScript y volver a medirlo cada vez que cambie algo dentro.
+ */
+
+.cajon {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition:
+    grid-template-rows var(--entra) var(--curva-entra),
+    visibility var(--entra);
+}
+
+.cajon > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.cajon.abierto {
+  grid-template-rows: 1fr;
+  visibility: visible;
 }

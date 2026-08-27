@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import {
   agruparGrupos,
@@ -77,6 +78,24 @@ export default function App() {
     carpetaDeDatos()
       .then(setCarpeta)
       .catch((e: unknown) => setError(String(e)));
+  }, []);
+
+  // F11 pone y quita la pantalla completa.
+  //
+  // La ventana lleva la barra de Windows, así que maximizar ya se puede desde
+  // ella. Lo que no existe es la pantalla completa: el atajo es de la
+  // aplicación, no del sistema, y hay que atenderlo a mano.
+  useEffect(() => {
+    async function tecla(e: KeyboardEvent) {
+      if (e.key !== "F11") return;
+      e.preventDefault();
+
+      const ventana = getCurrentWindow();
+      await ventana.setFullscreen(!(await ventana.isFullscreen()));
+    }
+
+    document.addEventListener("keydown", tecla);
+    return () => document.removeEventListener("keydown", tecla);
   }, []);
 
   // Un grupo nuevo nace visible. Los que ya existían conservan su casilla, así
