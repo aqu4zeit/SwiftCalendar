@@ -97,15 +97,31 @@ export function PanelFiltros({
     if (tomado === null) return;
 
     function mover(e: MouseEvent) {
-      const filas = lista.current?.querySelectorAll(".fila-grupo");
-      if (!filas) return;
+      const caja = lista.current;
+      if (!caja) return;
 
-      // Sobre qué fila está el puntero. Fuera de la lista no pasa nada, en vez
-      // de saltar al primero o al último.
+      const filas = caja.querySelectorAll<HTMLElement>(".fila-grupo");
+
+      /*
+       * Sobre qué fila está el puntero, medido contra el diseño y no contra lo
+       * que se ve.
+       *
+       * El rectángulo en pantalla de una fila incluye el desplazamiento de su
+       * animación, así que preguntando por él el cursor caía sobre una fila a
+       * medio camino, se ordenaba otro intercambio, y ese intercambio movía las
+       * filas otra vez: la lista temblaba entre dos posiciones sin parar. El
+       * sitio que ocupa cada fila en el diseño solo cambia cuando cambia el
+       * orden, que es lo que hace falta para decidir.
+       */
+      const arriba = caja.getBoundingClientRect().top - caja.offsetTop;
+      const y = e.clientY - arriba;
+
+      // Fuera de la lista no pasa nada, en vez de saltar al primero o al último.
       let destino: number | null = null;
       filas.forEach((fila, i) => {
-        const caja = fila.getBoundingClientRect();
-        if (e.clientY >= caja.top && e.clientY <= caja.bottom) destino = i;
+        if (y >= fila.offsetTop && y <= fila.offsetTop + fila.offsetHeight) {
+          destino = i;
+        }
       });
 
       if (destino === null) return;
@@ -176,17 +192,32 @@ export function PanelFiltros({
    * devolverlas a donde estaban sin animación y soltarlas en el mismo cuadro:
    * el navegador anima el regreso. Medir después de pintar y antes de que se
    * vea es justo lo que hace `useLayoutEffect`.
+   *
+   * La medida es `offsetTop` y no el rectángulo en pantalla, porque el
+   * rectángulo incluye el desplazamiento que la animación anterior está
+   * aplicando. Moviendo el grupo antes de que esa animación termine, cada
+   * desplazamiento se calculaba sobre una posición a medio camino y se sumaba
+   * al anterior: por eso las filas salían disparadas cuanto más rápido se
+   * arrastraba. `offsetTop` da el sitio que ocupa la fila en el diseño, que es
+   * lo único que no cambia mientras algo se está moviendo.
    */
   useLayoutEffect(() => {
     nodos.current.forEach((nodo, id) => {
-      const ahora = nodo.getBoundingClientRect().top;
+      const ahora = nodo.offsetTop;
       const previo = antes.current.get(id);
       antes.current.set(id, ahora);
 
-      if (previo === undefined || previo === ahora) return;
+      if (previo === undefined) return;
+
+      // De dónde tiene que salir: del sitio donde se está viendo ahora mismo,
+      // no del que ocupaba en el diseño anterior. Si la fila venía a mitad de
+      // camino, salir del otro la haría dar un tirón hacia atrás antes de
+      // arrancar.
+      const desplazada = previo + trasladoActual(nodo) - ahora;
+      if (Math.abs(desplazada) < 0.5) return;
 
       nodo.style.transition = "none";
-      nodo.style.transform = `translateY(${previo - ahora}px)`;
+      nodo.style.transform = `translateY(${desplazada}px)`;
 
       // Pedir una medida obliga al navegador a resolver el estilo de arriba en
       // este instante. Sin esta línea funde los dos cambios en uno solo, la
@@ -195,6 +226,15 @@ export function PanelFiltros({
 
       nodo.style.transition = "";
       nodo.style.transform = "";
+    });
+
+    // Los grupos que ya no están dejan de ocupar sitio en los dos registros.
+    const vivos = new Set(grupos.todos.map((g) => g.id));
+    nodos.current.forEach((_, id) => {
+      if (!vivos.has(id)) {
+        nodos.current.delete(id);
+        antes.current.delete(id);
+      }
     });
   });
 
@@ -222,12 +262,13 @@ export function PanelFiltros({
         {enOrden.map((g) => (
           <div
             key={g.id}
+            /* Solo el nodo. Las posiciones no se tocan acá: esta función se
+               escribe dentro del JSX, así que React la ve nueva en cada render
+               y la llama con `null` antes de volver a darle el elemento. Borrar
+               la posición ahí la dejaba sin punto de partida y la fila saltaba
+               en vez de deslizarse. */
             ref={(nodo) => {
               if (nodo) nodos.current.set(g.id, nodo);
-              else {
-                nodos.current.delete(g.id);
-                antes.current.delete(g.id);
-              }
             }}
             className={
               tomado === g.id ? "fila-grupo arrastrando" : "fila-grupo"
@@ -328,4 +369,17 @@ export function hayFiltroApagado(
     gruposActivos.length < grupos.todos.length ||
     importanciasActivas.length < TODAS_LAS_IMPORTANCIAS.length
   );
+}
+
+/**
+ * Cuánto tiene desplazada una fila en este instante, en píxeles.
+ *
+ * Durante una transición el valor calculado es el del fotograma actual, que es
+ * justo lo que hace falta para continuar desde ahí en vez de reiniciar.
+ */
+function trasladoActual(nodo: HTMLElement): number {
+  const escrito = getComputedStyle(nodo).transform;
+  if (escrito === "none" || escrito === "") return 0;
+
+  return new DOMMatrixReadOnly(escrito).m42;
 }
