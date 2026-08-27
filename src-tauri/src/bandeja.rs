@@ -46,10 +46,12 @@ fn globo(pendientes: i64) -> String {
 
 /// El menú del ícono. Dos entradas, y no cambia nunca.
 ///
-/// La cuenta de recordatorios estuvo acá y se sacó: Windows dibuja este menú con
-/// `TrackPopupMenu` y no acepta estilo de ninguna clase, así que cada línea es
-/// una pantalla que no controlamos. Lo que esa línea decía ya lo dicen el globo
-/// del ícono y el círculo rojo, que sí dibujamos nosotros.
+/// Lo dibuja Windows y no acepta estilo: es la única pantalla del proyecto que
+/// no respeta el diseño. Se intentó reemplazarlo por una ventana nuestra y no
+/// salió; está pospuesto hasta después de la etapa 16, con lo aprendido anotado
+/// en el plan. Mientras tanto se queda en lo mínimo que Windows no puede afear:
+/// dos líneas, sin la cuenta de recordatorios, que ya dicen el globo del ícono y
+/// el círculo rojo.
 fn menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let abrir = MenuItem::with_id(app, "abrir", "Abrir calendario", true, None::<&str>)?;
 
@@ -98,8 +100,8 @@ pub fn poner_al_dia(app: &AppHandle, activa: bool, pendientes: i64) -> tauri::Re
             _ => {}
         })
         .on_tray_icon_event(|icono, evento| {
-            // Solo el clic izquierdo completo. El derecho es del menú, y actuar al
-            // apretar en vez de al soltar dispara con el botón todavía abajo.
+            // Al soltar y no al apretar: actuar al apretar dispara con el botón
+            // todavía abajo.
             if let TrayIconEvent::Click {
                 button: MouseButton::Left,
                 button_state: MouseButtonState::Up,
