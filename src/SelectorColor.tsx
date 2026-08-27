@@ -112,7 +112,7 @@ export function SelectorColor({ color, onCambiar }: Props) {
         type="button"
         className="color-libre"
         onClick={() => (abierto ? cerrar() : abrirDesde())}
-        title="Elegir otro color"
+        data-texto="Elegir otro color"
       >
         +
       </button>

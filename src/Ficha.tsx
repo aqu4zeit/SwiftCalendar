@@ -1,8 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { openPath } from "@tauri-apps/plugin-opener";
+import { save } from "@tauri-apps/plugin-dialog";
 
 import {
   borrarEvento,
+  exportarEvento,
   leerEvento,
   tamanoLegible,
   urlDeArchivo,
@@ -68,6 +70,7 @@ export function Ficha({
 }: Props) {
   const [detalle, setDetalle] = useState<EventoDetalle | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exportando, setExportando] = useState(false);
 
   // Qué acción está esperando que se elija el alcance, o la confirmación.
   const [preguntando, setPreguntando] = useState<"editar" | "borrar" | null>(
@@ -170,6 +173,30 @@ export function Ficha({
     setPreguntando(accion);
   }
 
+  /**
+   * Guardar el evento como archivo `.calev`.
+   *
+   * El diálogo entrega la ruta y el lado nativo escribe: la interfaz nunca toca
+   * bytes, igual que con las imágenes y los adjuntos.
+   */
+  async function exportar() {
+    if (!detalle) return;
+    setExportando(true);
+    try {
+      const ruta = await save({
+        defaultPath: `${detalle.titulo.trim() || "evento"}.calev`,
+        filters: [{ name: "Evento de SwiftCalendar", extensions: ["calev"] }],
+      });
+
+      // Cancelar el diálogo no es un error: no pasa nada y no se dice nada.
+      if (ruta !== null) await exportarEvento(detalle.id, ruta);
+    } catch (e: unknown) {
+      setError(String(e));
+    } finally {
+      setExportando(false);
+    }
+  }
+
   return (
     <div
       className={saliendo ? "velo saliendo" : "velo"}
@@ -179,6 +206,20 @@ export function Ficha({
     >
       <div className="ficha">
         <div className="ficha-cab">
+          {/* Exportar vive acá y no en el pie: el pie ya tiene Editar y Borrar,
+              y un tercer botón dejaría el destructivo entre otros dos. */}
+          <button
+            type="button"
+            className="cerrar"
+            data-texto="Exportar evento"
+            disabled={!detalle || exportando}
+            onClick={exportar}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 15V3M8 7l4-4 4 4M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4" />
+            </svg>
+          </button>
+
           <button type="button" className="cerrar" onClick={onCerrar}>
             ✕
           </button>

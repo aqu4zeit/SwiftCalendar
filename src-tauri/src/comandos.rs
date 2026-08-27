@@ -9,6 +9,7 @@ use tauri::{AppHandle, Manager, State};
 use crate::ajuste;
 use crate::archivo::{self, Carpeta};
 use crate::bandeja;
+use crate::compartir;
 use crate::db::Base;
 use crate::evento;
 use crate::grupo;
@@ -653,6 +654,71 @@ pub fn refrescar_bandeja(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn esconder_en_bandeja(app: AppHandle) -> Result<(), String> {
     bandeja::esconder(&app).map_err(|e| e.to_string())
+}
+
+/// Escribe el archivo `.calev` de un evento en la ruta elegida.
+///
+/// Dónde guardarlo lo decide el usuario en el diálogo, que vive en la interfaz
+/// como el resto de los diálogos. Escribirlo lo hace este lado: es el único que
+/// toca el disco, y mandar el texto a la interfaz para que lo devuelva sería
+/// usar el canal de transporte, que es justo lo que la decisión 83 descarta.
+#[tauri::command]
+pub fn exportar_evento(
+    base: State<'_, Base>,
+    carpeta: State<'_, Carpeta>,
+    id: i64,
+    ruta: String,
+) -> Result<(), String> {
+    let texto = {
+        let conexion = base.0.lock().expect("la conexión quedó envenenada");
+        compartir::exportar(&conexion, id, &carpeta.0).map_err(|e| e.to_string())?
+    };
+
+    std::fs::write(&ruta, texto).map_err(|e| format!("no se pudo escribir {ruta}: {e}"))
+}
+
+/// Un evento importado, con lo que la pantalla necesita saber antes de crearlo.
+#[derive(Debug, Serialize)]
+pub struct Importado {
+    #[serde(flatten)]
+    pub evento: compartir::Calev,
+    /// Si ya hay un evento con este identificador en la base.
+    pub duplicado: bool,
+    /// La imagen, ya dejada en disco, o nada. El formulario la trata como una
+    /// imagen recién elegida, con el mismo recorte y los mismos límites.
+    pub imagen_ruta: Option<String>,
+}
+
+/// Lee un archivo `.calev` y lo deja listo para prellenar el formulario.
+///
+/// No crea nada: hasta que el usuario guarde, esto es solo lectura.
+#[tauri::command]
+pub fn leer_calev(base: State<'_, Base>, ruta: String) -> Result<Importado, String> {
+    let texto = std::fs::read_to_string(&ruta)
+        .map_err(|e| format!("no se pudo leer {ruta}: {e}"))?;
+
+    let calev = compartir::leer(&texto).map_err(|e| e.to_string())?;
+
+    let duplicado = {
+        let conexion = base.0.lock().expect("la conexión quedó envenenada");
+        compartir::ya_esta(&conexion, &calev.uid).map_err(|e| e.to_string())?
+    };
+
+    let imagen_ruta = match &calev.imagen {
+        None => None,
+        Some(imagen) => Some(
+            compartir::imagen_a_temporal(imagen, &calev.uid)
+                .map_err(|e| e.to_string())?
+                .to_string_lossy()
+                .into_owned(),
+        ),
+    };
+
+    Ok(Importado {
+        evento: calev,
+        duplicado,
+        imagen_ruta,
+    })
 }
 
 #[cfg(test)]

@@ -140,7 +140,7 @@ export function FormularioGrupo({
                   className={c === color ? "muestra elegida" : "muestra"}
                   style={{ background: c }}
                   onClick={() => setColor(c)}
-                  title={c}
+                  data-texto={c}
                 />
               ))}
               <SelectorColor color={color} onCambiar={setColor} />

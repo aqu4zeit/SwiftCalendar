@@ -205,12 +205,15 @@ pub fn insertar(conexion: &Connection, nuevo: EventoNuevo) -> Result<i64, Error>
     let momento = texto(ahora());
 
     conexion.execute(
+        // `uid` lo genera SQLite: un identificador único entre máquinas, que es
+        // lo que viaja dentro del archivo `.calev`.
         "INSERT INTO evento (
             grupo_id, titulo, inicio, fin, todo_el_dia, hora_fija, zona_origen,
             importancia, color, descripcion, ubicacion, url, imagen, imagen_thumb,
-            rrule, recordatorio_min, creado, modificado
+            rrule, recordatorio_min, creado, modificado, uid
          ) VALUES (
-            ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18
+            ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18,
+            lower(hex(randomblob(16)))
          )",
         params![
             nuevo.grupo_id,
@@ -391,12 +394,17 @@ pub fn insertar_completo(conexion: &Connection, completo: &EventoCompleto) -> Re
     };
 
     conexion.execute(
+        // El identificador se genera de nuevo, igual que pasa con los adjuntos
+        // (decisión 89): al restaurar un borrado nada apunta al anterior, y un
+        // archivo `.calev` exportado antes deja de reconocerse como duplicado.
+        // Es el mismo precio que el proyecto ya aceptó, por la misma razón.
         "INSERT INTO evento (
             id, grupo_id, titulo, inicio, fin, todo_el_dia, hora_fija, zona_origen,
             importancia, color, descripcion, ubicacion, url, imagen, imagen_thumb,
-            rrule, recordatorio_min, creado, modificado
+            rrule, recordatorio_min, creado, modificado, uid
          ) VALUES (
-            ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19
+            ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19,
+            lower(hex(randomblob(16)))
          )",
         params![
             evento.id,

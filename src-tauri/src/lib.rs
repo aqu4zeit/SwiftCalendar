@@ -2,6 +2,7 @@ mod ajuste;
 mod archivo;
 mod bandeja;
 mod comandos;
+mod compartir;
 mod db;
 mod evento;
 mod grupo;
@@ -116,7 +117,9 @@ pub fn run() {
             comandos::borrar_notificacion,
             comandos::borrar_notificaciones_vistas,
             comandos::refrescar_bandeja,
-            comandos::esconder_en_bandeja
+            comandos::esconder_en_bandeja,
+            comandos::exportar_evento,
+            comandos::leer_calev
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -8,6 +8,7 @@ import {
   type Edicion,
   type EventoNuevo,
   type ImagenPedida,
+  type Importado,
   type Grupos,
   type Importancia,
 } from "./api";
@@ -35,7 +36,8 @@ import {
  */
 export type Apertura =
   | { modo: "crear"; fecha: string }
-  | { modo: "editar"; edicion: Edicion };
+  | { modo: "editar"; edicion: Edicion }
+  | { modo: "importar"; importado: Importado };
 
 /** Con qué imagen abre el formulario: la que ya tenía el evento, o ninguna. */
 function imagenActual(edicion: Edicion | null): ImagenPedida {
@@ -68,6 +70,8 @@ interface Props {
   activo: boolean;
   /** Verdadero mientras se está yendo. */
   saliendo: boolean;
+  /** Una advertencia que mostrar arriba del formulario, si la hay. */
+  aviso?: string;
   onCerrar: () => void;
   onGuardado: () => void;
   /** Crear un grupo sin salir del formulario. Devuelve el que se creó. */
@@ -163,12 +167,47 @@ function desdeEdicion(edicion: Edicion): Campos {
   };
 }
 
+/**
+ * El formulario cargado con lo que traía un archivo `.calev`.
+ *
+ * Importar no crea nada por su cuenta: abre este mismo formulario con los datos
+ * puestos, y guardar es un evento nuevo como cualquier otro. Así lo importado
+ * pasa por la misma validación, el mismo recorte de imagen y los mismos límites
+ * que lo escrito a mano, en vez de tener un camino propio.
+ *
+ * Lo que el archivo no trae nace con el valor por defecto: el grupo es el
+ * predeterminado y el recordatorio avisa al momento. Son decisiones de quien
+ * recibe, no de quien comparte, y acá se pueden cambiar antes de guardar.
+ */
+function desdeImportado(importado: Importado, grupoPorDefecto: number): Campos {
+  const enBlancoCon = enBlanco(grupoPorDefecto, importado.inicio.slice(0, 10));
+
+  return {
+    ...enBlancoCon,
+    titulo: importado.titulo,
+    importancia: importado.importancia,
+    horaInicio: importado.inicio.slice(11, 16),
+    fechaFin: importado.fin === null ? "" : importado.fin.slice(0, 10),
+    horaFin: importado.fin === null ? "" : importado.fin.slice(11, 16),
+    todoElDia: importado.cuando === "todo_el_dia",
+    adaptable: importado.cuando === "adaptable",
+    descripcion: importado.descripcion ?? "",
+    ubicacion: importado.ubicacion ?? "",
+    url: importado.url ?? "",
+    repeticion: importado.rrule ? desdeRrule(importado.rrule) : SIN_REPETICION,
+    // La imagen no se asigna acá: entra por el diálogo de encuadre, que es donde
+    // nacen el recorte y la previa. Asignarla ya hecha dejaba la fila con el
+    // nombre del archivo temporal y sin miniatura.
+  };
+}
+
 export function Formulario({
   grupos,
   apertura,
   carpeta,
   activo,
   saliendo,
+  aviso,
   onCerrar,
   onGuardado,
   onNuevoGrupo,
@@ -178,11 +217,12 @@ export function Formulario({
   // Una ocurrencia separada de su serie es un evento suelto: no se repite.
   const permiteRepeticion = edicion === null || edicion.ocurrencia === null;
 
-  const [inicial] = useState<Campos>(() =>
-    apertura.modo === "editar"
-      ? desdeEdicion(apertura.edicion)
-      : enBlanco(grupos.porDefecto.id, apertura.fecha),
-  );
+  const [inicial] = useState<Campos>(() => {
+    if (apertura.modo === "editar") return desdeEdicion(apertura.edicion);
+    if (apertura.modo === "importar")
+      return desdeImportado(apertura.importado, grupos.porDefecto.id);
+    return enBlanco(grupos.porDefecto.id, apertura.fecha);
+  });
 
   const [campos, setCampos] = useState<Campos>(inicial);
   const [masAbierto, setMasAbierto] = useState(false);
@@ -325,6 +365,8 @@ export function Formulario({
         </div>
 
         <div className="modal-cuerpo">
+          {aviso && <div className="aviso">{aviso}</div>}
+
           <div className="fila-campo">
             <label>TÍTULO</label>
             <input
@@ -478,6 +520,11 @@ export function Formulario({
 
           <Archivos
             carpeta={carpeta}
+            imagenInicial={
+              apertura.modo === "importar"
+                ? (apertura.importado.imagen_ruta ?? undefined)
+                : undefined
+            }
             imagen={campos.imagen}
             onImagen={(imagen) => set({ imagen })}
             adjuntos={campos.adjuntos}

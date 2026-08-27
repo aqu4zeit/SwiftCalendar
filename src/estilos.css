@@ -1296,6 +1296,25 @@ button:focus-visible {
   top: 10px;
   right: 10px;
   z-index: 2;
+  display: flex;
+  gap: 6px;
+}
+
+/* El ícono de exportar usa la misma caja que el aspa: son dos acciones de la
+   misma esquina y tienen que medir lo mismo. */
+
+.ficha-cab .cerrar svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ficha-cab .cerrar:disabled {
+  color: var(--tx-3);
 }
 
 /* Va encima de la imagen, así que necesita su propio fondo. Sin él, el aspa
@@ -3033,3 +3052,81 @@ button:focus-visible {
   color: #d98a7c;
 }
 
+
+/* --- aviso --- */
+
+/*
+ * No es un error: la operación se puede completar igual. Por eso no usa el rojo
+ * de `.msg-error`, que en esta aplicación significa "esto no se pudo hacer".
+ */
+
+.aviso {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #d9b87c;
+  background: rgba(207, 143, 60, 0.1);
+  border: 1px solid rgba(207, 143, 60, 0.3);
+  border-radius: 6px;
+  padding: 8px 11px;
+}
+
+/* --- globo de ayuda --- */
+
+/*
+ * Reemplaza al del sistema, que Windows dibuja siempre en claro y con su propio
+ * retraso. Es la misma razón por la que existen `Desplegable` y `SelectorColor`.
+ *
+ * Va por encima de todo, incluidos los velos internos, porque describe lo que
+ * esté arriba en ese momento. Y no recibe el ratón: si lo hiciera, aparecer
+ * debajo del cursor contaría como salir del botón y parpadearía sin parar.
+ */
+
+.globo {
+  position: fixed;
+  z-index: 200;
+  pointer-events: none;
+  max-width: 260px;
+  width: max-content;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #322e2c;
+  border: 1px solid var(--line-2);
+  color: var(--tx);
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 4px 14px rgba(9, 8, 7, 0.45);
+}
+
+/* El desplazamiento lo hace el transform y no el `top`, para que el punto de
+   anclaje sea el borde del botón sin tener que medir el globo antes. */
+
+.globo[data-arriba="true"] {
+  transform: translate(-50%, -100%);
+}
+
+.globo[data-arriba="false"] {
+  transform: translate(-50%, 0);
+}
+
+.globo {
+  animation: globo-entra var(--sale) var(--curva-entra);
+}
+
+.globo.saliendo {
+  animation: globo-sale var(--sale) var(--curva-sale) forwards;
+}
+
+/* Solo opacidad: mover un texto chico lo hace temblar, y acá ya lo desplaza el
+   transform que lo ancla. */
+
+@keyframes globo-entra {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes globo-sale {
+  to {
+    opacity: 0;
+  }
+}

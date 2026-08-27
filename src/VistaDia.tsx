@@ -87,7 +87,7 @@ export function VistaDia({
               type="button"
               className="icono-chico"
               onClick={onCrear}
-              title="Nuevo evento este día"
+              data-texto="Nuevo evento este día"
             >
               +
             </button>

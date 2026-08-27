@@ -277,7 +277,7 @@ function Seccion({
               type="button"
               className="aviso-ok"
               onClick={() => onMarcar(aviso.id)}
-              title="Marcar como vista"
+              data-texto="Marcar como vista"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M4 12l6 6L20 6" />
@@ -290,7 +290,7 @@ function Seccion({
               type="button"
               className="aviso-ok borrar"
               onClick={() => onBorrar(aviso.id)}
-              title="Borrar esta notificación"
+              data-texto="Borrar esta notificación"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 6l12 12M18 6L6 18" />

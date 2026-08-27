@@ -187,7 +187,9 @@ pub fn vista_previa(origen: &Path) -> Result<String, Error> {
 }
 
 /// Codifica en base64 sin traer una dependencia por veinte líneas.
-fn base64(bytes: &[u8]) -> String {
+///
+/// `compartir` la usa para meter la imagen dentro del archivo `.calev`.
+pub(crate) fn base64(bytes: &[u8]) -> String {
     const ALFABETO: &[u8; 64] =
         b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

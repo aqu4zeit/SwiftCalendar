@@ -9,7 +9,7 @@ export function BotonBorrar({ onBorrar }: Props) {
       type="button"
       className="borrar-campo"
       onClick={onBorrar}
-      title="Vaciar"
+      data-texto="Vaciar"
     >
       ✕
     </button>

@@ -286,7 +286,7 @@ export function PanelFiltros({
               type="button"
               className="editar-grupo"
               onClick={() => onEditarGrupo(g)}
-              title={`Editar ${g.nombre}`}
+              data-texto={`Editar ${g.nombre}`}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" />
@@ -295,7 +295,7 @@ export function PanelFiltros({
 
             <span
               className="asa"
-              title="Arrastrar para reordenar"
+              data-texto="Arrastrar para reordenar"
               onMouseDown={(e) => {
                 e.preventDefault();
                 tomar(g.id);

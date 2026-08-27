@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
+import { open } from "@tauri-apps/plugin-dialog";
 
 import {
   agruparGrupos,
@@ -8,6 +9,7 @@ import {
   contarPendientes,
   esconderEnBandeja,
   generarNotificaciones,
+  leerCalev,
   guardarAjuste,
   instanciaDe,
   NACIERON,
@@ -29,6 +31,7 @@ import { clave, fechaDe, fechaLarga, rejilla, type FormatoHora } from "./fecha";
 import { Ajustes } from "./Ajustes";
 import { AvisoBandeja } from "./AvisoBandeja";
 import { Ficha } from "./Ficha";
+import { Globo } from "./Globo";
 import { Formulario, type Apertura } from "./Formulario";
 import { FormularioGrupo } from "./FormularioGrupo";
 import { PanelAvisos } from "./PanelAvisos";
@@ -263,6 +266,27 @@ export default function App() {
       .finally(() => void esconderEnBandeja().catch(() => {}));
   }
 
+  /**
+   * Elegir un archivo `.calev` y abrir el formulario con sus datos.
+   *
+   * No se crea nada acá: importar termina en el mismo formulario de siempre, y
+   * el evento nace cuando el usuario guarda. Así lo importado se puede revisar y
+   * corregir antes de entrar a la base.
+   */
+  function importar() {
+    void open({
+      multiple: false,
+      filters: [{ name: "Evento de SwiftCalendar", extensions: ["calev"] }],
+    })
+      .then((ruta) => {
+        if (typeof ruta !== "string") return;
+        return leerCalev(ruta).then((importado) =>
+          setFormulario({ modo: "importar", importado }),
+        );
+      })
+      .catch((e: unknown) => setError(String(e)));
+  }
+
   function ir(anioDestino: number, mesDestino: number) {
     setAnio(anioDestino);
     setMes(mesDestino);
@@ -364,7 +388,7 @@ export default function App() {
           <button
             className={panelAbierto ? "icono on" : "icono"}
             onClick={() => setPanelAbierto(!panelAbierto)}
-            title="Filtros"
+            data-texto="Filtros"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M4 5h16M7 12h10M10 19h4" />
@@ -376,7 +400,7 @@ export default function App() {
             <button
               className={avisosAbiertos ? "icono on" : "icono"}
               onClick={() => setAvisosAbiertos(!avisosAbiertos)}
-              title={
+              data-texto={
                 pendientes === 0
                   ? "Notificaciones"
                   : `${pendientes} ${pendientes === 1 ? "pendiente" : "pendientes"}`
@@ -406,9 +430,20 @@ export default function App() {
           </div>
 
           <button
+            className="icono"
+            onClick={importar}
+            data-texto="Importar evento"
+            disabled={!grupos}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v12M8 11l4 4 4-4M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4" />
+            </svg>
+          </button>
+
+          <button
             className={ajustesAbiertos ? "icono on" : "icono"}
             onClick={() => setAjustesAbiertos(!ajustesAbiertos)}
-            title="Ajustes"
+            data-texto="Ajustes"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="3" />
@@ -506,6 +541,12 @@ export default function App() {
           grupos={grupos}
           apertura={formularioVisible.valor}
           carpeta={carpeta}
+          aviso={
+            formularioVisible.valor.modo === "importar" &&
+            formularioVisible.valor.importado.duplicado
+              ? "Este evento ya lo importaste antes. Si lo guardas quedará repetido."
+              : undefined
+          }
           activo={arriba === "formulario"}
           saliendo={formularioVisible.saliendo}
           onCerrar={() => setFormulario(null)}
@@ -537,6 +578,9 @@ export default function App() {
           }}
         />
       )}
+
+      {/* Uno solo para toda la aplicación, encima de todo lo demás. */}
+      <Globo />
 
       {grupoVisible.valor && (
         <FormularioGrupo

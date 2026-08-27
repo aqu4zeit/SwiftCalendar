@@ -20,6 +20,14 @@ interface Props {
   onImagen: (imagen: ImagenPedida) => void;
   adjuntos: AdjuntoPedido[];
   onAdjuntos: (adjuntos: AdjuntoPedido[]) => void;
+  /**
+   * Una imagen que ya está en disco y hay que encuadrar al abrir.
+   *
+   * La usa el formulario cuando viene de importar un archivo `.calev`. Entra por
+   * el mismo diálogo de encuadre que cualquier imagen elegida a mano: darle el
+   * valor ya hecho se saltaría el recorte y la previa, que nacen ahí.
+   */
+  imagenInicial?: string;
 }
 
 /**
@@ -35,13 +43,17 @@ export function Archivos({
   onImagen,
   adjuntos,
   onAdjuntos,
+  imagenInicial,
 }: Props) {
   const zonaImagen = useRef<HTMLDivElement>(null);
   const zonaAdjuntos = useRef<HTMLDivElement>(null);
   const [encima, setEncima] = useState<"imagen" | "adjuntos" | null>(null);
 
-  // La imagen elegida que todavía no se confirmó: primero se encuadra.
-  const [encuadrando, setEncuadrando] = useState<string | null>(null);
+  // La imagen elegida que todavía no se confirmó: primero se encuadra. Al
+  // importar, la del archivo ya está esperando desde el primer render.
+  const [encuadrando, setEncuadrando] = useState<string | null>(
+    imagenInicial ?? null,
+  );
 
   // Cómo quedó al encuadrarla. Una imagen recién elegida todavía no está en la
   // carpeta de datos, así que no hay archivo que pedir: esto es lo único que
@@ -164,7 +176,7 @@ export function Archivos({
                   onImagen({ tipo: "sin" });
                   setMuestra(null);
                 }}
-                title="Quitar la imagen"
+                data-texto="Quitar la imagen"
               >
                 ✕
               </button>
@@ -194,7 +206,7 @@ export function Archivos({
                 onClick={() =>
                   onAdjuntos(adjuntos.filter((a) => claveDe(a) !== claveDe(adjunto)))
                 }
-                title="Quitar el archivo"
+                data-texto="Quitar el archivo"
               >
                 ✕
               </button>

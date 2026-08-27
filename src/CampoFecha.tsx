@@ -63,7 +63,7 @@ export function CampoFecha({ valor, onCambiar, placeholder }: Props) {
           type="button"
           className="icono-cal"
           onClick={() => (abierto ? cerrar() : abrir())}
-          title="Elegir del calendario"
+          data-texto="Elegir del calendario"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="5" width="18" height="16" rx="2" />

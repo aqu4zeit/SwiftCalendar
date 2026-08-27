@@ -371,3 +371,37 @@ export function esconderEnBandeja(): Promise<void> {
 
 /** El aviso con que el lado nativo consulta antes de esconder la ventana. */
 export const PIDEN_ESCONDER = "bandeja://esconder";
+
+/** Un evento tal como viaja dentro de un archivo `.calev`. */
+export interface Calev {
+  calev: number;
+  uid: string;
+  titulo: string;
+  inicio: string;
+  fin: string | null;
+  cuando: Cuando;
+  zona_origen?: string;
+  importancia: Importancia;
+  descripcion?: string;
+  ubicacion?: string;
+  url?: string;
+  rrule?: string;
+}
+
+/** Lo leído de un archivo, con lo que la pantalla necesita antes de crear nada. */
+export interface Importado extends Calev {
+  /** Si ya hay un evento con este identificador. */
+  duplicado: boolean;
+  /** La imagen ya dejada en disco, para tratarla como una recién elegida. */
+  imagen_ruta: string | null;
+}
+
+/** Escribe el `.calev` del evento en la ruta que eligió el usuario. */
+export function exportarEvento(id: number, ruta: string): Promise<void> {
+  return invoke("exportar_evento", { id, ruta });
+}
+
+/** Lee un `.calev`. No crea nada: eso lo hace el formulario al guardar. */
+export function leerCalev(ruta: string): Promise<Importado> {
+  return invoke("leer_calev", { ruta });
+}
