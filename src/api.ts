@@ -198,6 +198,16 @@ export function listarAjustes(): Promise<Ajustes> {
 }
 
 /**
+ * Escribe un ajuste que ya existe y lo deja aplicado.
+ *
+ * La clave tiene que haber nacido en una migración: el lado nativo rechaza una
+ * que no conozca en vez de guardarla para que nadie la lea nunca.
+ */
+export function guardarAjuste(clave: string, valor: string): Promise<void> {
+  return invoke("guardar_ajuste", { clave, valor });
+}
+
+/**
  * La carpeta de datos, en absoluto. Se pide una vez al arrancar.
  *
  * Lo guardado es siempre relativo a esta carpeta, así que mostrar un archivo
@@ -338,3 +348,26 @@ export function borrarNotificacionesVistas(): Promise<number> {
 
 /** El aviso que emite el temporizador nativo cuando nacen notificaciones. */
 export const NACIERON = "notificaciones://nuevas";
+
+/**
+ * Vuelve a dibujar el ícono de la bandeja desde la base.
+ *
+ * Va después de cualquier cosa que mueva la cuenta de pendientes. No recibe la
+ * cuenta: el ícono se dibuja desde la misma fuente que alimenta al temporizador,
+ * así que no puede quedar contando algo distinto de lo que muestra la campana.
+ */
+export function refrescarBandeja(): Promise<void> {
+  return invoke("refrescar_bandeja");
+}
+
+/**
+ * Destruye la ventana y deja la aplicación viva en la bandeja.
+ *
+ * La promesa no alcanza a resolverse: quien la esperaría se va con la ventana.
+ */
+export function esconderEnBandeja(): Promise<void> {
+  return invoke("esconder_en_bandeja");
+}
+
+/** El aviso con que el lado nativo consulta antes de esconder la ventana. */
+export const PIDEN_ESCONDER = "bandeja://esconder";

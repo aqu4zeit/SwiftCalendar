@@ -21,7 +21,10 @@ tauri-build = { version = "2", features = [] }
 # `protocol-asset` sirve los archivos de la carpeta de datos a la interfaz. Sin
 # él, una imagen guardada en disco no se puede mostrar. Su alcance se declara en
 # `tauri.conf.json`.
-tauri = { version = "2", features = ["protocol-asset"] }
+#
+# `tray-icon` compila el ícono de la bandeja del sistema, e `image-png` es lo que
+# permite leer sus dos dibujos desde los bytes incrustados en el binario.
+tauri = { version = "2", features = ["protocol-asset", "tray-icon", "image-png"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

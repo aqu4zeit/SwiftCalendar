@@ -636,6 +636,14 @@ body {
   overflow-y: auto;
 }
 
+/* Cuerpo de párrafos o de filas sueltas, que no traen separación propia. */
+
+.modal-cuerpo.apilado {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .modal-pie {
   display: flex;
   justify-content: flex-end;
@@ -967,6 +975,93 @@ button:focus-visible {
   left: auto;
   right: 2px;
   background: var(--tx);
+}
+
+/* --- ajustes --- */
+
+.seccion {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--tx-3);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* La fila crece con su nota; el interruptor se queda arriba, junto al título. */
+
+.ajuste {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 4px 0;
+}
+
+.ajuste-que {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ajuste-titulo {
+  font-size: 13px;
+  color: var(--tx);
+}
+
+.ajuste-nota {
+  font-size: 12px;
+  color: var(--tx-3);
+  line-height: 1.5;
+}
+
+/* El interruptor de una fila de ajuste se alinea con su título, no con la caja. */
+
+.ajuste .sw {
+  margin-top: 2px;
+}
+
+/* --- casilla --- */
+
+.casilla {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--tx-2);
+  background: none;
+  border: none;
+  padding: 4px 0 0;
+  font-family: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.casilla:hover {
+  color: var(--tx);
+}
+
+.casilla .caja {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 3px;
+  border: 1px solid var(--line-2);
+  background: #302c2a;
+  position: relative;
+}
+
+/* La marca es media cruz girada: dos bordes de una caja sin relleno. */
+
+.casilla .caja.marcada::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 3px;
+  height: 7px;
+  border-right: 1.6px solid var(--tx);
+  border-bottom: 1.6px solid var(--tx);
+  transform: rotate(42deg);
 }
 
 .area {

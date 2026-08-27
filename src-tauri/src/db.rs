@@ -12,6 +12,7 @@ const MIGRACIONES: &[&str] = &[
     include_str!("../migrations/001_esquema_inicial.sql"),
     include_str!("../migrations/002_formato_hora.sql"),
     include_str!("../migrations/003_generado_hasta.sql"),
+    include_str!("../migrations/004_aviso_bandeja.sql"),
 ];
 
 /// La conexión, guardada como estado de la aplicación.

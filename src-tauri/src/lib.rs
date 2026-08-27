@@ -1,5 +1,6 @@
 mod ajuste;
 mod archivo;
+mod bandeja;
 mod comandos;
 mod db;
 mod evento;
@@ -15,7 +16,7 @@ mod recurrencia;
 use std::time::Duration;
 
 use chrono::Timelike;
-use tauri::{Emitter, Manager};
+use tauri::{Emitter, Manager, RunEvent, WindowEvent};
 
 /// Lo que falta para el próximo cambio de minuto.
 ///
@@ -41,7 +42,7 @@ const NACIERON: &str = "notificaciones://nuevas";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -55,8 +56,41 @@ pub fn run() {
             // El historial vive del lado nativo para sobrevivir al minimizar.
             app.manage(historial::Pila(Default::default()));
 
+            bandeja::sincronizar(app.handle()).expect("no se pudo montar la bandeja");
+
             arrancar_temporizador(app.handle().clone());
             Ok(())
+        })
+        .on_window_event(|ventana, evento| {
+            let app = ventana.app_handle();
+
+            // Sin bandeja no hay a dónde esconderse: la ventana se cierra y con
+            // ella la aplicación, que es lo que el ajuste apagado promete.
+            if !bandeja::montada(app) {
+                return;
+            }
+
+            match evento {
+                // Cerrar no cierra. Quién decide es la interfaz, que sabe si
+                // todavía hay que explicarlo.
+                WindowEvent::CloseRequested { api, .. } => {
+                    api.prevent_close();
+                    bandeja::pedir_esconder(app);
+                }
+
+                // Minimizar sí esconde de inmediato: no hay nada que explicar,
+                // porque el ícono queda a la vista en la bandeja.
+                //
+                // No existe un evento de minimizado; lo que llega es un cambio de
+                // tamaño, y hay que preguntarle a la ventana en qué quedó.
+                WindowEvent::Resized(_) => {
+                    if ventana.is_minimized().unwrap_or(false) {
+                        let _ = bandeja::esconder(app);
+                    }
+                }
+
+                _ => {}
+            }
         })
         .invoke_handler(tauri::generate_handler![
             comandos::eventos_en_rango,
@@ -66,6 +100,7 @@ pub fn run() {
             comandos::borrar_grupo,
             comandos::reordenar_grupos,
             comandos::listar_ajustes,
+            comandos::guardar_ajuste,
             comandos::carpeta_de_datos,
             comandos::vista_previa_imagen,
             comandos::leer_evento,
@@ -79,10 +114,26 @@ pub fn run() {
             comandos::marcar_vista,
             comandos::marcar_todas_vistas,
             comandos::borrar_notificacion,
-            comandos::borrar_notificaciones_vistas
+            comandos::borrar_notificaciones_vistas,
+            comandos::refrescar_bandeja,
+            comandos::esconder_en_bandeja
         ])
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    app.run(|app, evento| {
+        // Quedarse sin ventanas no es motivo para terminar mientras el ícono
+        // siga puesto: ahí vive el temporizador que genera los recordatorios.
+        //
+        // `code` distingue las dos salidas: viene vacío cuando se cerró la última
+        // ventana, y con valor cuando alguien pidió salir de verdad. Sin esa
+        // diferencia, "Salir" del menú tampoco podría cerrar la aplicación.
+        if let RunEvent::ExitRequested { code, api, .. } = evento {
+            if code.is_none() && bandeja::montada(app) {
+                api.prevent_exit();
+            }
+        }
+    });
 }
 
 /// El hilo que genera notificaciones mientras la aplicación vive.
@@ -111,6 +162,12 @@ fn arrancar_temporizador(app: tauri::AppHandle) {
                 // y no hay a quién avisarle. Los registros ya están en la base, así
                 // que se leen al restaurarla.
                 let _ = app.emit(NACIERON, cuantas);
+
+                // El ícono sí está siempre, y es lo único que el usuario ve
+                // mientras la ventana no existe.
+                if let Err(e) = bandeja::sincronizar(&app) {
+                    eprintln!("no se pudo poner al día la bandeja: {e}");
+                }
             }
             Err(e) => eprintln!("no se pudieron generar notificaciones: {e}"),
         }

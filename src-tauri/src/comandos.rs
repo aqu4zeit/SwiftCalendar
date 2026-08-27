@@ -4,10 +4,11 @@ use std::collections::{BTreeMap, HashMap};
 
 use chrono::{NaiveDate, NaiveDateTime};
 use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 
 use crate::ajuste;
 use crate::archivo::{self, Carpeta};
+use crate::bandeja;
 use crate::db::Base;
 use crate::evento;
 use crate::grupo;
@@ -617,6 +618,41 @@ pub fn marcar_vista(base: State<'_, Base>, id: i64) -> Result<(), String> {
 pub fn marcar_todas_vistas(base: State<'_, Base>) -> Result<usize, String> {
     let conexion = base.0.lock().expect("la conexión quedó envenenada");
     notificacion::marcar_todas_vistas(&conexion).map_err(|e| e.to_string())
+}
+
+/// Escribe un ajuste y lo deja aplicado.
+///
+/// Guardar y aplicar son el mismo acto: un ajuste escrito que todavía no rige
+/// deja dos verdades, la de la base y la de la pantalla, y la que gana depende
+/// de que alguien más se acuerde de llamar a otra cosa.
+#[tauri::command]
+pub fn guardar_ajuste(app: AppHandle, clave: String, valor: String) -> Result<(), String> {
+    {
+        let base = app.state::<Base>();
+        let conexion = base.0.lock().expect("la conexión quedó envenenada");
+        ajuste::guardar(&conexion, &clave, &valor).map_err(|e| e.to_string())?;
+    }
+
+    bandeja::sincronizar(&app)
+}
+
+/// Vuelve a mirar la base y deja la bandeja igual a lo que dice.
+///
+/// La interfaz lo llama después de tocar cualquier notificación. No recibe la
+/// cuenta por parámetro a propósito: la bandeja se dibuja desde la base, que es
+/// la misma fuente que alimenta al temporizador.
+#[tauri::command]
+pub fn refrescar_bandeja(app: AppHandle) -> Result<(), String> {
+    bandeja::sincronizar(&app)
+}
+
+/// Destruye la ventana y deja la aplicación viva en la bandeja.
+///
+/// Lo pide la interfaz, no el lado nativo, porque cerrar la ventana la primera
+/// vez pasa antes por el aviso que lo explica.
+#[tauri::command]
+pub fn esconder_en_bandeja(app: AppHandle) -> Result<(), String> {
+    bandeja::esconder(&app).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

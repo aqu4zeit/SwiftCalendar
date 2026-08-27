@@ -6,12 +6,16 @@ import {
   agruparGrupos,
   carpetaDeDatos,
   contarPendientes,
+  esconderEnBandeja,
   generarNotificaciones,
+  guardarAjuste,
   instanciaDe,
   NACIERON,
   eventosEnRango,
   listarAjustes,
   listarGrupos,
+  PIDEN_ESCONDER,
+  refrescarBandeja,
   reordenarGrupos,
   TODAS_LAS_IMPORTANCIAS,
   type Densidad,
@@ -22,6 +26,8 @@ import {
   type PorDia,
 } from "./api";
 import { clave, fechaDe, fechaLarga, rejilla, type FormatoHora } from "./fecha";
+import { Ajustes } from "./Ajustes";
+import { AvisoBandeja } from "./AvisoBandeja";
 import { Ficha } from "./Ficha";
 import { Formulario, type Apertura } from "./Formulario";
 import { FormularioGrupo } from "./FormularioGrupo";
@@ -45,6 +51,17 @@ export default function App() {
   const [carpeta, setCarpeta] = useState<string | null>(null);
   const [pendientes, setPendientes] = useState(0);
   const [avisosAbiertos, setAvisosAbiertos] = useState(false);
+
+  /*
+   * Los dos ajustes de la bandeja.
+   *
+   * Parten en el valor que no interrumpe: si la respuesta de la base todavía no
+   * llegó cuando el usuario cierra la ventana, no aparece un aviso a destiempo.
+   */
+  const [bandeja, setBandeja] = useState(true);
+  const [avisoVisto, setAvisoVisto] = useState(true);
+  const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
+  const [avisandoBandeja, setAvisandoBandeja] = useState(false);
 
   // Sube cada vez que algo cambia en las notificaciones, para que el panel
   // vuelva a pedir la lista sin que haya que pasarle los datos ya cargados.
@@ -88,12 +105,15 @@ export default function App() {
   // Sube cada vez que algo cambia en la base, para volver a pedir el mes.
   const [version, setVersion] = useState(0);
 
-  // Los ajustes y la carpeta se piden una vez: ninguno cambia mientras corre.
+  // La carpeta no cambia nunca; los ajustes solo desde su propio panel, que
+  // escribe en la base y refresca esto mismo.
   useEffect(() => {
     listarAjustes()
       .then((ajustes) => {
         if (ajustes.densidad === "compacta") setDensidad("compacta");
         if (ajustes.formato_hora === "12") setFormatoHora("12");
+        setBandeja(ajustes.bandeja === "1");
+        setAvisoVisto(ajustes.aviso_bandeja_visto === "1");
       })
       .catch((e: unknown) => setError(String(e)));
 
@@ -108,28 +128,31 @@ export default function App() {
    * el temporizador nativo, que avisa cuando nace alguna.
    */
   useEffect(() => {
-    let vigente = true;
-
-    const refrescar = () =>
-      contarPendientes()
-        .then((n) => {
-          if (!vigente) return;
-          setPendientes(n);
-          setVersionAvisos((v) => v + 1);
-        })
-        .catch((e: unknown) => vigente && setError(String(e)));
-
     generarNotificaciones()
-      .then(refrescar)
-      .catch((e: unknown) => vigente && setError(String(e)));
+      .then(refrescarAvisos)
+      .catch((e: unknown) => setError(String(e)));
 
-    const quitar = listen(NACIERON, () => void refrescar());
+    const quitar = listen(NACIERON, () => void refrescarAvisos());
 
-    return () => {
-      vigente = false;
-      void quitar.then((f) => f());
-    };
+    return () => void quitar.then((f) => f());
+    // `refrescarAvisos` solo escribe estado; no depende de nada que cambie.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /*
+   * Cerrar la ventana no la cierra: el lado nativo pregunta antes.
+   *
+   * La primera vez hay que explicar qué pasó, y quién sabe si ya se explicó es
+   * esta parte, que tiene los ajustes cargados.
+   */
+  useEffect(() => {
+    const quitar = listen(PIDEN_ESCONDER, () => {
+      if (avisoVisto) void esconderEnBandeja().catch(() => {});
+      else setAvisandoBandeja(true);
+    });
+
+    return () => void quitar.then((f) => f());
+  }, [avisoVisto]);
 
   // F11 pone y quita la pantalla completa.
   //
@@ -194,6 +217,52 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anio, mes, grupos, ocultos, importanciasActivas, version]);
 
+  /**
+   * Volver a contar los pendientes y dejar al día lo que los muestra.
+   *
+   * La campana y el ícono de la bandeja dibujan el mismo número, así que se
+   * ponen al día juntos: por caminos separados uno de los dos quedaría contando
+   * lo de antes cada vez que se agregue un lugar donde la cuenta cambia.
+   */
+  function refrescarAvisos() {
+    return contarPendientes()
+      .then((n) => {
+        setPendientes(n);
+        setVersionAvisos((v) => v + 1);
+        return refrescarBandeja();
+      })
+      .catch((e: unknown) => setError(String(e)));
+  }
+
+  /** Escribe un ajuste y lo refleja acá. El lado nativo ya lo dejó aplicado. */
+  function guardar(clave: string, valor: string) {
+    guardarAjuste(clave, valor)
+      .then(() => {
+        if (clave === "bandeja") setBandeja(valor === "1");
+        if (clave === "aviso_bandeja_visto") setAvisoVisto(valor === "1");
+      })
+      .catch((e: unknown) => setError(String(e)));
+  }
+
+  /**
+   * Dar por visto el aviso —si se pidió— y esconder la ventana.
+   *
+   * Lo uno antes de lo otro, y no las dos a la vez: destruir la ventana se lleva
+   * lo que todavía no haya cruzado al lado nativo, y el ajuste perdido haría
+   * reaparecer el aviso la próxima vez.
+   */
+  function esconder(noRepetir: boolean) {
+    setAvisandoBandeja(false);
+
+    const guardado = noRepetir
+      ? guardarAjuste("aviso_bandeja_visto", "1").then(() => setAvisoVisto(true))
+      : Promise.resolve();
+
+    void guardado
+      .catch((e: unknown) => setError(String(e)))
+      .finally(() => void esconderEnBandeja().catch(() => {}));
+  }
+
   function ir(anioDestino: number, mesDestino: number) {
     setAnio(anioDestino);
     setMes(mesDestino);
@@ -241,15 +310,19 @@ export default function App() {
    * sobre esta y nada más: si cada ventana decidiera por su cuenta, una tecla
    * cerraría varias a la vez.
    */
-  const arriba = grupoAbierto
-    ? "grupo"
-    : formulario
-      ? "formulario"
-      : abierto
-        ? "ficha"
-        : dia
-          ? "dia"
-          : null;
+  const arriba = avisandoBandeja
+    ? "aviso"
+    : ajustesAbiertos
+      ? "ajustes"
+      : grupoAbierto
+        ? "grupo"
+        : formulario
+          ? "formulario"
+          : abierto
+            ? "ficha"
+            : dia
+              ? "dia"
+              : null;
 
   // Cada ventana sobrevive a su cierre el tiempo que dura su animación.
   const diaVisible = usePresencia(dia);
@@ -257,6 +330,8 @@ export default function App() {
   const formularioVisible = usePresencia(formulario);
   const grupoVisible = usePresencia(grupoAbierto);
   const filtrosVisible = usePresencia(panelAbierto ? true : null);
+  const ajustesVisible = usePresencia(ajustesAbiertos ? true : null);
+  const avisoVisible = usePresencia(avisandoBandeja ? true : null);
 
   const filtrado = grupos
     ? hayFiltroApagado(grupos, gruposActivos, importanciasActivas)
@@ -319,14 +394,7 @@ export default function App() {
                 formatoHora={formatoHora}
                 version={versionAvisos}
                 saliendo={avisos.saliendo}
-                onCambio={() =>
-                  void contarPendientes()
-                    .then((n) => {
-                      setPendientes(n);
-                      setVersionAvisos((v) => v + 1);
-                    })
-                    .catch((e: unknown) => setError(String(e)))
-                }
+                onCambio={() => void refrescarAvisos()}
                 onAbrirEvento={(evento_id, ocurrencia) => {
                   setAvisosAbiertos(false);
                   abrirDesdeAviso(evento_id, ocurrencia);
@@ -336,6 +404,17 @@ export default function App() {
               />
             )}
           </div>
+
+          <button
+            className={ajustesAbiertos ? "icono on" : "icono"}
+            onClick={() => setAjustesAbiertos(!ajustesAbiertos)}
+            title="Ajustes"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" />
+            </svg>
+          </button>
 
           <button
             className="nuevo-evento"
@@ -432,6 +511,30 @@ export default function App() {
           onCerrar={() => setFormulario(null)}
           onGuardado={recargar}
           onNuevoGrupo={(alCrear) => setGrupoAbierto({ alCrear })}
+        />
+      )}
+
+      {ajustesVisible.valor && (
+        <Ajustes
+          bandeja={bandeja}
+          avisar={!avisoVisto}
+          activo={arriba === "ajustes"}
+          saliendo={ajustesVisible.saliendo}
+          onGuardar={guardar}
+          onCerrar={() => setAjustesAbiertos(false)}
+        />
+      )}
+
+      {avisoVisible.valor && (
+        <AvisoBandeja
+          activo={arriba === "aviso"}
+          saliendo={avisoVisible.saliendo}
+          onEntendido={esconder}
+          onAbrirAjustes={(noRepetir) => {
+            setAvisandoBandeja(false);
+            if (noRepetir) guardar("aviso_bandeja_visto", "1");
+            setAjustesAbiertos(true);
+          }}
         />
       )}
 
