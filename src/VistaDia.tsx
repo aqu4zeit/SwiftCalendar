@@ -28,6 +28,8 @@ interface Props {
   onCerrar: () => void;
   onAbrir: (instancia: Instancia) => void;
   onCrear: () => void;
+  /** Clic derecho sobre un evento de la lista. */
+  onMenu: (x: number, y: number, instancia: Instancia) => void;
 }
 
 export function VistaDia({
@@ -40,6 +42,7 @@ export function VistaDia({
   onCerrar,
   onAbrir,
   onCrear,
+  onMenu,
 }: Props) {
   const velo = useVelo(onCerrar);
 
@@ -124,6 +127,7 @@ export function VistaDia({
                   formato={formatoHora}
                   carpeta={carpeta}
                   onAbrir={onAbrir}
+                  onMenu={onMenu}
                 />
               ))}
             </div>
@@ -145,9 +149,17 @@ interface FilaProps {
   formato: FormatoHora;
   carpeta: string;
   onAbrir: (instancia: Instancia) => void;
+  onMenu: (x: number, y: number, instancia: Instancia) => void;
 }
 
-function Fila({ instancia, saliendo, formato, carpeta, onAbrir }: FilaProps) {
+function Fila({
+  instancia,
+  saliendo,
+  formato,
+  carpeta,
+  onAbrir,
+  onMenu,
+}: FilaProps) {
   const estilo =
     instancia.importancia === "urgente"
       ? { background: instancia.color }
@@ -159,6 +171,11 @@ function Fila({ instancia, saliendo, formato, carpeta, onAbrir }: FilaProps) {
     <div
       className={saliendo ? "dia-ev saliendo" : "dia-ev"}
       onClick={() => onAbrir(instancia)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onMenu(e.clientX, e.clientY, instancia);
+      }}
     >
       <span className="marca" style={estilo} />
       {/* La celda del mes no la dibuja (decisión 63), pero la vista día sí:

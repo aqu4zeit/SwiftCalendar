@@ -5,12 +5,14 @@ import { open } from "@tauri-apps/plugin-dialog";
 
 import {
   agruparGrupos,
+  borrarEvento,
   carpetaDeDatos,
   contarPendientes,
   deshacer,
   esconderEnBandeja,
   generarNotificaciones,
   leerCalev,
+  leerEvento,
   guardarAjuste,
   instanciaDe,
   NACIERON,
@@ -26,6 +28,7 @@ import {
   type Grupo,
   type Grupos,
   type Importancia,
+  type EventoDetalle,
   type Instancia,
   type Tema,
   type PorDia,
@@ -33,8 +36,19 @@ import {
 import { clave, fechaDe, fechaLarga, rejilla, type FormatoHora } from "./fecha";
 import { Ajustes } from "./Ajustes";
 import { AvisoBandeja } from "./AvisoBandeja";
+import {
+  edicionSegun,
+  exportarAArchivo,
+  ocurrenciaSegun,
+  PreguntaAlcance,
+  type Alcance,
+} from "./acciones";
 import { Ficha } from "./Ficha";
 import { Globo } from "./Globo";
+import { MenuContextual, type Entrada } from "./MenuContextual";
+
+/** Sobre qué se hizo el clic derecho: un evento, o un día sin nada. */
+type SobreQue = { instancia: Instancia } | { fecha: Date };
 import { Paleta, type Comando } from "./Paleta";
 import { Formulario, type Apertura } from "./Formulario";
 import { FormularioGrupo } from "./FormularioGrupo";
@@ -71,6 +85,27 @@ export default function App() {
   const [avisoVisto, setAvisoVisto] = useState(true);
   const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
   const [paletaAbierta, setPaletaAbierta] = useState(false);
+
+  /*
+   * El menú del clic derecho, y lo que quedó pendiente de él.
+   *
+   * `pedido` sobrevive al menú: elegir "Editar" lo cierra, pero todavía hay que
+   * leer el evento para saber si se repite, y solo entonces se sabe si hay que
+   * preguntar el alcance.
+   */
+  const [menu, setMenu] = useState<{
+    x: number;
+    y: number;
+    sobre: SobreQue;
+  } | null>(null);
+
+  const [pedido, setPedido] = useState<{
+    accion: "editar" | "borrar";
+    instancia: Instancia;
+    detalle: EventoDetalle;
+  } | null>(null);
+  const [alcance, setAlcance] = useState<Alcance>("solo_esta");
+  const [ocupado, setOcupado] = useState(false);
   const [avisandoBandeja, setAvisandoBandeja] = useState(false);
 
   // Sube cada vez que algo cambia en las notificaciones, para que el panel
@@ -337,6 +372,93 @@ export default function App() {
       .catch((e: unknown) => setError(String(e)));
   }, [filtroCargado, ocultos, importanciasActivas]);
 
+  /**
+   * Qué ofrece el menú, según sobre qué se hizo clic derecho.
+   *
+   * Se arma acá y no dentro del menú por la misma razón que los comandos de la
+   * paleta: esa pantalla sabe dibujar y colocarse, no qué se puede hacer.
+   */
+  function entradasPara(sobre: SobreQue): Entrada[] {
+    return "instancia" in sobre
+      ? [
+          { id: "editar", texto: "Editar evento" },
+          { id: "exportar", texto: "Exportar evento" },
+          { id: "borrar", texto: "Borrar evento", malo: true },
+        ]
+      : [{ id: "nuevo-aqui", texto: "Nuevo evento aquí" }];
+  }
+
+  /**
+   * Lo que se eligió en el menú.
+   *
+   * Editar y borrar leen el evento antes de nada: la instancia que tiene la
+   * celda no lleva la regla de repetición —decisión 73—, así que hasta acá no se
+   * sabe si hay que preguntar el alcance.
+   */
+  async function elegirDelMenu(id: string) {
+    const sobre = menu?.sobre;
+    setMenu(null);
+    if (!sobre) return;
+
+    if ("fecha" in sobre) {
+      if (id === "nuevo-aqui") setFormulario({ modo: "crear", fecha: clave(sobre.fecha) });
+      return;
+    }
+
+    const instancia = sobre.instancia;
+    try {
+      const detalle = await leerEvento(instancia.evento_id);
+
+      if (id === "exportar") return void (await exportarAArchivo(detalle));
+
+      // Editar un evento suelto no tiene nada que preguntar; borrarlo sí, porque
+      // la confirmación es la única red que tiene.
+      const esSerie = detalle.rrule != null;
+      if (id === "editar" && !esSerie) {
+        return setFormulario({
+          modo: "editar",
+          edicion: edicionSegun(detalle, instancia, false, "todas"),
+        });
+      }
+
+      setAlcance("solo_esta");
+      setPedido({ accion: id === "borrar" ? "borrar" : "editar", instancia, detalle });
+    } catch (e: unknown) {
+      setError(String(e));
+    }
+  }
+
+  /** Seguir adelante con lo que el menú dejó pendiente, ya elegido el alcance. */
+  async function seguirPedido() {
+    if (!pedido) return;
+    const { accion, instancia, detalle } = pedido;
+    const esSerie = detalle.rrule != null;
+
+    if (accion === "editar") {
+      setPedido(null);
+      setFormulario({
+        modo: "editar",
+        edicion: edicionSegun(detalle, instancia, esSerie, alcance),
+      });
+      return;
+    }
+
+    setOcupado(true);
+    try {
+      await borrarEvento(
+        instancia.evento_id,
+        ocurrenciaSegun(instancia, esSerie, alcance),
+      );
+      setPedido(null);
+      setVersion((v) => v + 1);
+      void refrescarAvisos();
+    } catch (e: unknown) {
+      setError(String(e));
+    } finally {
+      setOcupado(false);
+    }
+  }
+
   function ir(anioDestino: number, mesDestino: number) {
     setAnio(anioDestino);
     setMes(mesDestino);
@@ -386,7 +508,9 @@ export default function App() {
    */
   const arriba = avisandoBandeja
     ? "aviso"
-    : paletaAbierta
+    : pedido
+      ? "alcance"
+      : paletaAbierta
       ? "paleta"
       : ajustesAbiertos
       ? "ajustes"
@@ -555,6 +679,7 @@ export default function App() {
   const grupoVisible = usePresencia(grupoAbierto);
   const filtrosVisible = usePresencia(panelAbierto ? true : null);
   const paletaVisible = usePresencia(paletaAbierta ? true : null);
+  const menuVisible = usePresencia(menu);
   const ajustesVisible = usePresencia(ajustesAbiertos ? true : null);
   const avisoVisible = usePresencia(avisandoBandeja ? true : null);
 
@@ -675,6 +800,7 @@ export default function App() {
             onNavegar={ir}
             onAbrir={setAbierto}
             onAbrirDia={setDia}
+            onMenu={(x, y, sobre) => setMenu({ x, y, sobre })}
             filtrado={filtrado}
             onMostrarTodos={mostrarTodos}
           />
@@ -711,6 +837,9 @@ export default function App() {
           saliendo={diaVisible.saliendo}
           onCerrar={() => setDia(null)}
           onAbrir={setAbierto}
+          onMenu={(x, y, instancia) =>
+            setMenu({ x, y, sobre: { instancia } })
+          }
           onCrear={() =>
             setFormulario({
               modo: "crear",
@@ -782,6 +911,31 @@ export default function App() {
             if (noRepetir) guardar("aviso_bandeja_visto", "1");
             setAjustesAbiertos(true);
           }}
+        />
+      )}
+
+      {menuVisible.valor && (
+        <MenuContextual
+          entradas={entradasPara(menuVisible.valor.sobre)}
+          x={menuVisible.valor.x}
+          y={menuVisible.valor.y}
+          saliendo={menuVisible.saliendo}
+          onElegir={(id) => void elegirDelMenu(id)}
+          onCerrar={() => setMenu(null)}
+        />
+      )}
+
+      {pedido && (
+        <PreguntaAlcance
+          accion={pedido.accion}
+          detalle={pedido.detalle}
+          instancia={pedido.instancia}
+          esSerie={pedido.detalle.rrule != null}
+          alcance={alcance}
+          ocupado={ocupado}
+          onAlcance={setAlcance}
+          onCancelar={() => setPedido(null)}
+          onSeguir={() => void seguirPedido()}
         />
       )}
 

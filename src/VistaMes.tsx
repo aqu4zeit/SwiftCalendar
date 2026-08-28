@@ -21,6 +21,12 @@ interface Props {
   onAbrir: (instancia: Instancia) => void;
   /** Hacer clic en el resto de la celda abre la vista día. */
   onAbrirDia: (fecha: Date) => void;
+  /** Clic derecho sobre un evento, o sobre el hueco de una celda. */
+  onMenu: (
+    x: number,
+    y: number,
+    sobre: { instancia: Instancia } | { fecha: Date },
+  ) => void;
   /** Verdadero si el filtro está escondiendo algo. */
   filtrado: boolean;
   onMostrarTodos: () => void;
@@ -37,6 +43,7 @@ export function VistaMes({
   onAbrirDia,
   filtrado,
   onMostrarTodos,
+  onMenu,
 }: Props) {
   const dias = rejilla(anio, mes);
   const lunesActual = clave(lunesDeLaSemana(hoy));
@@ -70,6 +77,7 @@ export function VistaMes({
             onNavegar={onNavegar}
             onAbrir={onAbrir}
             onAbrirDia={onAbrirDia}
+            onMenu={onMenu}
           />
         ))}
       </div>

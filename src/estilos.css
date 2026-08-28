@@ -1611,8 +1611,8 @@ button:focus-visible {
 
 .opcion.on .radio::after {
   content: "";
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--tx-2);
 }
@@ -3340,4 +3340,90 @@ button:focus-visible {
   padding: 14px 10px;
   font-size: 13px;
   color: var(--tx-3);
+}
+
+/* --- menú del clic derecho --- */
+
+/*
+ * Vive dentro de nuestra ventana, al revés que el de la bandeja, así que se
+ * dibuja con CSS como todo lo demás. Posición fija porque el punto del clic está
+ * en coordenadas de la ventana, y dentro de un contenedor con scroll quedaría
+ * recortado — la misma razón de `flotante.ts`.
+ */
+
+/* La tapa se queda con el clic que cierra el menú: sin ella el clic seguía
+   hasta la celda y abría además lo que había debajo. No pinta nada. */
+
+.tapa-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 89;
+}
+
+.tapa-menu.saliendo {
+  pointer-events: none;
+}
+
+.menu-contextual {
+  position: fixed;
+  z-index: 90;
+  min-width: 168px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 5px;
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px var(--sombra-globo);
+  animation: menu-contextual-entra var(--sale) var(--curva-entra);
+}
+
+.menu-contextual.saliendo {
+  animation: menu-contextual-sale var(--sale) var(--curva-sale) forwards;
+  pointer-events: none;
+}
+
+.opcion-menu {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: var(--tx-2);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: default;
+}
+
+.opcion-menu:hover {
+  background: var(--hover-2);
+  color: var(--tx);
+}
+
+/* La que no se puede deshacer se distingue antes de apretarla, no después:
+   el color es suyo siempre, no algo que aparece al pasar por encima. */
+
+.opcion-menu.mala,
+.opcion-menu.mala:hover {
+  color: var(--mal-tx);
+}
+
+/* Crece desde el cursor: es de donde viene. Sin escalar, que hace temblar el
+   texto — la misma razón por la que ninguna ventana escala al entrar. */
+
+@keyframes menu-contextual-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes menu-contextual-sale {
+  to {
+    opacity: 0;
+  }
 }

@@ -1,10 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { openPath } from "@tauri-apps/plugin-opener";
-import { save } from "@tauri-apps/plugin-dialog";
 
 import {
   borrarEvento,
-  exportarEvento,
   leerEvento,
   tamanoLegible,
   urlDeArchivo,
@@ -13,6 +11,13 @@ import {
   type Grupos,
   type Instancia,
 } from "./api";
+import {
+  edicionSegun,
+  exportarAArchivo,
+  ocurrenciaSegun,
+  PreguntaAlcance,
+  type Alcance,
+} from "./acciones";
 import {
   duracion,
   fechaCompacta,
@@ -47,8 +52,6 @@ const NOMBRE_IMPORTANCIA = {
 } as const;
 
 /** Qué se hace cuando el evento se repite. */
-type Alcance = "solo_esta" | "todas";
-
 /**
  * Desde qué proporción una imagen va ancha arriba en vez de al costado.
  *
@@ -126,36 +129,18 @@ export function Ficha({
         : "lado";
   const esSerie = detalle?.rrule != null;
 
-  /**
-   * `null` toca la fila completa; la fecha de la ocurrencia toca solo esa.
-   *
-   * Un evento sin regla no tiene ocurrencias sueltas que separar, así que el
-   * alcance no significa nada y siempre se toca la fila. Preguntarlo acá evita
-   * que cada sitio que llama tenga que acordarse.
-   */
-  function ocurrenciaSegun(elegido: Alcance): string | null {
-    if (!esSerie || elegido === "todas") return null;
-    return instancia.ocurrencia;
-  }
-
   function editar(elegido: Alcance) {
     if (!detalle) return;
-
-    // Toda la serie se edita sobre la fila maestra, con sus propias fechas.
-    const deLaSerie = elegido === "todas";
-
-    onEditar({
-      detalle,
-      ocurrencia: ocurrenciaSegun(elegido),
-      inicio: deLaSerie ? detalle.inicio : instancia.inicio,
-      fin: deLaSerie ? detalle.fin : instancia.fin,
-    });
+    onEditar(edicionSegun(detalle, instancia, esSerie, elegido));
   }
 
   async function borrar(elegido: Alcance) {
     setBorrando(true);
     try {
-      await borrarEvento(instancia.evento_id, ocurrenciaSegun(elegido));
+      await borrarEvento(
+        instancia.evento_id,
+        ocurrenciaSegun(instancia, esSerie, elegido),
+      );
       onBorrado();
     } catch (e: unknown) {
       setError(String(e));
@@ -176,23 +161,11 @@ export function Ficha({
 
   const velo = useVelo(onCerrar);
 
-  /**
-   * Guardar el evento como archivo `.calev`.
-   *
-   * El diálogo entrega la ruta y el lado nativo escribe: la interfaz nunca toca
-   * bytes, igual que con las imágenes y los adjuntos.
-   */
   async function exportar() {
     if (!detalle) return;
     setExportando(true);
     try {
-      const ruta = await save({
-        defaultPath: `${detalle.titulo.trim() || "evento"}.calev`,
-        filters: [{ name: "Evento de SwiftCalendar", extensions: ["calev"] }],
-      });
-
-      // Cancelar el diálogo no es un error: no pasa nada y no se dice nada.
-      if (ruta !== null) await exportarEvento(detalle.id, ruta);
+      await exportarAArchivo(detalle);
     } catch (e: unknown) {
       setError(String(e));
     } finally {
@@ -322,74 +295,19 @@ export function Ficha({
       </div>
 
       {preguntando && (
-        <div className="velo interno" onClick={(e) => e.stopPropagation()}>
-          <div className="modal angosto">
-            <div className="modal-cab">
-              <h2>
-                {esSerie
-                  ? "Este evento se repite"
-                  : "¿Borrar este evento?"}
-              </h2>
-            </div>
-
-            <div className="modal-cuerpo">
-              {esSerie ? (
-                <>
-                  <p className="parrafo">
-                    {detalle?.titulo} se repite{" "}
-                    {textoRepeticion(desdeRrule(detalle?.rrule ?? ""))}.
-                  </p>
-
-                  <Opcion
-                    elegida={alcance === "solo_esta"}
-                    onElegir={() => setAlcance("solo_esta")}
-                    titulo="Solo esta"
-                    detalle={`${
-                      preguntando === "borrar" ? "Borra" : "Cambia"
-                    } únicamente el ${fechaCompacta(
-                      fechaDe(instancia.inicio),
-                    )}. El resto de la serie queda igual.`}
-                  />
-                  <Opcion
-                    elegida={alcance === "todas"}
-                    onElegir={() => setAlcance("todas")}
-                    titulo="Todas"
-                    detalle={`${
-                      preguntando === "borrar" ? "Borra" : "Cambia"
-                    } toda la serie, incluidas las que ya pasaron.`}
-                  />
-                </>
-              ) : (
-                <p className="parrafo">
-                  {detalle?.titulo}, {fechaCompacta(fechaDe(instancia.inicio))}.
-                  Esta acción no se puede deshacer desde acá.
-                </p>
-              )}
-            </div>
-
-            <div className="modal-pie">
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setPreguntando(null)}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className={
-                  preguntando === "borrar" ? "btn malo" : "btn pri"
-                }
-                disabled={borrando}
-                onClick={() =>
-                  preguntando === "borrar" ? borrar(alcance) : editar(alcance)
-                }
-              >
-                {preguntando === "borrar" ? "Borrar" : "Continuar"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <PreguntaAlcance
+          accion={preguntando}
+          detalle={detalle}
+          instancia={instancia}
+          esSerie={esSerie}
+          alcance={alcance}
+          ocupado={borrando}
+          onAlcance={setAlcance}
+          onCancelar={() => setPreguntando(null)}
+          onSeguir={() =>
+            preguntando === "borrar" ? void borrar(alcance) : editar(alcance)
+          }
+        />
       )}
     </div>
   );
@@ -549,28 +467,3 @@ function Detalles({
 }
 
 /** Una de las dos salidas de un evento repetido. */
-function Opcion({
-  elegida,
-  onElegir,
-  titulo,
-  detalle,
-}: {
-  elegida: boolean;
-  onElegir: () => void;
-  titulo: string;
-  detalle: string;
-}) {
-  return (
-    <button
-      type="button"
-      className={elegida ? "opcion on" : "opcion"}
-      onClick={onElegir}
-    >
-      <span className="radio" />
-      <span>
-        <span className="opcion-t">{titulo}</span>
-        <span className="opcion-s">{detalle}</span>
-      </span>
-    </button>
-  );
-}

@@ -14,6 +14,12 @@ interface Props {
   onNavegar: (anio: number, mes: number) => void;
   onAbrir: (instancia: Instancia) => void;
   onAbrirDia: (fecha: Date) => void;
+  /** Clic derecho sobre un evento, o sobre el hueco de la celda. */
+  onMenu: (
+    x: number,
+    y: number,
+    sobre: { instancia: Instancia } | { fecha: Date },
+  ) => void;
 }
 
 export function Celda({
@@ -26,6 +32,7 @@ export function Celda({
   onNavegar,
   onAbrir,
   onAbrirDia,
+  onMenu,
 }: Props) {
   const lista = useRef<HTMLDivElement>(null);
   const [desborda, setDesborda] = useState(false);
@@ -64,6 +71,13 @@ export function Celda({
           ? () => onAbrirDia(fecha)
           : () => onNavegar(fecha.getFullYear(), fecha.getMonth() + 1)
       }
+      // El hueco de la celda ofrece crear un evento ese día. En los días de otro
+      // mes no: esa celda es un atajo para navegar, no un día de este mes.
+      onContextMenu={(e) => {
+        if (!esDeEsteMes) return;
+        e.preventDefault();
+        onMenu(e.clientX, e.clientY, { fecha });
+      }}
     >
       <span className="numero">{fecha.getDate()}</span>
 
@@ -74,6 +88,7 @@ export function Celda({
             saliendo={dibujados[0].saliendo}
             formato={formatoHora}
             onAbrir={onAbrir}
+            onMenu={onMenu}
           />
         ) : (
           dibujados.map(({ item, saliendo }) => (
@@ -83,6 +98,7 @@ export function Celda({
               saliendo={saliendo}
               formato={formatoHora}
               onAbrir={onAbrir}
+              onMenu={onMenu}
             />
           ))
         )}
@@ -102,10 +118,21 @@ interface FilaProps {
   saliendo: boolean;
   formato: FormatoHora;
   onAbrir: (instancia: Instancia) => void;
+  onMenu: (
+    x: number,
+    y: number,
+    sobre: { instancia: Instancia } | { fecha: Date },
+  ) => void;
 }
 
 /** Un día con un solo evento tiene sitio para contar algo más. */
-function EventoSolo({ instancia, saliendo, formato, onAbrir }: FilaProps) {
+function EventoSolo({
+  instancia,
+  saliendo,
+  formato,
+  onAbrir,
+  onMenu,
+}: FilaProps) {
   const clases = [instancia.descripcion ? "ev-solo" : "ev-solo centrado"];
   if (saliendo) clases.push("saliendo");
 
@@ -116,6 +143,12 @@ function EventoSolo({ instancia, saliendo, formato, onAbrir }: FilaProps) {
 /** El clic en el evento no debe llegar a la celda, que abre el día. */
         e.stopPropagation();
         onAbrir(instancia);
+      }}
+      onContextMenu={(e) => {
+        // Igual que el clic izquierdo: no llega a la celda, que ofrece crear.
+        e.preventDefault();
+        e.stopPropagation();
+        onMenu(e.clientX, e.clientY, { instancia });
       }}
     >
       <Marca instancia={instancia} />
@@ -134,13 +167,24 @@ function EventoSolo({ instancia, saliendo, formato, onAbrir }: FilaProps) {
 }
 
 /** Desde dos eventos, cada uno es una fila de una línea. */
-function EventoCompacto({ instancia, saliendo, formato, onAbrir }: FilaProps) {
+function EventoCompacto({
+  instancia,
+  saliendo,
+  formato,
+  onAbrir,
+  onMenu,
+}: FilaProps) {
   return (
     <div
       className={saliendo ? "ev saliendo" : "ev"}
       onClick={(e) => {
         e.stopPropagation();
         onAbrir(instancia);
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onMenu(e.clientX, e.clientY, { instancia });
       }}
     >
       <Marca instancia={instancia} />
