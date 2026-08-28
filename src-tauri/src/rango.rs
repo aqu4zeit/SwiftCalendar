@@ -310,6 +310,7 @@ mod pruebas {
             rrule: None,
             recordatorio_min: None,
             adjuntos: Vec::new(),
+            uid: None,
         }
     }
 

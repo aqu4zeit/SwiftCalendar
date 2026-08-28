@@ -20,6 +20,8 @@ const PALETA = [
 interface Props {
   /** Ausente significa crear. */
   grupo?: Grupo;
+  /** Si es la ventana de arriba. Solo esa atiende Escape. */
+  activo: boolean;
   /** Verdadero mientras se está yendo. */
   saliendo: boolean;
   onCerrar: () => void;
@@ -30,6 +32,7 @@ interface Props {
 
 export function FormularioGrupo({
   grupo,
+  activo,
   saliendo,
   onCerrar,
   onGuardado,
@@ -52,6 +55,8 @@ export function FormularioGrupo({
   }
 
   useEffect(() => {
+    if (!activo) return;
+
     function tecla(evento: KeyboardEvent) {
       if (evento.key !== "Escape") return;
       if (confirmando) setConfirmando(false);

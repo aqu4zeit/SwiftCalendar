@@ -13,8 +13,14 @@ use crate::ajuste;
 use crate::db::Base;
 use crate::notificacion;
 
-/// El identificador del ícono. Que exista o no es el único estado de la bandeja:
-/// no hay una copia aparte que se pueda desincronizar de la realidad.
+/// El identificador del ícono.
+///
+/// El ícono está puesto mientras la aplicación corre, siempre. Antes aparecía y
+/// desaparecía con el ajuste, y apagar una preferencia sobre *cerrar la ventana*
+/// borraba algo de la barra de tareas en el acto, sin haber cerrado nada.
+///
+/// Lo que el ajuste decide ahora es solo qué pasa al cerrar, y eso se pregunta a
+/// la base cuando hace falta: `esconde_al_cerrar`.
 pub const ID: &str = "bandeja";
 
 /// La etiqueta de la ventana principal, la misma de `tauri.conf.json`.
@@ -62,17 +68,12 @@ fn menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     Menu::with_items(app, &[&abrir, &raya, &salir])
 }
 
-/// Deja la bandeja igual a lo que dice la base.
+/// Pone el ícono al día, o lo crea si todavía no está.
 ///
-/// Una sola función responde por el ícono entero —si existe, qué dibujo lleva y
-/// qué dice su globo—, así que ningún camino puede dejarla a medias. Los datos
-/// llegan por parámetro: acá no se consulta la base.
-pub fn poner_al_dia(app: &AppHandle, activa: bool, pendientes: i64) -> tauri::Result<()> {
-    if !activa {
-        app.remove_tray_by_id(ID);
-        return Ok(());
-    }
-
+/// Una sola función responde por él entero —qué dibujo lleva y qué dice su
+/// globo—, así que ningún camino puede dejarlo a medias. Los datos llegan por
+/// parámetro: acá no se consulta la base.
+pub fn poner_al_dia(app: &AppHandle, pendientes: i64) -> tauri::Result<()> {
     let dibujo = icono(pendientes > 0)?;
 
     // El menú no depende de la cuenta, así que se arma una sola vez al crear el
@@ -125,19 +126,35 @@ pub fn poner_al_dia(app: &AppHandle, activa: bool, pendientes: i64) -> tauri::Re
 pub fn sincronizar(app: &AppHandle) -> Result<(), String> {
     let base = app.state::<Base>();
 
-    let (activa, pendientes) = {
+    let pendientes = {
         let conexion = base.0.lock().expect("la conexión quedó envenenada");
-        let activa = ajuste::encendido(&conexion, "bandeja").map_err(|e| e.to_string())?;
-        let pendientes = notificacion::pendientes(&conexion).map_err(|e| e.to_string())?;
-        (activa, pendientes)
+        notificacion::pendientes(&conexion).map_err(|e| e.to_string())?
     };
 
-    poner_al_dia(app, activa, pendientes).map_err(|e| e.to_string())
+    poner_al_dia(app, pendientes).map_err(|e| e.to_string())
 }
 
-/// Si el ícono está puesto. Con la bandeja apagada, cerrar la ventana cierra todo.
-pub fn montada(app: &AppHandle) -> bool {
-    app.tray_by_id(ID).is_some()
+/// Si cerrar la ventana tiene que dejar la aplicación viva en la bandeja.
+///
+/// Se pregunta a la base y no a una copia en memoria: el ajuste ya vive ahí, y
+/// una segunda verdad que alguien tenga que mantener al día es justo lo que este
+/// proyecto evita en todas partes.
+///
+/// Si la base no se deja leer, la respuesta es que sí. No es una alternativa
+/// silenciosa: es que equivocarse hacia "sigue viva" deja al usuario con una
+/// aplicación de más, y equivocarse hacia el otro lado la cierra sin que lo haya
+/// pedido.
+pub fn esconde_al_cerrar(app: &AppHandle) -> bool {
+    let base = app.state::<Base>();
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+
+    match ajuste::encendido(&conexion, "bandeja") {
+        Ok(valor) => valor,
+        Err(e) => {
+            eprintln!("no se pudo leer el ajuste de la bandeja: {e}");
+            true
+        }
+    }
 }
 
 /// Destruye la ventana y deja solo el proceso nativo.

@@ -160,6 +160,13 @@ export interface EventoNuevo {
   adjuntos: AdjuntoPedido[];
   rrule: string | null;
   recordatorio_min: number | null;
+  /**
+   * El identificador que traía un archivo `.calev` importado.
+   *
+   * Un evento importado adopta el del archivo en vez de recibir uno nuevo: es el
+   * mismo evento, y es lo que permite avisar la próxima vez que se importe.
+   */
+  uid?: string;
 }
 
 /** Devuelve el identificador del evento creado. */
@@ -192,6 +199,8 @@ export function borrarEvento(
 export type Ajustes = Record<string, string>;
 
 export type Densidad = "comoda" | "compacta";
+
+export type Tema = "oscuro" | "claro";
 
 export function listarAjustes(): Promise<Ajustes> {
   return invoke("listar_ajustes");
@@ -404,4 +413,33 @@ export function exportarEvento(id: number, ruta: string): Promise<void> {
 /** Lee un `.calev`. No crea nada: eso lo hace el formulario al guardar. */
 export function leerCalev(ruta: string): Promise<Importado> {
   return invoke("leer_calev", { ruta });
+}
+
+/**
+ * Deshace la última acción. `false` si no había nada que deshacer.
+ *
+ * El historial vive en el lado nativo y cubre la sesión: al salir se descarta.
+ */
+export function deshacer(): Promise<boolean> {
+  return invoke("deshacer");
+}
+
+/** Rehace lo último deshecho. `false` si no había nada. */
+export function rehacer(): Promise<boolean> {
+  return invoke("rehacer");
+}
+
+/** Empaqueta la carpeta de datos entera en el archivo elegido. */
+export function exportarRespaldo(ruta: string): Promise<void> {
+  return invoke("exportar_respaldo", { ruta });
+}
+
+/**
+ * Deja un respaldo listo y cierra la aplicación.
+ *
+ * No lo aplica: la base está abierta. Se pone en su sitio en el próximo
+ * arranque, antes de abrirla. La promesa no alcanza a resolverse.
+ */
+export function restaurarRespaldo(ruta: string): Promise<void> {
+  return invoke("restaurar_respaldo", { ruta });
 }

@@ -338,6 +338,10 @@ export function Formulario({
         url: campos.url.trim() === "" ? null : campos.url.trim(),
         imagen: campos.imagen,
         adjuntos: campos.adjuntos,
+        // Al importar, el evento adopta el identificador del archivo: es el
+        // mismo evento, y es lo que hace que la próxima importación avise.
+        uid:
+          apertura.modo === "importar" ? apertura.importado.uid : undefined,
         rrule: aRrule(campos.repeticion),
         recordatorio_min: campos.recordatorio,
       };
@@ -365,7 +369,7 @@ export function Formulario({
         </div>
 
         <div className="modal-cuerpo">
-          {aviso && <div className="aviso">{aviso}</div>}
+          {aviso && <div className="advertencia">{aviso}</div>}
 
           <div className="fila-campo">
             <label>TÍTULO</label>
@@ -549,7 +553,7 @@ export function Formulario({
           />
 
           {seSolapa && (
-            <div className="aviso">
+            <div className="advertencia">
               El evento dura más que su intervalo de repetición, así que una
               ocurrencia alcanza a la siguiente y vas a verlo dos veces en los
               días compartidos. Se puede crear igual.

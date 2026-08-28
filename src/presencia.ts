@@ -59,10 +59,18 @@ export interface EnLista<T> {
  * Un evento que se borra o que un filtro esconde desaparece de la lista, y React
  * lo desmonta en el mismo cuadro. Acá se queda en el sitio que tenía, marcado
  * como saliendo, hasta que termina su animación.
+ *
+ * `clave` dice qué elemento es cuál para React. `identidad` dice si la cosa
+ * sigue estando, y por defecto son la misma. Se separan cuando la clave lleva
+ * algo que puede cambiar sin que el elemento se haya ido: la clave de un evento
+ * incluye su ocurrencia, así que mover su hora —o deshacer esa edición— lo hacía
+ * pasar por uno que se va y otro que llega, y durante la animación se veían los
+ * dos a la vez.
  */
 export function useListaConSalida<T>(
   items: T[],
   clave: (item: T) => string,
+  identidad: (item: T) => string = clave,
 ): EnLista<T>[] {
   const [lista, setLista] = useState<EnLista<T>[]>(() =>
     items.map((item) => ({ item, saliendo: false })),
@@ -77,15 +85,17 @@ export function useListaConSalida<T>(
         previas.every((e, i) => !e.saliendo && e.item === items[i]);
       if (igual) return previas;
 
-      const claves = new Set(items.map(clave));
+      const presentes = new Set(items.map(identidad));
       const resultado: EnLista<T>[] = items.map((item) => ({
         item,
         saliendo: false,
       }));
 
-      // Los que ya no están vuelven a su posición anterior, marcados.
+      // Los que ya no están vuelven a su posición anterior, marcados. Se
+      // pregunta por la identidad y no por la clave: uno que solo cambió de hora
+      // sigue estando, aunque su clave sea otra.
       previas.forEach((anterior, indice) => {
-        if (claves.has(clave(anterior.item))) return;
+        if (presentes.has(identidad(anterior.item))) return;
         resultado.splice(Math.min(indice, resultado.length), 0, {
           item: anterior.item,
           saliendo: true,

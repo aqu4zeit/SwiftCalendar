@@ -6,6 +6,7 @@ use rusqlite::Connection;
 
 use crate::evento;
 use crate::grupo;
+use crate::notificacion;
 use crate::modelo::{Adjunto, Error, Evento, EventoCompleto, Grupo, Notificacion};
 use crate::ocurrencia;
 
@@ -35,6 +36,14 @@ pub enum Accion {
         maestro_id: i64,
         fecha_original: String,
     },
+    /// Una notificación que el usuario borró de su lista.
+    ///
+    /// Entró al historial recién en la etapa 16: antes era registrar algo que
+    /// nadie podía invocar, porque `Ctrl+Z` no existía.
+    NotificacionBorrada(notificacion::Fila),
+    /// La reversión de la anterior, que vuelve a quitarla.
+    NotificacionDevuelta(notificacion::Fila),
+
     /// La reversión de la anterior. Guarda el reemplazo para poder devolverlo.
     OcurrenciaDevuelta {
         maestro_id: i64,
@@ -58,6 +67,15 @@ fn revertir(conexion: &Connection, accion: Accion) -> Result<Accion, Error> {
             adjuntos,
         } => evento::escribir(conexion, &antes, notificaciones.as_deref(), &adjuntos),
         Accion::EventoBorrado(completo) => evento::restaurar(conexion, &completo),
+
+        Accion::NotificacionBorrada(fila) => {
+            notificacion::devolver(conexion, &fila)?;
+            Ok(Accion::NotificacionDevuelta(fila))
+        }
+        Accion::NotificacionDevuelta(fila) => {
+            notificacion::borrar(conexion, fila.id)?;
+            Ok(Accion::NotificacionBorrada(fila))
+        }
 
         Accion::OcurrenciaExcluida {
             maestro_id,

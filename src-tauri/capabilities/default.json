@@ -12,6 +12,9 @@
       "identifier": "opener:allow-open-path",
       "allow": [
         {
+          "path": "$DOCUMENT/SwiftCalendar"
+        },
+        {
           "path": "$DOCUMENT/SwiftCalendar/**"
         }
       ]

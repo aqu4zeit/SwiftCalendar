@@ -46,6 +46,13 @@ image = { version = "0.25", default-features = false, features = [
 ] }
 # Abre el selector de archivos de Windows para elegir la imagen.
 tauri-plugin-dialog = "2"
+# Empaqueta la carpeta de datos en un solo archivo. Sin las opciones por
+# defecto: traen cifrado y cuatro compresores más que un respaldo no usa.
+zip = { version = "8", default-features = false, features = [
+  "deflate-flate2-zlib-rs",
+] }
+# Registra la aplicación para que Windows la abra al iniciar sesión.
+tauri-plugin-autostart = "2"
 
 
 # Las dependencias se compilan optimizadas incluso en desarrollo.

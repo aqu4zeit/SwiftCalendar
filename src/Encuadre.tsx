@@ -83,12 +83,19 @@ export function Encuadre({ origen, saliendo, onCerrar, onElegir }: Props) {
     };
   }, [vista, marco]);
 
+  /*
+   * Es la capa más interna que puede haber abierta, así que se queda con la
+   * tecla en vez de dejarla seguir. En fase de captura llega antes que el
+   * formulario que lo contiene; sin eso, un Escape cerraba los dos.
+   */
   useEffect(() => {
     function tecla(e: KeyboardEvent) {
-      if (e.key === "Escape") onCerrar();
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      onCerrar();
     }
-    document.addEventListener("keydown", tecla);
-    return () => document.removeEventListener("keydown", tecla);
+    document.addEventListener("keydown", tecla, true);
+    return () => document.removeEventListener("keydown", tecla, true);
   }, [onCerrar]);
 
   function empezar(agarre: Agarre, e: React.MouseEvent) {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type React from "react";
 
 /** Paneles que se abren sobre un campo sin quedar cortados. */
 export interface Posicion {
@@ -95,4 +96,27 @@ export function useFlotante(alto: number) {
   }, [abierto]);
 
   return { ancla, panel, posicion, abierto, saliendo, abrir, cerrar };
+}
+
+/**
+ * Cerrar una ventana al hacer clic fuera, sin cerrarla al seleccionar texto.
+ *
+ * Mirar solo el clic no basta: al arrastrar desde dentro y soltar sobre el velo,
+ * el navegador dispara el clic sobre el ancestro común, que es el velo, y la
+ * ventana se cerraba en mitad de una selección. Cuenta como clic fuera solo si
+ * el gesto empezó Y terminó en el velo.
+ */
+export function useVelo(onCerrar: () => void) {
+  const empezoFuera = useRef(false);
+
+  return {
+    onMouseDown(evento: MouseEvent | React.MouseEvent) {
+      empezoFuera.current = evento.target === evento.currentTarget;
+    },
+    onClick(evento: MouseEvent | React.MouseEvent) {
+      if (evento.target === evento.currentTarget && empezoFuera.current) {
+        onCerrar();
+      }
+    },
+  };
 }

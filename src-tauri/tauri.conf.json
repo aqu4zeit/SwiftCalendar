@@ -12,6 +12,8 @@
   "app": {
     "windows": [
       {
+        "label": "main",
+        "create": false,
         "title": "SwiftCalendar",
         "width": 1280,
         "height": 860,

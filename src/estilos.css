@@ -17,10 +17,108 @@
   --scroll: #3a3634;
   --scroll-activo: #4f4a46;
 
+  /* Superficies y estados. Antes estaban escritos a mano en cada regla, lo que
+     hacía imposible un segundo tema sin repasar sesenta sitios. */
+  --hover: #2f2b29;
+  --hover-2: #302c2a;
+  --activo: #3b3633;
+  --borde-activo: #4a4542;
+  --tx-apagado: #4a453f;
+  --tx-inactivo: #4f4a45;
+  --semana: #201d1b;
+  --celda-hoy: #241d1b;
+  --evento: #232120;
+  --evento-hover: #2b2827;
+  --pie: #221f1e;
+  --inactivo: #242120;
+  --segmento-on: #332f2d;
+  --opcion-on: #2e2a28;
+  --separador: #443f3a;
+  --globo-fondo: #322e2c;
+
+  /* Lo que salió mal, y lo que conviene saber sin que impida seguir. */
+  --mal-tx: #d98a7c;
+  --mal-fondo: #2b2320;
+  --mal-borde: #5c3a35;
+  --mal-borde-2: #7a4038;
+  --adv-tx: #d9b8a5;
+  --adv-borde: #4d3b33;
+
+  /* Velos y sombras. */
+  --velo: rgba(9, 8, 7, 0.62);
+  --velo-2: rgba(9, 8, 7, 0.5);
+  --sombra-globo: rgba(9, 8, 7, 0.45);
+  --esquina: rgba(19, 17, 16, 0.72);
+  --esquina-hover: rgba(19, 17, 16, 0.88);
+  --tapa-filtro: rgba(19, 17, 16, 0.86);
+
   /* Alturas de las filas de la celda: mínimo, máximo y tope de la tarjeta. */
   --fila-min: 24px;
   --fila-max: 38px;
   --tarjeta-max: 126px;
+}
+
+/*
+ * El tema claro.
+ *
+ * Redefine la paleta y nada más: ninguna regla del archivo sabe en qué tema
+ * está. Por eso el paso previo fue sacar los sesenta colores escritos a mano,
+ * no agregar un selector delante de cada uno.
+ *
+ * Sigue siendo cálido. Un gris neutro al lado del rojo de "hoy" y de los colores
+ * de grupo, que son todos cálidos, los hace ver sucios.
+ */
+
+:root[data-tema="claro"] {
+  --bg: #efeae2;
+  --cell: #fffdfa;
+  --cell-out: #f4f0e8;
+  --panel: #faf7f2;
+  --raised: #fffdfa;
+  --campo: #f3efe8;
+  --line: #ded6ca;
+  --line-2: #cec7bb;
+  --tx: #241f1b;
+  --tx-2: #5e574e;
+  --tx-3: #8a8176;
+  --hoy: #c2452f;
+  --scroll: #cec7bb;
+  --scroll-activo: #a79d90;
+
+  --hover: #ebe5dc;
+  --hover-2: #ebe5dc;
+  --activo: #dcd3c5;
+  --borde-activo: #c3b9a9;
+  --tx-apagado: #b4aba0;
+  --tx-inactivo: #b4aba0;
+  /* A seis u ocho puntos de `--cell`, igual que en el oscuro. Estaba a veinte, y
+     sobre ese beige el evento —que también es beige— desaparecía. */
+  --semana: #f8f4ed;
+  --celda-hoy: #fbeae5;
+  --evento: #e4dbcb;
+  --evento-hover: #d8cdb9;
+  --pie: #f4f0e9;
+  --inactivo: #ece7df;
+  --segmento-on: #dcd3c5;
+  --opcion-on: #ebe5dc;
+  --separador: #c3b9a9;
+  --globo-fondo: #fffdfa;
+
+  --mal-tx: #a3392a;
+  --mal-fondo: #fbeeea;
+  --mal-borde: #e0b3aa;
+  --mal-borde-2: #cf8677;
+  --adv-tx: #85511f;
+  --adv-borde: #e5c9a6;
+
+  /* Sobre claro el velo tiñe en vez de apagar: el negro puro se ve sucio al
+     lado de una paleta cálida. */
+  --velo: rgba(60, 51, 42, 0.34);
+  --velo-2: rgba(60, 51, 42, 0.24);
+  --sombra-globo: rgba(60, 51, 42, 0.2);
+  --esquina: rgba(255, 253, 250, 0.82);
+  --esquina-hover: rgba(255, 253, 250, 0.95);
+  --tapa-filtro: rgba(250, 247, 242, 0.86);
 }
 
 * {
@@ -197,12 +295,12 @@ body {
 }
 
 .selector-mes:hover {
-  background: #2f2b29;
+  background: var(--hover);
   color: var(--tx);
 }
 
 .selector-mes.activo {
-  background: #3b3633;
+  background: var(--activo);
   color: var(--tx);
 }
 
@@ -280,13 +378,13 @@ body {
 }
 
 .fuera .numero {
-  color: #4a453f;
+  color: var(--tx-apagado);
 }
 
 /* Marca de la semana actual: marco alrededor de las siete celdas. */
 
 .semana {
-  background: #201d1b;
+  background: var(--semana);
   box-shadow:
     inset 0 1px 0 var(--line-2),
     inset 0 -1px 0 var(--line-2);
@@ -309,7 +407,7 @@ body {
 /* El día actual va después: su marco reemplaza al de la semana, no se suma. */
 
 .rejilla .celda.hoy {
-  background: #241d1b;
+  background: var(--celda-hoy);
   box-shadow: inset 0 0 0 1.5px var(--hoy);
 }
 
@@ -390,7 +488,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #232120;
+  background: var(--evento);
   border-radius: 4px;
   padding: 4px 6px;
   font-size: 11.5px;
@@ -409,7 +507,7 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 7px;
-  background: #232120;
+  background: var(--evento);
   border-radius: 5px;
   padding: 7px;
   overflow: hidden;
@@ -480,11 +578,11 @@ body {
 }
 
 .semana .hay-mas {
-  background: linear-gradient(transparent, #201d1b 72%);
+  background: linear-gradient(transparent, var(--semana) 72%);
 }
 
 .hoy .hay-mas {
-  background: linear-gradient(transparent, #241d1b 72%);
+  background: linear-gradient(transparent, var(--celda-hoy) 72%);
 }
 
 .fuera .hay-mas {
@@ -503,15 +601,23 @@ body {
 /* --- densidad --- */
 /* Densidad: cambia el aire de las filas, nunca qué se muestra. */
 
+/*
+ * Compacta cambia el aire, no lo que se muestra.
+ *
+ * La primera versión encogía además la letra a 11 px y dejaba el relleno en 2,
+ * y el resultado era un bloque apretado donde el título rozaba el borde. Ahora
+ * la letra es la misma en las dos densidades —lo que cambia es cuánto respira—
+ * y la diferencia de alto sigue siendo clara: 22 a 32 contra 24 a 38.
+ */
+
 .app[data-densidad="compacta"] {
-  --fila-min: 20px;
-  --fila-max: 28px;
-  --tarjeta-max: 96px;
+  --fila-min: 22px;
+  --fila-max: 32px;
+  --tarjeta-max: 104px;
 }
 
 .app[data-densidad="compacta"] .ev {
-  padding: 2px 5px;
-  font-size: 11px;
+  padding: 3px 6px;
 }
 
 .app[data-densidad="compacta"] .eventos {
@@ -527,10 +633,10 @@ body {
 .error {
   margin: 24px;
   padding: 14px 16px;
-  border: 1px solid #5c3a35;
+  border: 1px solid var(--mal-borde);
   border-radius: 7px;
-  background: #2b2320;
-  color: #d98a7c;
+  background: var(--mal-fondo);
+  color: var(--mal-tx);
   font-size: 13px;
   line-height: 1.5;
   user-select: text;
@@ -557,7 +663,7 @@ body {
 }
 
 .nuevo-evento:hover {
-  background: #302c2a;
+  background: var(--hover-2);
 }
 
 .nuevo-evento:disabled {
@@ -575,13 +681,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(9, 8, 7, 0.62);
+  background: var(--velo);
   padding: 24px;
   overflow-y: auto;
 }
 
 .velo.interno {
-  background: rgba(9, 8, 7, 0.5);
+  background: var(--velo-2);
   /* Por encima de los paneles emergentes: lo último que se abre manda. */
   z-index: 70;
 }
@@ -650,7 +756,7 @@ body {
   gap: 9px;
   padding: 13px 18px;
   border-top: 1px solid var(--line);
-  background: #221f1e;
+  background: var(--pie);
   flex: none;
 }
 
@@ -678,22 +784,22 @@ body {
 }
 
 .btn.pri {
-  background: #3b3633;
+  background: var(--activo);
   color: var(--tx);
-  border-color: #4a4542;
+  border-color: var(--borde-activo);
 }
 
 /* El botón inactivo se ve, no se esconde. */
 
 .btn.inactivo {
-  background: #242120;
-  color: #4f4a45;
-  border-color: #302c2a;
+  background: var(--inactivo);
+  color: var(--tx-inactivo);
+  border-color: var(--hover-2);
 }
 
 .btn.malo {
-  border-color: #5c3a35;
-  color: #d98a7c;
+  border-color: var(--mal-borde);
+  color: var(--mal-tx);
 }
 
 /* --- campos del formulario --- */
@@ -733,7 +839,7 @@ button:focus-visible {
 /* Un campo con error mantiene su borde rojo aunque tenga el foco. */
 .campo.malo:focus-within,
 .campo-titulo.malo:focus {
-  border-color: #7a4038;
+  border-color: var(--mal-borde-2);
 }
 
 /* El título es un campo más, solo que más grande. */
@@ -754,13 +860,13 @@ button:focus-visible {
 }
 
 .campo-titulo.malo {
-  border-color: #7a4038;
+  border-color: var(--mal-borde-2);
 }
 
 .msg-error {
   font-size: 11.5px;
   line-height: 1.45;
-  color: #d98a7c;
+  color: var(--mal-tx);
   margin-top: 7px;
 }
 
@@ -787,7 +893,7 @@ button:focus-visible {
 }
 
 .campo.malo {
-  border-color: #7a4038;
+  border-color: var(--mal-borde-2);
 }
 
 .campo input {
@@ -922,10 +1028,13 @@ button:focus-visible {
   font-size: 12.5px;
   color: var(--tx-2);
   cursor: default;
+  /* En Ajustes el control va en la columna derecha, que es angosta: sin esto
+     "24 h" se partía por el espacio y quedaba en dos líneas. */
+  white-space: nowrap;
 }
 
 .segmentado button.on {
-  background: #332f2d;
+  background: var(--segmento-on);
   color: var(--tx);
 }
 
@@ -949,7 +1058,7 @@ button:focus-visible {
   width: 30px;
   height: 17px;
   border-radius: 9px;
-  background: #302c2a;
+  background: var(--hover-2);
   border: 1px solid var(--line-2);
   position: relative;
   flex: none;
@@ -957,9 +1066,16 @@ button:focus-visible {
   cursor: default;
 }
 
+/* El centro sale de la resta y no de un porcentaje.
+ *
+ * La caja es `border-box`, así que el hueco interior mide 15 y no 17: con el
+ * círculo de 11, el centro exacto es (15 - 11) / 2 = 2, el mismo número que el
+ * costado. `translateY(-50%)` sobre 11 píxeles da 5,5 y el navegador redondea,
+ * que era lo que lo dejaba medio píxel corrido. */
+
 .sw i {
   position: absolute;
-  top: 1px;
+  top: 2px;
   left: 2px;
   width: 11px;
   height: 11px;
@@ -968,7 +1084,7 @@ button:focus-visible {
 }
 
 .sw.on {
-  background: #4a4542;
+  background: var(--borde-activo);
 }
 
 .sw.on i {
@@ -1046,7 +1162,7 @@ button:focus-visible {
   flex: none;
   border-radius: 3px;
   border: 1px solid var(--line-2);
-  background: #302c2a;
+  background: var(--hover-2);
   position: relative;
 }
 
@@ -1116,12 +1232,12 @@ button:focus-visible {
 }
 
 .fila-opcion:hover {
-  background: #2f2b29;
+  background: var(--hover);
   color: var(--tx);
 }
 
 .fila-opcion.on {
-  background: #3b3633;
+  background: var(--activo);
   color: var(--tx);
 }
 
@@ -1155,7 +1271,7 @@ button:focus-visible {
 }
 
 .mini-paso:hover {
-  background: #2f2b29;
+  background: var(--hover);
   color: var(--tx);
 }
 
@@ -1189,11 +1305,11 @@ button:focus-visible {
 }
 
 .mini-dia:hover {
-  background: #2f2b29;
+  background: var(--hover);
 }
 
 .mini-dia.fuera {
-  color: #4a453f;
+  color: var(--tx-apagado);
 }
 
 .mini-dia.es-hoy {
@@ -1201,7 +1317,7 @@ button:focus-visible {
 }
 
 .mini-dia.elegido {
-  background: #3b3633;
+  background: var(--activo);
   color: var(--tx);
 }
 
@@ -1260,16 +1376,25 @@ button:focus-visible {
   margin-top: 7px;
 }
 
-.aviso {
-  display: flex;
-  gap: 10px;
-  background: #2b2320;
-  border: 1px solid #4d3b33;
+/*
+ * Una advertencia que no impide seguir: el evento que se solapa con su
+ * repetición, y el archivo `.calev` que ya se importó antes. No usa el rojo de
+ * `.msg-error`, que significa "esto no se pudo hacer".
+ *
+ * Se llama `advertencia` y no `aviso` porque `.aviso` ya es cada fila del panel
+ * de notificaciones, más abajo en este mismo archivo. Compartían nombre, y como
+ * el del panel viene después, esta caja salía con el margen, el relleno y la
+ * animación de una fila de notificación.
+ */
+
+.advertencia {
+  background: var(--mal-fondo);
+  border: 1px solid var(--adv-borde);
   border-radius: 6px;
   padding: 10px 12px;
   margin-top: 15px;
   font-size: 12px;
-  color: #d9b8a5;
+  color: var(--adv-tx);
   line-height: 1.5;
 }
 
@@ -1291,13 +1416,20 @@ button:focus-visible {
   position: relative;
 }
 
+/*
+ * Va en el flujo, arriba de la imagen y no encima.
+ *
+ * Flotando sobre una foto necesitaba un fondo propio para no perderse, y aun así
+ * competía con lo que la imagen tuviera en esa esquina. En su propia fila no
+ * compite con nada y la imagen se ve entera.
+ */
+
 .ficha-cab {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
   display: flex;
-  gap: 6px;
+  justify-content: flex-end;
+  gap: 4px;
+  flex: none;
+  padding: 9px 10px 0;
 }
 
 /* El ícono de exportar usa la misma caja que el aspa: son dos acciones de la
@@ -1317,25 +1449,22 @@ button:focus-visible {
   color: var(--tx-3);
 }
 
-/* Va encima de la imagen, así que necesita su propio fondo. Sin él, el aspa
-   queda suelta sobre la foto y se pierde según qué haya debajo. */
-
 .ficha-cab .cerrar {
   width: 28px;
   height: 28px;
   padding: 0;
   border-radius: 6px;
-  background: rgba(19, 17, 16, 0.72);
+  background: none;
   color: var(--tx-2);
 }
 
 .ficha-cab .cerrar:hover {
-  background: rgba(19, 17, 16, 0.88);
+  background: var(--hover-2);
   color: var(--tx);
 }
 
 .ficha-cuerpo {
-  padding: 18px;
+  padding: 9px 18px 18px;
   overflow-y: auto;
 }
 
@@ -1358,7 +1487,7 @@ button:focus-visible {
 }
 
 .ficha-meta .sep {
-  color: #443f3a;
+  color: var(--separador);
   margin-right: 7px;
 }
 
@@ -1431,7 +1560,7 @@ button:focus-visible {
   justify-content: space-between;
   padding: 13px 18px;
   border-top: 1px solid var(--line);
-  background: #221f1e;
+  background: var(--pie);
 }
 
 .ficha-error {
@@ -1461,8 +1590,8 @@ button:focus-visible {
 }
 
 .opcion.on {
-  border-color: #4a4542;
-  background: #2e2a28;
+  border-color: var(--borde-activo);
+  background: var(--opcion-on);
 }
 
 .opcion .radio {
@@ -1510,7 +1639,7 @@ button:focus-visible {
 
 .ev:hover,
 .ev-solo:hover {
-  background: #2b2827;
+  background: var(--evento-hover);
 }
 
 /* --- vista día --- */
@@ -1560,7 +1689,7 @@ button:focus-visible {
 }
 
 .icono-chico:hover {
-  background: #302c2a;
+  background: var(--hover-2);
   color: var(--tx);
 }
 
@@ -1629,7 +1758,7 @@ button:focus-visible {
 }
 
 .dia-hr .sep {
-  color: #443f3a;
+  color: var(--separador);
   margin: 0 5px;
 }
 
@@ -1854,7 +1983,7 @@ button:focus-visible {
   justify-content: center;
   gap: 9px;
   text-align: center;
-  background: rgba(19, 17, 16, 0.86);
+  background: var(--tapa-filtro);
 }
 
 .oculto-por-filtro .vacio-s {
@@ -1921,7 +2050,7 @@ button:focus-visible {
 }
 
 .asa {
-  color: #4a453f;
+  color: var(--tx-apagado);
   font-size: 12px;
   letter-spacing: 1px;
   flex: none;
@@ -3049,26 +3178,9 @@ button:focus-visible {
 .aviso-ok.borrar:hover {
   background: var(--line);
   /* El mismo tono que el botón de borrar de la ficha. */
-  color: #d98a7c;
+  color: var(--mal-tx);
 }
 
-
-/* --- aviso --- */
-
-/*
- * No es un error: la operación se puede completar igual. Por eso no usa el rojo
- * de `.msg-error`, que en esta aplicación significa "esto no se pudo hacer".
- */
-
-.aviso {
-  font-size: 12px;
-  line-height: 1.5;
-  color: #d9b87c;
-  background: rgba(207, 143, 60, 0.1);
-  border: 1px solid rgba(207, 143, 60, 0.3);
-  border-radius: 6px;
-  padding: 8px 11px;
-}
 
 /* --- globo de ayuda --- */
 
@@ -3089,12 +3201,12 @@ button:focus-visible {
   width: max-content;
   padding: 5px 9px;
   border-radius: 6px;
-  background: #322e2c;
+  background: var(--globo-fondo);
   border: 1px solid var(--line-2);
   color: var(--tx);
   font-size: 12px;
   line-height: 1.4;
-  box-shadow: 0 4px 14px rgba(9, 8, 7, 0.45);
+  box-shadow: 0 4px 14px var(--sombra-globo);
 }
 
 /* El desplazamiento lo hace el transform y no el `top`, para que el punto de
@@ -3129,4 +3241,103 @@ button:focus-visible {
   to {
     opacity: 0;
   }
+}
+
+/* La ruta de la carpeta de datos: larga, y se corta por donde no duele. */
+
+.ruta {
+  font-size: 11px;
+  color: var(--tx-3);
+  background: var(--campo);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 6px 8px;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+/* --- paleta de comandos --- */
+
+/*
+ * Se abre pegada arriba y no centrada: crece hacia abajo al escribir, y una
+ * ventana centrada que cambia de alto se mueve entera bajo el cursor.
+ */
+
+.velo:has(> .paleta) {
+  align-items: flex-start;
+  padding-top: 14vh;
+}
+
+.modal.paleta {
+  width: 480px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.paleta-campo {
+  width: 100%;
+  box-sizing: border-box;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  color: var(--tx);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 14px 16px;
+  outline: none;
+}
+
+.paleta-campo::placeholder {
+  color: var(--tx-3);
+}
+
+.paleta-lista {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.paleta-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--tx-2);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: default;
+}
+
+/* Una sola marca de elegido, la del teclado. El `:hover` la duplicaría y con el
+   ratón quieto sobre una fila mientras se navega con flechas habría dos. */
+
+.paleta-fila.on {
+  background: var(--hover-2);
+  color: var(--tx);
+}
+
+.paleta-fila kbd {
+  flex: none;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--tx-3);
+  background: var(--campo);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.paleta-vacia {
+  padding: 14px 10px;
+  font-size: 13px;
+  color: var(--tx-3);
 }

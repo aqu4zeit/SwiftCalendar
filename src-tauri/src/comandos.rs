@@ -10,6 +10,7 @@ use crate::ajuste;
 use crate::archivo::{self, Carpeta};
 use crate::bandeja;
 use crate::compartir;
+use crate::respaldo;
 use crate::db::Base;
 use crate::evento;
 use crate::grupo;
@@ -250,6 +251,14 @@ pub struct EventoDeLaInterfaz {
     adjuntos: Vec<AdjuntoPedido>,
     rrule: Option<String>,
     recordatorio_min: Option<i64>,
+    /// Solo lo manda el formulario abierto desde un archivo `.calev`.
+    ///
+    /// Lleva `default` para que el cuerpo que arma el formulario normal —que no
+    /// conoce este campo— siga deserializando. Un campo obligatorio en el borde
+    /// rompe la aplicación sin que ninguna prueba lo note, y este proyecto ya
+    /// pagó eso una vez en la etapa 12.
+    #[serde(default)]
+    uid: Option<String>,
 }
 
 /// Copia la imagen si hace falta y devuelve lo que se guarda en la fila.
@@ -321,6 +330,7 @@ fn a_evento_nuevo(e: EventoDeLaInterfaz, carpeta: &Carpeta) -> Result<EventoNuev
         rrule: e.rrule,
         recordatorio_min: e.recordatorio_min,
         adjuntos,
+        uid: e.uid,
     })
 }
 
@@ -555,10 +565,25 @@ pub fn generar_notificaciones(base: State<'_, Base>) -> Result<usize, String> {
     notificacion::pasada(&conexion).map_err(|e| e.to_string())
 }
 
+/// Borra una notificación vista. Entra al historial, así que `Ctrl+Z` la devuelve.
 #[tauri::command]
-pub fn borrar_notificacion(base: State<'_, Base>, id: i64) -> Result<(), String> {
+pub fn borrar_notificacion(
+    base: State<'_, Base>,
+    pila: State<'_, Pila>,
+    id: i64,
+) -> Result<(), String> {
     let conexion = base.0.lock().expect("la conexión quedó envenenada");
-    notificacion::borrar(&conexion, id).map_err(|e| e.to_string())
+
+    // Se captura antes de borrar: después la fila ya no está para preguntarle.
+    let fila = notificacion::capturar(&conexion, id).map_err(|e| e.to_string())?;
+    notificacion::borrar(&conexion, id).map_err(|e| e.to_string())?;
+
+    pila.0
+        .lock()
+        .expect("el historial quedó envenenado")
+        .registrar(Accion::NotificacionBorrada(fila));
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -621,6 +646,62 @@ pub fn marcar_todas_vistas(base: State<'_, Base>) -> Result<usize, String> {
     notificacion::marcar_todas_vistas(&conexion).map_err(|e| e.to_string())
 }
 
+/// Empaqueta la carpeta de datos en el archivo elegido.
+///
+/// Antes vuelca el WAL a la base: sin eso, el respaldo llevaría un `calendario.db`
+/// al que le faltan los últimos cambios, que están en el archivo de al lado.
+#[tauri::command]
+pub fn exportar_respaldo(
+    base: State<'_, Base>,
+    carpeta: State<'_, Carpeta>,
+    ruta: String,
+) -> Result<(), String> {
+    {
+        let conexion = base.0.lock().expect("la conexión quedó envenenada");
+        conexion
+            .pragma_update(None, "wal_checkpoint", "TRUNCATE")
+            .map_err(|e| format!("no se pudo consolidar la base: {e}"))?;
+    }
+
+    respaldo::empaquetar(&carpeta.0, std::path::Path::new(&ruta)).map_err(|e| e.to_string())
+}
+
+/// Deja un respaldo listo y cierra la aplicación para poder aplicarlo.
+///
+/// No lo aplica acá: la base está abierta y su WAL todavía puede volcarse encima
+/// de lo recién escrito. Se extrae a un lado y el próximo arranque lo pone en su
+/// sitio, antes de abrir nada.
+#[tauri::command]
+pub fn restaurar_respaldo(
+    app: AppHandle,
+    carpeta: State<'_, Carpeta>,
+    ruta: String,
+) -> Result<(), String> {
+    respaldo::dejar_preparado(&carpeta.0, std::path::Path::new(&ruta))
+        .map_err(|e| e.to_string())?;
+
+    // Reiniciar y no cerrar: el usuario pidió restaurar un respaldo, no irse. La
+    // aplicación vuelve sola y aparece con los datos ya puestos.
+    app.restart()
+}
+
+/// Registra o quita la aplicación del arranque de Windows.
+///
+/// Es lo mismo que hace la bandeja con su ícono: el ajuste no queda escrito
+/// esperando a que alguien lo aplique, se aplica al escribirlo. Decisión 99.
+fn aplicar_arranque(app: &AppHandle, encendido: bool) -> Result<(), String> {
+    use tauri_plugin_autostart::ManagerExt;
+
+    let gestor = app.autolaunch();
+    let hecho = if encendido {
+        gestor.enable()
+    } else {
+        gestor.disable()
+    };
+
+    hecho.map_err(|e| format!("no se pudo cambiar el arranque con Windows: {e}"))
+}
+
 /// Escribe un ajuste y lo deja aplicado.
 ///
 /// Guardar y aplicar son el mismo acto: un ajuste escrito que todavía no rige
@@ -632,6 +713,10 @@ pub fn guardar_ajuste(app: AppHandle, clave: String, valor: String) -> Result<()
         let base = app.state::<Base>();
         let conexion = base.0.lock().expect("la conexión quedó envenenada");
         ajuste::guardar(&conexion, &clave, &valor).map_err(|e| e.to_string())?;
+    }
+
+    if clave == "arranque" {
+        aplicar_arranque(&app, valor == "1")?;
     }
 
     bandeja::sincronizar(&app)
@@ -719,6 +804,31 @@ pub fn leer_calev(base: State<'_, Base>, ruta: String) -> Result<Importado, Stri
         duplicado,
         imagen_ruta,
     })
+}
+
+/// Deshace la última acción. Devuelve `false` si no había nada que deshacer.
+///
+/// El historial vive del lado nativo desde la etapa 3 y registra todo desde
+/// entonces; hasta acá no había nadie que pudiera invocarlo.
+#[tauri::command]
+pub fn deshacer(base: State<'_, Base>, pila: State<'_, Pila>) -> Result<bool, String> {
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+    pila.0
+        .lock()
+        .expect("el historial quedó envenenado")
+        .deshacer(&conexion)
+        .map_err(|e| e.to_string())
+}
+
+/// Rehace lo último que se deshizo. `false` si no había nada.
+#[tauri::command]
+pub fn rehacer(base: State<'_, Base>, pila: State<'_, Pila>) -> Result<bool, String> {
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+    pila.0
+        .lock()
+        .expect("el historial quedó envenenado")
+        .rehacer(&conexion)
+        .map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

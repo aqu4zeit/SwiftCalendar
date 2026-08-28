@@ -34,6 +34,7 @@ export function Celda({
   const dibujados = useListaConSalida(
     eventos,
     (i) => `${i.evento_id}-${i.ocurrencia}`,
+    (i) => String(i.evento_id),
   );
 
   useEffect(() => {

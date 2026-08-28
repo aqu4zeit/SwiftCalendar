@@ -23,6 +23,7 @@ import {
 } from "./fecha";
 import { RECORDATORIOS } from "./MasOpciones";
 import { desdeRrule, textoRepeticion } from "./rrule";
+import { useVelo } from "./flotante";
 
 interface Props {
   instancia: Instancia;
@@ -173,6 +174,8 @@ export function Ficha({
     setPreguntando(accion);
   }
 
+  const velo = useVelo(onCerrar);
+
   /**
    * Guardar el evento como archivo `.calev`.
    *
@@ -200,9 +203,7 @@ export function Ficha({
   return (
     <div
       className={saliendo ? "velo saliendo" : "velo"}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCerrar();
-      }}
+      {...velo}
     >
       <div className="ficha">
         <div className="ficha-cab">

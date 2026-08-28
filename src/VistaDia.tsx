@@ -10,6 +10,7 @@ import {
   type FormatoHora,
 } from "./fecha";
 import { useListaConSalida } from "./presencia";
+import { useVelo } from "./flotante";
 
 /** La ventana crece hasta acá y desde el siguiente hace scroll. */
 const EVENTOS_VISIBLES = 5;
@@ -40,12 +41,15 @@ export function VistaDia({
   onAbrir,
   onCrear,
 }: Props) {
+  const velo = useVelo(onCerrar);
+
   const lista = useRef<HTMLDivElement>(null);
   const [tope, setTope] = useState<number | null>(null);
 
   const dibujados = useListaConSalida(
     eventos,
     (i) => `${i.evento_id}-${i.ocurrencia}`,
+    (i) => String(i.evento_id),
   );
 
   // El tope se mide sobre los cinco primeros, no se calcula con una altura
@@ -75,9 +79,7 @@ export function VistaDia({
   return (
     <div
       className={saliendo ? "velo saliendo" : "velo"}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCerrar();
-      }}
+      {...velo}
     >
       <div className="vista-dia">
         <div className="dia-cab">

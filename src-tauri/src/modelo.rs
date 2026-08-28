@@ -177,6 +177,13 @@ pub struct EventoNuevo {
     /// Van acá y no aparte para que crear una ocurrencia suelta los lleve por
     /// el mismo camino que crear un evento nuevo.
     pub adjuntos: Vec<Adjunto>,
+    /// El identificador que trae un archivo `.calev` importado.
+    ///
+    /// Vacío en todo lo demás, y entonces lo genera la base. Un evento importado
+    /// adopta el del archivo: es el mismo evento, y así una sola consulta
+    /// reconoce tanto reimportar el archivo como importar uno hecho desde algo
+    /// que ya se tiene.
+    pub uid: Option<String>,
 }
 
 /// Un archivo colgado de un evento.

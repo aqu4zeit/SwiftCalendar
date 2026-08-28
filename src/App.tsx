@@ -7,6 +7,7 @@ import {
   agruparGrupos,
   carpetaDeDatos,
   contarPendientes,
+  deshacer,
   esconderEnBandeja,
   generarNotificaciones,
   leerCalev,
@@ -18,6 +19,7 @@ import {
   listarGrupos,
   PIDEN_ESCONDER,
   refrescarBandeja,
+  rehacer,
   reordenarGrupos,
   TODAS_LAS_IMPORTANCIAS,
   type Densidad,
@@ -25,6 +27,7 @@ import {
   type Grupos,
   type Importancia,
   type Instancia,
+  type Tema,
   type PorDia,
 } from "./api";
 import { clave, fechaDe, fechaLarga, rejilla, type FormatoHora } from "./fecha";
@@ -32,6 +35,7 @@ import { Ajustes } from "./Ajustes";
 import { AvisoBandeja } from "./AvisoBandeja";
 import { Ficha } from "./Ficha";
 import { Globo } from "./Globo";
+import { Paleta, type Comando } from "./Paleta";
 import { Formulario, type Apertura } from "./Formulario";
 import { FormularioGrupo } from "./FormularioGrupo";
 import { PanelAvisos } from "./PanelAvisos";
@@ -49,6 +53,7 @@ export default function App() {
   const [mes, setMes] = useState(HOY.getMonth() + 1);
   const [porDia, setPorDia] = useState<PorDia>({});
   const [grupos, setGrupos] = useState<Grupos | null>(null);
+  const [tema, setTema] = useState<Tema>("oscuro");
   const [densidad, setDensidad] = useState<Densidad>("comoda");
   const [formatoHora, setFormatoHora] = useState<FormatoHora>("24");
   const [carpeta, setCarpeta] = useState<string | null>(null);
@@ -62,8 +67,10 @@ export default function App() {
    * llegó cuando el usuario cierra la ventana, no aparece un aviso a destiempo.
    */
   const [bandeja, setBandeja] = useState(true);
+  const [arranque, setArranque] = useState(false);
   const [avisoVisto, setAvisoVisto] = useState(true);
   const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
+  const [paletaAbierta, setPaletaAbierta] = useState(false);
   const [avisandoBandeja, setAvisandoBandeja] = useState(false);
 
   // Sube cada vez que algo cambia en las notificaciones, para que el panel
@@ -92,6 +99,14 @@ export default function App() {
    */
   const [ocultos, setOcultos] = useState<number[]>([]);
 
+  /*
+   * Si el filtro guardado ya llegó.
+   *
+   * Sin esto, el primer render guardaría el filtro vacío del estado inicial
+   * encima del que está en la base, y abrir la aplicación borraría lo elegido.
+   */
+  const [filtroCargado, setFiltroCargado] = useState(false);
+
   // Las ventanas flotantes se apilan en este orden: el día sobre el mes, y la
   // ficha o el formulario sobre el día. Cerrar la de arriba deja la de abajo.
   const [dia, setDia] = useState<Date | null>(null);
@@ -113,10 +128,30 @@ export default function App() {
   useEffect(() => {
     listarAjustes()
       .then((ajustes) => {
+        if (ajustes.tema === "claro") setTema("claro");
         if (ajustes.densidad === "compacta") setDensidad("compacta");
         if (ajustes.formato_hora === "12") setFormatoHora("12");
         setBandeja(ajustes.bandeja === "1");
+        setArranque(ajustes.arranque === "1");
         setAvisoVisto(ajustes.aviso_bandeja_visto === "1");
+
+        // Lo apagado, no lo visible: un grupo creado después de guardar nace
+        // visible sin que nadie tenga que preguntarse si es nuevo.
+        setOcultos(
+          (ajustes.filtro_grupos_ocultos ?? "")
+            .split(",")
+            .filter((t) => t !== "")
+            .map(Number),
+        );
+
+        const guardadas = (ajustes.filtro_importancias ?? "")
+          .split(",")
+          .filter((t): t is Importancia =>
+            TODAS_LAS_IMPORTANCIAS.includes(t as Importancia),
+          );
+        setImportanciasActivas(guardadas);
+
+        setFiltroCargado(true);
       })
       .catch((e: unknown) => setError(String(e)));
 
@@ -157,23 +192,17 @@ export default function App() {
     return () => void quitar.then((f) => f());
   }, [avisoVisto]);
 
-  // F11 pone y quita la pantalla completa.
-  //
-  // La ventana lleva la barra de Windows, así que maximizar ya se puede desde
-  // ella. Lo que no existe es la pantalla completa: el atajo es de la
-  // aplicación, no del sistema, y hay que atenderlo a mano.
+  /*
+   * El tema se marca en la raíz del documento y no en `.app`.
+   *
+   * El fondo lo pinta `body`, que está fuera del árbol de React, y los velos y
+   * el globo se dibujan con posición fija. Marcando la raíz, la paleta entera
+   * cambia sin que ninguna regla del CSS tenga que saber en qué tema está.
+   */
   useEffect(() => {
-    async function tecla(e: KeyboardEvent) {
-      if (e.key !== "F11") return;
-      e.preventDefault();
+    document.documentElement.dataset.tema = tema;
+  }, [tema]);
 
-      const ventana = getCurrentWindow();
-      await ventana.setFullscreen(!(await ventana.isFullscreen()));
-    }
-
-    document.addEventListener("keydown", tecla);
-    return () => document.removeEventListener("keydown", tecla);
-  }, []);
 
   useEffect(() => {
     listarGrupos()
@@ -242,7 +271,11 @@ export default function App() {
     guardarAjuste(clave, valor)
       .then(() => {
         if (clave === "bandeja") setBandeja(valor === "1");
+        if (clave === "arranque") setArranque(valor === "1");
         if (clave === "aviso_bandeja_visto") setAvisoVisto(valor === "1");
+        if (clave === "tema") setTema(valor as Tema);
+        if (clave === "densidad") setDensidad(valor as Densidad);
+        if (clave === "formato_hora") setFormatoHora(valor as FormatoHora);
       })
       .catch((e: unknown) => setError(String(e)));
   }
@@ -286,6 +319,23 @@ export default function App() {
       })
       .catch((e: unknown) => setError(String(e)));
   }
+
+  /*
+   * El filtro se guarda al cambiar, no al cerrar.
+   *
+   * Al esconder la aplicación en la bandeja la ventana se destruye, así que no
+   * hay un momento de cierre en el que alcance a guardar nada. Escribir dos
+   * claves cuando el usuario toca una casilla no se nota.
+   */
+  useEffect(() => {
+    if (!filtroCargado) return;
+
+    guardarAjuste("filtro_grupos_ocultos", ocultos.join(","))
+      .then(() =>
+        guardarAjuste("filtro_importancias", importanciasActivas.join(",")),
+      )
+      .catch((e: unknown) => setError(String(e)));
+  }, [filtroCargado, ocultos, importanciasActivas]);
 
   function ir(anioDestino: number, mesDestino: number) {
     setAnio(anioDestino);
@@ -336,7 +386,9 @@ export default function App() {
    */
   const arriba = avisandoBandeja
     ? "aviso"
-    : ajustesAbiertos
+    : paletaAbierta
+      ? "paleta"
+      : ajustesAbiertos
       ? "ajustes"
       : grupoAbierto
         ? "grupo"
@@ -348,12 +400,161 @@ export default function App() {
               ? "dia"
               : null;
 
+  /**
+   * Lo que se puede hacer con el calendario, con su nombre ya resuelto.
+   *
+   * La paleta no sabe cómo está cada cosa: recibe "Cerrar filtros" o "Abrir
+   * filtros" ya decidido. Es la misma lista que alimenta a los atajos, así que
+   * un comando nuevo aparece en los dos lados sin escribirlo dos veces.
+   */
+  const comandos: Comando[] = [
+    { id: "nuevo", nombre: "Nuevo evento", atajo: "Ctrl+N" },
+    { id: "importar", nombre: "Importar evento desde un archivo" },
+    { id: "hoy", nombre: "Ir a hoy" },
+    { id: "mes-anterior", nombre: "Mes anterior", atajo: "←" },
+    { id: "mes-siguiente", nombre: "Mes siguiente", atajo: "→" },
+    {
+      id: "filtros",
+      nombre: panelAbierto ? "Cerrar los filtros" : "Abrir los filtros",
+    },
+    { id: "mostrar-todos", nombre: "Quitar todos los filtros" },
+    {
+      id: "avisos",
+      nombre: avisosAbiertos
+        ? "Cerrar los recordatorios"
+        : "Ver los recordatorios",
+    },
+    { id: "ajustes", nombre: "Abrir los ajustes", atajo: "Ctrl+," },
+    {
+      id: "tema",
+      nombre: tema === "oscuro" ? "Usar el tema claro" : "Usar el tema oscuro",
+    },
+    { id: "deshacer", nombre: "Deshacer", atajo: "Ctrl+Z" },
+    { id: "rehacer", nombre: "Rehacer", atajo: "Ctrl+Shift+Z" },
+    { id: "pantalla-completa", nombre: "Pantalla completa", atajo: "F11" },
+  ];
+
+  async function ejecutar(id: string) {
+    setPaletaAbierta(false);
+
+    switch (id) {
+      case "nuevo":
+        return setFormulario({ modo: "crear", fecha: clave(HOY) });
+      case "importar":
+        return importar();
+      case "hoy":
+        return ir(HOY.getFullYear(), HOY.getMonth() + 1);
+      case "mes-anterior":
+        return ir(mes === 1 ? anio - 1 : anio, mes === 1 ? 12 : mes - 1);
+      case "mes-siguiente":
+        return ir(mes === 12 ? anio + 1 : anio, mes === 12 ? 1 : mes + 1);
+      case "filtros":
+        return setPanelAbierto(!panelAbierto);
+      case "mostrar-todos":
+        return mostrarTodos();
+      case "avisos":
+        return setAvisosAbiertos(!avisosAbiertos);
+      case "ajustes":
+        return setAjustesAbiertos(true);
+      case "tema":
+        return guardar("tema", tema === "oscuro" ? "claro" : "oscuro");
+      case "pantalla-completa": {
+        const ventana = getCurrentWindow();
+        return void ventana.setFullscreen(!(await ventana.isFullscreen()));
+      }
+      case "deshacer":
+      case "rehacer": {
+        try {
+          const hubo = id === "rehacer" ? await rehacer() : await deshacer();
+          if (hubo) {
+            setVersion((v) => v + 1);
+            void refrescarAvisos();
+          }
+        } catch (e: unknown) {
+          setError(String(e));
+        }
+        return;
+      }
+    }
+  }
+
+  /**
+   * Los atajos de teclado de la aplicación, en un solo lugar.
+   *
+   * Casi todos actúan solo con el calendario al frente: con una ventana flotante
+   * abierta, lo que el usuario está mirando no es lo que cambiaría. Es la misma
+   * regla que gobierna a `Esc`, y por eso mira la misma variable.
+   *
+   * `Ctrl+K` y `F11` son la excepción: la paleta se abre encima de todo y se
+   * cierra sola, y la pantalla completa no toca ningún dato.
+   */
+  useEffect(() => {
+    function escribiendo() {
+      const foco = document.activeElement;
+      return (
+        foco instanceof HTMLInputElement || foco instanceof HTMLTextAreaElement
+      );
+    }
+
+    function tecla(e: KeyboardEvent) {
+      if (e.key === "F11") {
+        e.preventDefault();
+        void ejecutar("pantalla-completa");
+        return;
+      }
+
+      // La paleta se abre desde donde sea, salvo escribiendo: ahí Ctrl+K no
+      // tiene otro uso, pero abrir una ventana encima de un texto a medias sí
+      // sorprende.
+      if (e.ctrlKey && e.key.toLowerCase() === "k" && !escribiendo()) {
+        e.preventDefault();
+        setPaletaAbierta(true);
+        return;
+      }
+
+      if (arriba !== null || escribiendo()) return;
+
+      if (e.ctrlKey) {
+        const clave = e.key.toLowerCase();
+
+        // Dentro de un campo de texto ya se descartó arriba: acá Ctrl+Z es el
+        // de la aplicación y no el del navegador.
+        if (clave === "z" || clave === "y") {
+          e.preventDefault();
+          return void ejecutar(clave === "y" || e.shiftKey ? "rehacer" : "deshacer");
+        }
+        if (clave === "n") {
+          e.preventDefault();
+          return void ejecutar("nuevo");
+        }
+        if (e.key === ",") {
+          e.preventDefault();
+          return void ejecutar("ajustes");
+        }
+        return;
+      }
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        return void ejecutar("mes-anterior");
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        return void ejecutar("mes-siguiente");
+      }
+    }
+
+    document.addEventListener("keydown", tecla);
+    return () => document.removeEventListener("keydown", tecla);
+  });
+
   // Cada ventana sobrevive a su cierre el tiempo que dura su animación.
   const diaVisible = usePresencia(dia);
   const fichaVisible = usePresencia(abierto);
   const formularioVisible = usePresencia(formulario);
   const grupoVisible = usePresencia(grupoAbierto);
   const filtrosVisible = usePresencia(panelAbierto ? true : null);
+  const paletaVisible = usePresencia(paletaAbierta ? true : null);
   const ajustesVisible = usePresencia(ajustesAbiertos ? true : null);
   const avisoVisible = usePresencia(avisandoBandeja ? true : null);
 
@@ -555,10 +756,15 @@ export default function App() {
         />
       )}
 
-      {ajustesVisible.valor && (
+      {ajustesVisible.valor && carpeta && (
         <Ajustes
+          tema={tema}
+          densidad={densidad}
+          formatoHora={formatoHora}
+          carpeta={carpeta}
           bandeja={bandeja}
           avisar={!avisoVisto}
+          arranque={arranque}
           activo={arriba === "ajustes"}
           saliendo={ajustesVisible.saliendo}
           onGuardar={guardar}
@@ -579,12 +785,23 @@ export default function App() {
         />
       )}
 
+      {paletaVisible.valor && (
+        <Paleta
+          comandos={comandos}
+          activo={arriba === "paleta"}
+          saliendo={paletaVisible.saliendo}
+          onElegir={(id) => void ejecutar(id)}
+          onCerrar={() => setPaletaAbierta(false)}
+        />
+      )}
+
       {/* Uno solo para toda la aplicación, encima de todo lo demás. */}
       <Globo />
 
       {grupoVisible.valor && (
         <FormularioGrupo
           grupo={grupoVisible.valor.editando}
+          activo={arriba === "grupo"}
           saliendo={grupoVisible.saliendo}
           onCerrar={() => setGrupoAbierto(null)}
           onGuardado={(id) => {

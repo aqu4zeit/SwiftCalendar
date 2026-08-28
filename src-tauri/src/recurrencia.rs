@@ -417,6 +417,7 @@ mod pruebas {
                 rrule: Some("FREQ=WEEKLY".to_string()),
                 recordatorio_min: None,
                 adjuntos: Vec::new(),
+            uid: None,
             },
         )
         .unwrap();

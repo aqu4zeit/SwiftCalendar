@@ -14,6 +14,7 @@ const MIGRACIONES: &[&str] = &[
     include_str!("../migrations/003_generado_hasta.sql"),
     include_str!("../migrations/004_aviso_bandeja.sql"),
     include_str!("../migrations/005_uid_evento.sql"),
+    include_str!("../migrations/006_filtro_recordado.sql"),
 ];
 
 /// La conexión, guardada como estado de la aplicación.
@@ -22,6 +23,14 @@ pub struct Base(pub Mutex<Connection>);
 /// Prepara la carpeta de datos, abre la base y deja el esquema al día.
 pub fn abrir(app: &AppHandle) -> Base {
     let carpeta = carpeta_de_datos(app);
+
+    // Antes que nada: si quedó un respaldo esperando, este es el único momento en
+    // que los archivos no están en uso y se puede poner en su sitio.
+    match crate::respaldo::aplicar_si_hay(&carpeta) {
+        Ok(true) => println!("SwiftCalendar — respaldo restaurado"),
+        Ok(false) => {}
+        Err(e) => eprintln!("no se pudo restaurar el respaldo: {e}"),
+    }
 
     for sub in ["assets/imagenes", "assets/miniaturas", "assets/adjuntos"] {
         fs::create_dir_all(carpeta.join(sub))

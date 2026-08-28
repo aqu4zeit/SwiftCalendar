@@ -1,5 +1,7 @@
 //! Operaciones sobre eventos.
 
+use std::collections::HashSet;
+
 use chrono::{Local, NaiveDate, NaiveDateTime};
 use chrono_tz::Tz;
 use rusqlite::{params, Connection, OptionalExtension, Row};
@@ -205,15 +207,15 @@ pub fn insertar(conexion: &Connection, nuevo: EventoNuevo) -> Result<i64, Error>
     let momento = texto(ahora());
 
     conexion.execute(
-        // `uid` lo genera SQLite: un identificador único entre máquinas, que es
-        // lo que viaja dentro del archivo `.calev`.
+        // Con `uid` vacío lo genera SQLite, que es el caso de todo evento nacido
+        // acá. Un importado trae el suyo y lo conserva.
         "INSERT INTO evento (
             grupo_id, titulo, inicio, fin, todo_el_dia, hora_fija, zona_origen,
             importancia, color, descripcion, ubicacion, url, imagen, imagen_thumb,
             rrule, recordatorio_min, creado, modificado, uid
          ) VALUES (
             ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18,
-            lower(hex(randomblob(16)))
+            coalesce(?19, lower(hex(randomblob(16))))
          )",
         params![
             nuevo.grupo_id,
@@ -234,6 +236,7 @@ pub fn insertar(conexion: &Connection, nuevo: EventoNuevo) -> Result<i64, Error>
             nuevo.recordatorio_min,
             momento,
             momento,
+            nuevo.uid
         ],
     )?;
 
@@ -385,6 +388,30 @@ pub fn borrar(conexion: &Connection, id: i64) -> Result<Accion, Error> {
 }
 
 /// Escribe un evento y todo lo que colgaba de él. No abre transacción.
+/// Todas las rutas de archivo que alguna fila todavía nombra.
+///
+/// Es la mitad de la limpieza que sabe de la base; la otra, la que borra del
+/// disco, vive en `archivo` y no sabe nada de esto. Se pregunta por referencias
+/// y no por antigüedad: un archivo viejo puede seguir en uso, y uno recién
+/// copiado puede haber quedado suelto.
+pub fn rutas_referenciadas(conexion: &Connection) -> Result<HashSet<String>, Error> {
+    let mut rutas = HashSet::new();
+
+    for consulta in [
+        "SELECT imagen FROM evento WHERE imagen IS NOT NULL",
+        "SELECT imagen_thumb FROM evento WHERE imagen_thumb IS NOT NULL",
+        "SELECT ruta FROM adjunto",
+    ] {
+        let mut preparada = conexion.prepare(consulta)?;
+        let filas = preparada.query_map([], |f| f.get::<_, String>(0))?;
+        for ruta in filas {
+            rutas.insert(ruta?);
+        }
+    }
+
+    Ok(rutas)
+}
+
 pub fn insertar_completo(conexion: &Connection, completo: &EventoCompleto) -> Result<(), Error> {
     let evento = &completo.evento;
     let (todo_el_dia, hora_fija, zona) = columnas_de_cuando(evento.cuando);
@@ -491,6 +518,7 @@ mod pruebas {
             rrule: None,
             recordatorio_min: Some(30),
             adjuntos: Vec::new(),
+            uid: None,
         }
     }
 

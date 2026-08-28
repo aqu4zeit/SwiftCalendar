@@ -3,6 +3,8 @@
 //! Nada de lo que hay acá toca la base. Este módulo solo mueve bytes y devuelve
 //! rutas relativas a la raíz de la carpeta, que es lo único que se guarda.
 
+use std::collections::HashSet;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -184,6 +186,50 @@ pub fn vista_previa(origen: &Path) -> Result<String, Error> {
         .map_err(|e| falla("no se pudo preparar la vista previa", e))?;
 
     Ok(format!("data:image/jpeg;base64,{}", base64(&bytes)))
+}
+
+/// Borra de la carpeta los archivos que ya no nombra ninguna fila.
+///
+/// Corre al arrancar y no cada tanto: es el único momento en que el historial
+/// está vacío, y por lo tanto el único en que ningún archivo hace falta para
+/// deshacer un borrado. Decisión 93.
+///
+/// No sabe nada de la base: recibe la lista de lo que sigue en uso. Devuelve
+/// cuántos borró.
+///
+/// Un error al borrar un archivo suelto no detiene la limpieza. Puede estar
+/// abierto en otro programa, y volver a intentarlo en el próximo arranque es
+/// mejor que dejar el resto sin limpiar.
+pub fn borrar_huerfanos(carpeta: &Path, referenciados: &HashSet<String>) -> usize {
+    let mut borrados = 0;
+
+    for sub in ["assets/imagenes", "assets/miniaturas", "assets/adjuntos"] {
+        let Ok(entradas) = fs::read_dir(carpeta.join(sub)) else {
+            continue;
+        };
+
+        for entrada in entradas.flatten() {
+            if !entrada.path().is_file() {
+                continue;
+            }
+
+            let Some(nombre) = entrada.file_name().to_str().map(str::to_owned) else {
+                continue;
+            };
+
+            // Lo guardado es relativo a la carpeta y siempre con barras normales.
+            let relativa = format!("{sub}/{nombre}");
+            if referenciados.contains(&relativa) {
+                continue;
+            }
+
+            if fs::remove_file(entrada.path()).is_ok() {
+                borrados += 1;
+            }
+        }
+    }
+
+    borrados
 }
 
 /// Codifica en base64 sin traer una dependencia por veinte líneas.

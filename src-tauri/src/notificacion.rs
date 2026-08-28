@@ -304,6 +304,65 @@ pub fn borrar(conexion: &Connection, id: i64) -> Result<(), Error> {
     Ok(())
 }
 
+/// Una fila de notificación entera, para poder devolverla al deshacer.
+///
+/// `Notificacion` no sirve: no lleva `evento_id`, porque siempre se lee dentro
+/// del evento al que pertenece y ahí sobra. Devolver una fila borrada sí lo
+/// necesita, y agregárselo a aquel tipo obligaría a tocar todo lo que lo
+/// construye para un campo que solo usa el historial.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Fila {
+    pub id: i64,
+    pub evento_id: i64,
+    pub ocurrencia: String,
+    pub momento: String,
+    pub estado: String,
+}
+
+/// La fila tal como está, antes de borrarla.
+pub fn capturar(conexion: &Connection, id: i64) -> Result<Fila, Error> {
+    conexion
+        .query_row(
+            "SELECT id, evento_id, ocurrencia, momento, estado
+             FROM notificacion WHERE id = ?1",
+            [id],
+            |f| {
+                Ok(Fila {
+                    id: f.get("id")?,
+                    evento_id: f.get("evento_id")?,
+                    ocurrencia: f.get("ocurrencia")?,
+                    momento: f.get("momento")?,
+                    estado: f.get("estado")?,
+                })
+            },
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => Error::NoExiste,
+            otro => Error::Sqlite(otro),
+        })
+}
+
+/// Vuelve a poner una fila capturada, con su identificador original.
+///
+/// Conserva el identificador a propósito, al revés que los adjuntos: la clave de
+/// unicidad de la tabla impide que existan dos avisos del mismo evento a la misma
+/// hora, así que devolver el mismo aviso no puede chocar con otro.
+pub fn devolver(conexion: &Connection, fila: &Fila) -> Result<(), Error> {
+    conexion.execute(
+        "INSERT INTO notificacion (id, evento_id, ocurrencia, momento, estado)
+         VALUES (?1, ?2, ?3, ?4, ?5)",
+        rusqlite::params![
+            fila.id,
+            fila.evento_id,
+            fila.ocurrencia,
+            fila.momento,
+            fila.estado
+        ],
+    )?;
+
+    Ok(())
+}
+
 /// Borra todas las vistas y devuelve cuántas eran.
 pub fn borrar_vistas(conexion: &Connection) -> Result<usize, Error> {
     Ok(conexion.execute("DELETE FROM notificacion WHERE estado = 'vista'", [])?)
@@ -371,6 +430,7 @@ mod pruebas {
                 rrule: None,
                 recordatorio_min: recordatorio,
                 adjuntos: Vec::new(),
+            uid: None,
             },
         )
         .unwrap()

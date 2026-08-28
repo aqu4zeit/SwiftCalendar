@@ -168,7 +168,9 @@ export function Archivos({
                 imagen={elegida.valor}
                 muestra={muestra}
               />
-              <span className="nombre">{nombreDeImagen(elegida.valor)}</span>
+              <span className="nombre">
+                {nombreDeImagen(elegida.valor, imagenInicial)}
+              </span>
               <button
                 type="button"
                 className="quitar"
@@ -277,10 +279,20 @@ function nombreDeRuta(ruta: string): string {
   return partes[partes.length - 1] ?? ruta;
 }
 
-function nombreDeImagen(imagen: ImagenPedida): string {
-  if (imagen.tipo === "nueva") return nombreDeRuta(imagen.origen);
+/**
+ * Cómo se llama la imagen en la fila.
+ *
+ * La elegida a mano muestra su nombre de archivo, que es lo que el usuario
+ * reconoce. La importada no: viene de un archivo temporal con un nombre que no
+ * significa nada para nadie, así que se nombra por lo que es.
+ */
+function nombreDeImagen(imagen: ImagenPedida, importada?: string): string {
   if (imagen.tipo === "guardada") return "Imagen del evento";
-  return "";
+  if (imagen.tipo !== "nueva") return "";
+
+  return imagen.origen === importada
+    ? "Imagen del evento importado"
+    : nombreDeRuta(imagen.origen);
 }
 
 function nombreDeAdjunto(adjunto: AdjuntoPedido): string {
