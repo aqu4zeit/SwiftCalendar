@@ -31,6 +31,14 @@ pub enum Accion {
     /// Borrar un evento se lleva por cascada todo lo que cuelga de él.
     EventoBorrado(EventoCompleto),
 
+    /// Todos los eventos de la base, borrados de una vez desde el panel de
+    /// control. Es una acción y no cientos: `Ctrl+Z` los devuelve todos juntos,
+    /// que es lo que espera quien los borró de un golpe.
+    TodoBorrado(Vec<EventoCompleto>),
+    /// La reversión de la anterior. Guarda los identificadores para volver a
+    /// borrar exactamente esos, y no lo que haya en la base en ese momento.
+    TodoDevuelto { ids: Vec<i64> },
+
     /// Una ocurrencia sacada de su serie, con o sin evento que la reemplace.
     OcurrenciaExcluida {
         maestro_id: i64,
@@ -67,6 +75,9 @@ fn revertir(conexion: &Connection, accion: Accion) -> Result<Accion, Error> {
             adjuntos,
         } => evento::escribir(conexion, &antes, notificaciones.as_deref(), &adjuntos),
         Accion::EventoBorrado(completo) => evento::restaurar(conexion, &completo),
+
+        Accion::TodoBorrado(completos) => evento::restaurar_todos(conexion, &completos),
+        Accion::TodoDevuelto { ids } => evento::borrar_varios(conexion, &ids),
 
         Accion::NotificacionBorrada(fila) => {
             notificacion::devolver(conexion, &fila)?;

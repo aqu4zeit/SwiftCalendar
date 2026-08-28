@@ -429,6 +429,40 @@ export function rehacer(): Promise<boolean> {
   return invoke("rehacer");
 }
 
+/**
+ * Un evento guardado, tal como lo lista el panel de control.
+ *
+ * No es una instancia: una serie es una sola fila, con su regla, igual que en la
+ * base. La consulta de rango contesta la otra pregunta —qué cae cada día— y pide
+ * dos fechas que acá no existen.
+ */
+export interface Resumen {
+  evento_id: number;
+  titulo: string;
+  grupo_id: number;
+  grupo: string;
+  color: string;
+  importancia: Importancia;
+  inicio: string;
+  fin: string | null;
+  todo_el_dia: boolean;
+  rrule: string | null;
+}
+
+/** Todos los eventos guardados, del más antiguo al más nuevo. */
+export function listarEventos(): Promise<Resumen[]> {
+  return invoke("listar_eventos");
+}
+
+/**
+ * Borra todos los eventos y devuelve cuántos borró.
+ *
+ * Entra al historial como una sola acción: un `Ctrl+Z` los devuelve todos.
+ */
+export function borrarTodos(): Promise<number> {
+  return invoke("borrar_todos");
+}
+
 /** Empaqueta la carpeta de datos entera en el archivo elegido. */
 export function exportarRespaldo(ruta: string): Promise<void> {
   return invoke("exportar_respaldo", { ruta });

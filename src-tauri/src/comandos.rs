@@ -9,6 +9,7 @@ use tauri::{AppHandle, Manager, State};
 use crate::ajuste;
 use crate::archivo::{self, Carpeta};
 use crate::bandeja;
+use crate::catalogo::{self, Resumen};
 use crate::compartir;
 use crate::respaldo;
 use crate::db::Base;
@@ -540,6 +541,38 @@ pub fn borrar_evento(
         .registrar(accion);
 
     Ok(())
+}
+
+/// Todos los eventos guardados, para el panel de control.
+#[tauri::command]
+pub fn listar_eventos(base: State<'_, Base>) -> Result<Vec<Resumen>, String> {
+    let zona = hora::zona_del_equipo().map_err(|e| e.to_string())?;
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+
+    catalogo::todos(&conexion, zona).map_err(|e| e.to_string())
+}
+
+/// Borra todos los eventos y devuelve cuántos borró.
+///
+/// Entra al historial como una sola acción: `Ctrl+Z` los devuelve todos juntos.
+/// Con la base vacía no hay nada que registrar, y devuelve cero.
+#[tauri::command]
+pub fn borrar_todos(base: State<'_, Base>, pila: State<'_, Pila>) -> Result<usize, String> {
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+
+    let ids = evento::ids_todos(&conexion).map_err(|e| e.to_string())?;
+    if ids.is_empty() {
+        return Ok(0);
+    }
+
+    let accion = evento::borrar_varios(&conexion, &ids).map_err(|e| e.to_string())?;
+
+    pila.0
+        .lock()
+        .expect("el historial quedó envenenado")
+        .registrar(accion);
+
+    Ok(ids.len())
 }
 
 /// Una notificación tal como la pinta el panel.

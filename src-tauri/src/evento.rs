@@ -197,6 +197,26 @@ pub fn leer_en_rango(
         .collect()
 }
 
+/// Todos los eventos guardados, del más antiguo al más nuevo.
+///
+/// No expande series: una serie es una fila, igual que en la tabla.
+pub fn listar_todos(conexion: &Connection) -> Result<Vec<Evento>, Error> {
+    let mut consulta = conexion.prepare("SELECT * FROM evento ORDER BY inicio, id")?;
+    let filas = consulta.query_map([], |f| Ok(desde_fila(f)))?;
+
+    filas
+        .collect::<rusqlite::Result<Vec<_>>>()?
+        .into_iter()
+        .collect()
+}
+
+/// Los identificadores de todos los eventos guardados.
+pub fn ids_todos(conexion: &Connection) -> Result<Vec<i64>, Error> {
+    let mut consulta = conexion.prepare("SELECT id FROM evento ORDER BY id")?;
+    let filas = consulta.query_map([], |f| f.get(0))?;
+    Ok(filas.collect::<rusqlite::Result<Vec<i64>>>()?)
+}
+
 /// Inserta la fila y devuelve su identificador.
 pub fn insertar(conexion: &Connection, nuevo: EventoNuevo) -> Result<i64, Error> {
     let (todo_el_dia, hora_fija, zona) = columnas_de_cuando(nuevo.cuando);
@@ -412,7 +432,7 @@ pub fn rutas_referenciadas(conexion: &Connection) -> Result<HashSet<String>, Err
     Ok(rutas)
 }
 
-pub fn insertar_completo(conexion: &Connection, completo: &EventoCompleto) -> Result<(), Error> {
+fn insertar_cuerpo(conexion: &Connection, completo: &EventoCompleto) -> Result<(), Error> {
     let evento = &completo.evento;
     let (todo_el_dia, hora_fija, zona) = columnas_de_cuando(evento.cuando);
     let (imagen, miniatura) = match &evento.imagen {
@@ -457,18 +477,68 @@ pub fn insertar_completo(conexion: &Connection, completo: &EventoCompleto) -> Re
     )?;
 
     insertar_adjuntos(conexion, evento.id, &completo.adjuntos)?;
+    insertar_notificaciones(conexion, evento.id, &completo.notificaciones)?;
 
+    Ok(())
+}
+
+/// Las excepciones de un evento, aparte del resto.
+///
+/// Van solas porque `override_id` apunta a otro evento: al devolver varios de
+/// una vez hay que insertar todas las filas de `evento` antes que cualquier
+/// excepción, o la clave foránea se queja del que todavía no existe.
+fn insertar_excepciones(conexion: &Connection, completo: &EventoCompleto) -> Result<(), Error> {
     for e in &completo.excepciones {
         conexion.execute(
             "INSERT INTO excepcion (evento_id, fecha_original, override_id)
              VALUES (?1, ?2, ?3)",
-            params![evento.id, e.fecha_original, e.override_id],
+            params![completo.evento.id, e.fecha_original, e.override_id],
         )?;
     }
 
-    insertar_notificaciones(conexion, evento.id, &completo.notificaciones)?;
-
     Ok(())
+}
+
+pub fn insertar_completo(conexion: &Connection, completo: &EventoCompleto) -> Result<(), Error> {
+    insertar_cuerpo(conexion, completo)?;
+    insertar_excepciones(conexion, completo)
+}
+
+/// Borra los eventos indicados y captura todo lo que colgaba de ellos.
+pub fn borrar_varios(conexion: &Connection, ids: &[i64]) -> Result<Accion, Error> {
+    let tx = conexion.unchecked_transaction()?;
+
+    let mut completos = Vec::with_capacity(ids.len());
+    for id in ids {
+        completos.push(capturar(&tx, *id)?);
+    }
+
+    for id in ids {
+        tx.execute("DELETE FROM evento WHERE id = ?1", [*id])?;
+    }
+    tx.commit()?;
+
+    Ok(Accion::TodoBorrado(completos))
+}
+
+/// Devuelve un borrado en masa, con sus excepciones en una segunda pasada.
+pub fn restaurar_todos(
+    conexion: &Connection,
+    completos: &[EventoCompleto],
+) -> Result<Accion, Error> {
+    let tx = conexion.unchecked_transaction()?;
+
+    for completo in completos {
+        insertar_cuerpo(&tx, completo)?;
+    }
+    for completo in completos {
+        insertar_excepciones(&tx, completo)?;
+    }
+    tx.commit()?;
+
+    Ok(Accion::TodoDevuelto {
+        ids: completos.iter().map(|c| c.evento.id).collect(),
+    })
 }
 
 /// Devuelve un evento borrado con todo lo que colgaba de él.
@@ -743,7 +813,10 @@ mod pruebas {
         assert_eq!(adjuntos_guardados(&c, id), ["rubrica.pdf"]);
 
         h.rehacer(&c).unwrap();
-        assert!(adjuntos_guardados(&c, id).is_empty(), "rehacer los vuelve a sacar");
+        assert!(
+            adjuntos_guardados(&c, id).is_empty(),
+            "rehacer los vuelve a sacar"
+        );
     }
 
     /// Restaurar no conserva identificadores: nada apunta a un adjunto.
@@ -875,5 +948,80 @@ mod pruebas {
         nuevo.fin = Some(momento(2026, 8, 12, 17, 0));
 
         assert!(matches!(crear(&c, nuevo), Err(Error::Sqlite(_))));
+    }
+
+    fn cuantos_eventos(conexion: &Connection) -> i64 {
+        conexion
+            .query_row("SELECT COUNT(*) FROM evento", [], |f| f.get(0))
+            .unwrap()
+    }
+
+    /// Borrar todo es una sola acción: un solo `Ctrl+Z` lo devuelve entero.
+    #[test]
+    fn borrar_todos_se_deshace_de_una_vez() {
+        let c = db::en_memoria();
+        let mut h = Historial::default();
+        let g = grupo_defecto(&c);
+
+        let mut ids = Vec::new();
+        for n in 0..3 {
+            let mut nuevo = minimo(g);
+            nuevo.titulo = format!("Evento {n}");
+            ids.push(crear(&c, nuevo).unwrap().0);
+        }
+
+        h.registrar(borrar_varios(&c, &ids_todos(&c).unwrap()).unwrap());
+        assert_eq!(cuantos_eventos(&c), 0);
+
+        assert!(h.deshacer(&c).unwrap());
+        assert_eq!(
+            cuantos_eventos(&c),
+            3,
+            "un solo deshacer los devuelve todos"
+        );
+        for id in &ids {
+            assert!(leer(&c, *id).is_ok(), "el evento {id} volvió con su id");
+        }
+
+        assert!(h.rehacer(&c).unwrap());
+        assert_eq!(cuantos_eventos(&c), 0, "rehacer vuelve a borrarlos todos");
+    }
+
+    /// El caso que obliga a insertar en dos pasadas: una excepción apunta a otro
+    /// evento, y al devolver todos ese otro tiene que existir antes.
+    #[test]
+    fn borrar_todos_devuelve_una_excepcion_con_override() {
+        let c = db::en_memoria();
+        let mut h = Historial::default();
+        let g = grupo_defecto(&c);
+
+        let mut serie = minimo(g);
+        serie.rrule = Some("FREQ=WEEKLY;BYDAY=MO".to_string());
+        let maestro = crear(&c, serie).unwrap().0;
+
+        let mut suelto = minimo(g);
+        suelto.titulo = "Entrega movida".to_string();
+        let override_id = crear(&c, suelto).unwrap().0;
+
+        c.execute(
+            "INSERT INTO excepcion (evento_id, fecha_original, override_id)
+             VALUES (?1, '2026-08-17 18:00', ?2)",
+            [maestro, override_id],
+        )
+        .unwrap();
+
+        h.registrar(borrar_varios(&c, &ids_todos(&c).unwrap()).unwrap());
+        assert_eq!(cuantos_eventos(&c), 0);
+
+        h.deshacer(&c).unwrap();
+
+        let devuelto: Option<i64> = c
+            .query_row(
+                "SELECT override_id FROM excepcion WHERE evento_id = ?1",
+                [maestro],
+                |f| f.get(0),
+            )
+            .unwrap();
+        assert_eq!(devuelto, Some(override_id), "la excepción volvió apuntando");
     }
 }

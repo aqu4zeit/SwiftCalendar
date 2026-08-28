@@ -24,6 +24,8 @@ interface Props {
   saliendo: boolean;
   /** Escribe una clave de la tabla `ajuste`. */
   onGuardar: (clave: string, valor: string) => void;
+  /** Abre la lista de todos los eventos, encima de esta ventana. */
+  onAbrirControl: () => void;
   onCerrar: () => void;
 }
 
@@ -75,6 +77,7 @@ export function Ajustes({
   activo,
   saliendo,
   onGuardar,
+  onAbrirControl,
   onCerrar,
 }: Props) {
   const [confirmando, setConfirmando] = useState<string | null>(null);
@@ -223,6 +226,17 @@ export function Ajustes({
               on={arranque}
               onCambiar={() => onGuardar("arranque", arranque ? "0" : "1")}
             />
+          </Fila>
+
+          <div className="seccion">EVENTOS</div>
+
+          <Fila
+            titulo="Todos los eventos"
+            nota="Ver lo que hay guardado y borrar desde ahí"
+          >
+            <button type="button" className="btn" onClick={onAbrirControl}>
+              Abrir
+            </button>
           </Fila>
 
           <div className="seccion">DATOS</div>

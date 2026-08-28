@@ -1,6 +1,7 @@
 mod ajuste;
 mod archivo;
 mod bandeja;
+mod catalogo;
 mod comandos;
 mod compartir;
 mod db;
@@ -136,6 +137,8 @@ pub fn run() {
             comandos::crear_evento,
             comandos::editar_evento,
             comandos::borrar_evento,
+            comandos::listar_eventos,
+            comandos::borrar_todos,
             comandos::generar_notificaciones,
             comandos::listar_notificaciones,
             comandos::instancia_de,

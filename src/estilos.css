@@ -2456,6 +2456,8 @@ button:focus-visible {
 .campo.suelta,
 .aviso,
 .aviso-ok,
+.control-fila,
+.control-borrar,
 .avisos-link,
 .elegido,
 .elegido .quitar,
@@ -3426,4 +3428,112 @@ button:focus-visible {
   to {
     opacity: 0;
   }
+}
+
+
+/* --- panel de control: todos los eventos --- */
+
+/*
+ * La lista de lo que hay en la base, dentro de Ajustes y encima de él. Comparte
+ * la forma con la lista de notificaciones —punto de color, dos líneas de texto y
+ * una cruz— porque es la misma clase de lista, pero no sus clases: aquella vive
+ * en un panel angosto y esta en un modal ancho, y las medidas no coinciden.
+ */
+
+.control-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.control-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 7px;
+  animation: archivo-entra var(--entra-panel) var(--curva-entra);
+}
+
+.control-fila:hover {
+  background: var(--campo);
+}
+
+.control-fila.saliendo {
+  animation: archivo-sale var(--sale-panel) var(--curva-sale) forwards;
+  pointer-events: none;
+}
+
+.control-fila .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.control-txt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.control-txt .t {
+  font-size: 12.5px;
+  color: var(--tx);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.control-txt .h {
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+/* El grupo va a la derecha y no crece: el título es lo que manda el ancho. */
+
+.control-grupo {
+  flex: none;
+  max-width: 130px;
+  font-size: 11px;
+  color: var(--tx-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.control-borrar {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  color: var(--tx-3);
+  cursor: default;
+}
+
+.control-borrar svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.control-borrar:hover {
+  background: var(--line);
+  color: var(--mal-tx);
+}
+
+.control-cuenta {
+  align-self: center;
+  font-size: 12px;
+  color: var(--tx-3);
 }

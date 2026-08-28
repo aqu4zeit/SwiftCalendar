@@ -35,6 +35,7 @@ import {
 } from "./api";
 import { clave, fechaDe, fechaLarga, rejilla, type FormatoHora } from "./fecha";
 import { Ajustes } from "./Ajustes";
+import { Control } from "./Control";
 import { AvisoBandeja } from "./AvisoBandeja";
 import {
   edicionSegun,
@@ -84,6 +85,7 @@ export default function App() {
   const [arranque, setArranque] = useState(false);
   const [avisoVisto, setAvisoVisto] = useState(true);
   const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
+  const [controlAbierto, setControlAbierto] = useState(false);
   const [paletaAbierta, setPaletaAbierta] = useState(false);
 
   /*
@@ -512,6 +514,8 @@ export default function App() {
       ? "alcance"
       : paletaAbierta
       ? "paleta"
+      : controlAbierto
+      ? "control"
       : ajustesAbiertos
       ? "ajustes"
       : grupoAbierto
@@ -681,6 +685,7 @@ export default function App() {
   const paletaVisible = usePresencia(paletaAbierta ? true : null);
   const menuVisible = usePresencia(menu);
   const ajustesVisible = usePresencia(ajustesAbiertos ? true : null);
+  const controlVisible = usePresencia(controlAbierto ? true : null);
   const avisoVisible = usePresencia(avisandoBandeja ? true : null);
 
   const filtrado = grupos
@@ -897,7 +902,21 @@ export default function App() {
           activo={arriba === "ajustes"}
           saliendo={ajustesVisible.saliendo}
           onGuardar={guardar}
+          onAbrirControl={() => setControlAbierto(true)}
           onCerrar={() => setAjustesAbiertos(false)}
+        />
+      )}
+
+      {controlVisible.valor && (
+        <Control
+          formatoHora={formatoHora}
+          activo={arriba === "control"}
+          saliendo={controlVisible.saliendo}
+          onCambio={() => {
+            recargar();
+            void refrescarAvisos();
+          }}
+          onCerrar={() => setControlAbierto(false)}
         />
       )}
 
