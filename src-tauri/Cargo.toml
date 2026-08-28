@@ -54,6 +54,18 @@ zip = { version = "8", default-features = false, features = [
 # Registra la aplicación para que Windows la abra al iniciar sesión.
 tauri-plugin-autostart = "2"
 
+# El modo claro u oscuro de lo que dibuja Windows: el menú del ícono y los
+# diálogos del sistema. Se piden dos funciones de `uxtheme.dll` por su número.
+# La versión es la que `tao` y `muda` ya traen, así que no agrega nada nuevo que
+# compilar.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_System_LibraryLoader"] }
+# Suspender el webview del menú de la bandeja mientras está escondido. Las dos
+# vienen ya en el árbol por Tauri, y las versiones son las que él fija: con otras
+# los tipos no serían los mismos y no encajarían con lo que devuelve `with_webview`.
+webview2-com = "0.38"
+windows-core = "0.61"
+
 
 # Las dependencias se compilan optimizadas incluso en desarrollo.
 #

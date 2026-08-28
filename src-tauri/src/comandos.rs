@@ -12,6 +12,7 @@ use crate::bandeja;
 use crate::catalogo::{self, Pagina, Resumen};
 use crate::compartir;
 use crate::respaldo;
+use crate::tema_nativo;
 use crate::db::Base;
 use crate::evento;
 use crate::grupo;
@@ -770,6 +771,12 @@ pub fn guardar_ajuste(app: AppHandle, clave: String, valor: String) -> Result<()
 
     if clave == "arranque" {
         aplicar_arranque(&app, valor == "1")?;
+    }
+
+    // Guardar un ajuste y aplicarlo son el mismo acto (decisión 99). Lo que
+    // dibuja Windows también sigue el tema, así que también se aplica acá.
+    if clave == "tema" {
+        tema_nativo::aplicar(valor != "claro");
     }
 
     bandeja::sincronizar(&app)

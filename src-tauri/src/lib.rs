@@ -9,12 +9,15 @@ mod evento;
 mod grupo;
 mod historial;
 mod hora;
+mod menu_bandeja;
 mod modelo;
 mod notificacion;
 mod ocurrencia;
 mod rango;
 mod recurrencia;
 mod respaldo;
+mod sueno;
+mod tema_nativo;
 
 use std::time::Duration;
 
@@ -70,6 +73,11 @@ pub fn run() {
 
             // El historial vive del lado nativo para sobrevivir al minimizar.
             app.manage(historial::Pila(Default::default()));
+            app.manage(menu_bandeja::SitioDelIcono::default());
+
+            // Lo que dibuja Windows —el menú del ícono y los diálogos del
+            // sistema— sigue el tema de la aplicación, no el del equipo.
+            tema_nativo::aplicar(bandeja::tema_oscuro(app.handle()));
 
             // La limpieza corre acá y no después: es el único momento en que el
             // historial está vacío, así que ningún archivo hace falta todavía
@@ -103,6 +111,12 @@ pub fn run() {
                     if bandeja::esconde_al_cerrar(app) {
                         api.prevent_close();
                         bandeja::pedir_esconder(app);
+                    } else {
+                        // Cerrar el calendario con la bandeja apagada termina la
+                        // aplicación, y se dice acá en vez de dejarlo en manos de
+                        // "quedarse sin ventanas": el menú de la bandeja también
+                        // es una ventana, y vive escondida.
+                        app.exit(0);
                     }
                 }
 
@@ -139,6 +153,8 @@ pub fn run() {
             comandos::borrar_evento,
             comandos::listar_eventos,
             comandos::pagina_buscador,
+            menu_bandeja::entradas_del_menu,
+            menu_bandeja::elegir_del_menu,
             comandos::borrar_todos,
             comandos::generar_notificaciones,
             comandos::listar_notificaciones,

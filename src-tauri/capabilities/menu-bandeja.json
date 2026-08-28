@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "menu-bandeja",
+  "description": "El menú del ícono de la bandeja. Lo mínimo para que sus tres entradas puedan hablar con el lado nativo: sin esto, la ventana se dibuja pero ningún clic hace nada.",
+  "windows": [
+    "menu-bandeja"
+  ],
+  "permissions": [
+    "core:default"
+  ]
+}

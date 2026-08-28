@@ -19,7 +19,9 @@ import {
   eventosEnRango,
   listarAjustes,
   listarGrupos,
+  PIDEN_AVISOS,
   PIDEN_ESCONDER,
+  PIDEN_PANEL,
   refrescarBandeja,
   rehacer,
   reordenarGrupos,
@@ -237,6 +239,34 @@ export default function App() {
 
     return () => void quitar.then((f) => f());
   }, [avisoVisto]);
+
+  /*
+   * Llegar desde el menú de la bandeja a uno de los paneles.
+   *
+   * El menú manda qué panel quiere y esta parte lo abre. La ventana puede acabar
+   * de nacer, y por eso el aviso llega después de construirla.
+   */
+  useEffect(() => {
+    const quitar = listen<string>(PIDEN_PANEL, ({ payload }) => {
+      if (payload === "ajustes") setAjustesAbiertos(true);
+      if (payload === "avisos") setAvisosAbiertos(true);
+    });
+
+    return () => void quitar.then((f) => f());
+  }, []);
+
+  /*
+   * Llegar desde la entrada de recordatorios del menú de la bandeja.
+   *
+   * Esa entrada dice cuántos hay, así que tiene que llevar a la lista: contar
+   * sin mostrar sería quedarse a medias. La ventana puede acabar de nacer, y por
+   * eso el aviso lo manda el lado nativo después de construirla.
+   */
+  useEffect(() => {
+    const quitar = listen(PIDEN_AVISOS, () => setAvisosAbiertos(true));
+
+    return () => void quitar.then((f) => f());
+  }, []);
 
   /*
    * El tema se marca en la raíz del documento y no en `.app`.

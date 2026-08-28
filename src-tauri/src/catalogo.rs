@@ -305,3 +305,204 @@ pub fn pagina(
             .map(texto_de_mes),
     }))
 }
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+    use crate::db;
+    use crate::modelo::EventoNuevo;
+    use chrono_tz::America::Santiago;
+
+    fn dia(a: i32, m: u32, d: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(a, m, d).unwrap()
+    }
+
+    fn momento(a: i32, m: u32, d: u32, h: u32) -> NaiveDateTime {
+        dia(a, m, d).and_hms_opt(h, 0, 0).unwrap()
+    }
+
+    /// Crea un evento y devuelve su identificador.
+    fn crear(
+        conexion: &Connection,
+        titulo: &str,
+        inicio: NaiveDateTime,
+        rrule: Option<&str>,
+    ) -> i64 {
+        let grupo_id = grupo::listar(conexion).unwrap()[0].id;
+
+        evento::crear(
+            conexion,
+            EventoNuevo {
+                grupo_id,
+                titulo: titulo.to_string(),
+                inicio,
+                fin: None,
+                cuando: Cuando::Fija,
+                importancia: Importancia::Comun,
+                color: None,
+                descripcion: None,
+                ubicacion: None,
+                url: None,
+                imagen: None,
+                rrule: rrule.map(str::to_string),
+                recordatorio_min: None,
+                adjuntos: Vec::new(),
+                uid: None,
+            },
+        )
+        .unwrap()
+        .0
+    }
+
+    fn una_pagina(conexion: &Connection, mes: (i32, u32), busca: &str, hoy: NaiveDate) -> Pagina {
+        pagina(conexion, dia(mes.0, mes.1, 1), busca, hoy, Santiago)
+            .unwrap()
+            .expect("se esperaba una página")
+    }
+
+    /// Una serie ocupa una fila por mes, no una por ocurrencia.
+    #[test]
+    fn una_serie_es_una_fila_en_su_mes() {
+        let c = db::en_memoria();
+        crear(
+            &c,
+            "Clase de redes",
+            momento(2026, 8, 3, 18),
+            Some("FREQ=WEEKLY"),
+        );
+
+        let pagina = una_pagina(&c, (2026, 9), "", dia(2026, 8, 28));
+
+        assert_eq!(pagina.mes, "2026-09");
+        assert_eq!(pagina.eventos.len(), 1, "cinco lunes, una sola fila");
+        // Septiembre no es el mes en curso, así que representa el primer lunes.
+        assert_eq!(pagina.eventos[0].ocurrencia, momento(2026, 9, 7, 18));
+    }
+
+    /// En el mes en curso manda la ocurrencia que todavía no pasó.
+    #[test]
+    fn en_el_mes_en_curso_se_muestra_la_proxima() {
+        let c = db::en_memoria();
+        crear(
+            &c,
+            "Clase de redes",
+            momento(2026, 8, 3, 18),
+            Some("FREQ=WEEKLY"),
+        );
+
+        // El 28 de agosto es viernes; los lunes del mes son 3, 10, 17, 24 y 31.
+        let pagina = una_pagina(&c, (2026, 8), "", dia(2026, 8, 28));
+
+        assert_eq!(pagina.eventos[0].ocurrencia, momento(2026, 8, 31, 18));
+    }
+
+    /// Si en el mes en curso ya pasaron todas, se muestra la última.
+    #[test]
+    fn en_el_mes_en_curso_sin_futuras_se_muestra_la_ultima() {
+        let c = db::en_memoria();
+        crear(
+            &c,
+            "Clase de redes",
+            momento(2026, 8, 3, 18),
+            Some("FREQ=WEEKLY;COUNT=3"),
+        );
+
+        // Los lunes 3, 10 y 17. Mirando el 28, todas quedaron atrás.
+        let pagina = una_pagina(&c, (2026, 8), "", dia(2026, 8, 28));
+
+        assert_eq!(pagina.eventos[0].ocurrencia, momento(2026, 8, 17, 18));
+    }
+
+    /// Las flechas apuntan a meses que tienen algo, y se apagan en los extremos.
+    #[test]
+    fn los_vecinos_saltan_los_meses_vacios() {
+        let c = db::en_memoria();
+        crear(&c, "Primero", momento(2026, 3, 4, 10), None);
+        crear(&c, "Segundo", momento(2026, 8, 12, 10), None);
+        crear(&c, "Tercero", momento(2026, 12, 24, 10), None);
+
+        let agosto = una_pagina(&c, (2026, 8), "", dia(2026, 8, 28));
+        assert_eq!(agosto.anterior.as_deref(), Some("2026-03"));
+        assert_eq!(agosto.siguiente.as_deref(), Some("2026-12"));
+
+        let marzo = una_pagina(&c, (2026, 3), "", dia(2026, 8, 28));
+        assert_eq!(marzo.anterior, None, "no hay nada antes de marzo");
+
+        let diciembre = una_pagina(&c, (2026, 12), "", dia(2026, 8, 28));
+        assert_eq!(diciembre.siguiente, None, "no hay nada después");
+    }
+
+    /// Un mes sin eventos devuelve el más cercano que sí tiene.
+    #[test]
+    fn un_mes_vacio_lleva_al_mas_cercano() {
+        let c = db::en_memoria();
+        crear(&c, "Solitario", momento(2026, 11, 4, 10), None);
+
+        let pedido_en_mayo = una_pagina(&c, (2026, 5), "", dia(2026, 8, 28));
+        assert_eq!(pedido_en_mayo.mes, "2026-11", "mira hacia adelante primero");
+
+        let pedido_despues = una_pagina(&c, (2027, 6), "", dia(2026, 8, 28));
+        assert_eq!(
+            pedido_despues.mes, "2026-11",
+            "y hacia atrás si no hay nada"
+        );
+    }
+
+    /// Buscar reduce las páginas a los meses donde algo coincide.
+    #[test]
+    fn buscar_deja_solo_los_meses_que_coinciden() {
+        let c = db::en_memoria();
+        crear(&c, "Cumpleaños de Ana", momento(2026, 3, 4, 10), None);
+        crear(&c, "Reunión de equipo", momento(2026, 8, 12, 10), None);
+        crear(&c, "Cumpleaños de Beto", momento(2026, 12, 24, 10), None);
+
+        let pagina = una_pagina(&c, (2026, 8), "cumple", dia(2026, 8, 28));
+
+        assert_eq!(pagina.mes, "2026-12", "agosto ya no coincide con nada");
+        assert_eq!(pagina.eventos.len(), 1);
+        assert_eq!(pagina.anterior.as_deref(), Some("2026-03"));
+        assert_eq!(pagina.siguiente, None);
+    }
+
+    /// La búsqueda ignora los acentos y las mayúsculas, igual que la paleta.
+    #[test]
+    fn buscar_ignora_acentos_y_mayusculas() {
+        let c = db::en_memoria();
+        crear(&c, "Reunión de MAÑANA", momento(2026, 8, 12, 10), None);
+
+        for aguja in ["reunion", "REUNIÓN", "manana", "mañana"] {
+            let pagina = una_pagina(&c, (2026, 8), aguja, dia(2026, 8, 28));
+            assert_eq!(pagina.eventos.len(), 1, "'{aguja}' debería encontrarlo");
+        }
+    }
+
+    /// Sin ninguna coincidencia no hay página, y eso lo dice el tipo.
+    #[test]
+    fn sin_coincidencias_no_hay_pagina() {
+        let c = db::en_memoria();
+        crear(&c, "Reunión de equipo", momento(2026, 8, 12, 10), None);
+
+        let nada = pagina(&c, dia(2026, 8, 1), "asamblea", dia(2026, 8, 28), Santiago).unwrap();
+
+        assert!(nada.is_none());
+    }
+
+    /// La lista del panel de control trae todo, sin agrupar por mes.
+    #[test]
+    fn todos_trae_una_fila_por_evento_guardado() {
+        let c = db::en_memoria();
+        crear(
+            &c,
+            "Clase de redes",
+            momento(2026, 8, 3, 18),
+            Some("FREQ=WEEKLY"),
+        );
+        crear(&c, "Entrega", momento(2026, 9, 1, 10), None);
+
+        let lista = todos(&c, Santiago).unwrap();
+
+        assert_eq!(lista.len(), 2, "la serie es una fila, no una por semana");
+        assert_eq!(lista[0].titulo, "Clase de redes");
+        assert_eq!(lista[0].ocurrencia, momento(2026, 8, 3, 18));
+    }
+}

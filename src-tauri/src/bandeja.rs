@@ -5,12 +5,12 @@
 //! que el usuario ve al volver se lee de SQLite.
 
 use tauri::image::Image;
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager, WebviewWindowBuilder, Wry};
+use tauri::{AppHandle, Emitter, Manager, WebviewWindowBuilder};
 
 use crate::ajuste;
 use crate::db::Base;
+use crate::menu_bandeja;
 use crate::notificacion;
 
 /// El identificador del ícono.
@@ -50,24 +50,6 @@ fn globo(pendientes: i64) -> String {
     }
 }
 
-/// El menú del ícono. Dos entradas, y no cambia nunca.
-///
-/// Lo dibuja Windows y no acepta estilo: es la única pantalla del proyecto que
-/// no respeta el diseño. Se intentó reemplazarlo por una ventana nuestra y no
-/// salió; está pospuesto hasta después de la etapa 16, con lo aprendido anotado
-/// en el plan. Mientras tanto se queda en lo mínimo que Windows no puede afear:
-/// dos líneas, sin la cuenta de recordatorios, que ya dicen el globo del ícono y
-/// el círculo rojo.
-fn menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
-    let abrir = MenuItem::with_id(app, "abrir", "Abrir calendario", true, None::<&str>)?;
-
-    // Salir va detrás de una línea, lejos de Abrir, para no apretarlo por error.
-    let raya = PredefinedMenuItem::separator(app)?;
-    let salir = MenuItem::with_id(app, "salir", "Salir", true, None::<&str>)?;
-
-    Menu::with_items(app, &[&abrir, &raya, &salir])
-}
-
 /// Pone el ícono al día, o lo crea si todavía no está.
 ///
 /// Una sola función responde por él entero —qué dibujo lleva y qué dice su
@@ -76,45 +58,65 @@ fn menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
 pub fn poner_al_dia(app: &AppHandle, pendientes: i64) -> tauri::Result<()> {
     let dibujo = icono(pendientes > 0)?;
 
-    // El menú no depende de la cuenta, así que se arma una sola vez al crear el
-    // ícono. De un refresco a otro solo cambian el dibujo y el globo.
+    // De un refresco a otro solo cambian el dibujo y el globo.
     if let Some(existente) = app.tray_by_id(ID) {
         existente.set_icon(Some(dibujo))?;
         existente.set_tooltip(Some(globo(pendientes)))?;
         return Ok(());
     }
 
-    let lista = menu(app)?;
-
     TrayIconBuilder::with_id(ID)
         .icon(dibujo)
         .tooltip(globo(pendientes))
-        .menu(&lista)
-        // Con el menú en el clic izquierdo no queda gesto para abrir la ventana,
-        // que es lo que se hace mil veces más seguido.
-        .show_menu_on_left_click(false)
-        .on_menu_event(|app, evento| match evento.id().as_ref() {
-            "abrir" => {
-                let _ = mostrar(app);
-            }
-            "salir" => app.exit(0),
-            _ => {}
-        })
+        // Sin menú: el clic derecho llega igual como evento —lo comprobado en
+        // `tray-icon` es que el menú solo se dibuja si existe— y con él se abre
+        // el nuestro, que sí respeta el diseño.
         .on_tray_icon_event(|icono, evento| {
+            let app = icono.app_handle();
+
+            // Cada evento del ícono dice dónde está, y el menú lo necesita para
+            // anclarse y para saber si un clic cayó encima.
+            if let Some(rect) = sitio_de(&evento) {
+                menu_bandeja::anotar_sitio(app, rect);
+            }
+
             // Al soltar y no al apretar: actuar al apretar dispara con el botón
             // todavía abajo.
-            if let TrayIconEvent::Click {
-                button: MouseButton::Left,
+            let TrayIconEvent::Click {
+                button,
                 button_state: MouseButtonState::Up,
+                rect,
                 ..
             } = evento
-            {
-                let _ = mostrar(icono.app_handle());
+            else {
+                return;
+            };
+
+            match button {
+                MouseButton::Left => {
+                    let _ = mostrar(app);
+                }
+                MouseButton::Right => {
+                    let _ = menu_bandeja::alternar(app, rect);
+                }
+                MouseButton::Middle => {}
             }
         })
         .build(app)?;
 
     Ok(())
+}
+
+/// El rectángulo del ícono, venga en el evento que venga.
+fn sitio_de(evento: &TrayIconEvent) -> Option<tauri::Rect> {
+    match evento {
+        TrayIconEvent::Click { rect, .. }
+        | TrayIconEvent::DoubleClick { rect, .. }
+        | TrayIconEvent::Enter { rect, .. }
+        | TrayIconEvent::Move { rect, .. }
+        | TrayIconEvent::Leave { rect, .. } => Some(*rect),
+        _ => None,
+    }
 }
 
 /// Lee la base y deja la bandeja igual a lo que encuentra.
@@ -152,6 +154,24 @@ pub fn esconde_al_cerrar(app: &AppHandle) -> bool {
         Ok(valor) => valor,
         Err(e) => {
             eprintln!("no se pudo leer el ajuste de la bandeja: {e}");
+            true
+        }
+    }
+}
+
+/// Si el tema elegido en la aplicación es el oscuro.
+///
+/// Lo pregunta a la base, igual que el resto de los ajustes: la única verdad es
+/// la fila de `ajuste`. Si no se deja leer, la respuesta es el tema con el que
+/// nace la aplicación.
+pub fn tema_oscuro(app: &AppHandle) -> bool {
+    let base = app.state::<Base>();
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+
+    match ajuste::leer(&conexion, "tema") {
+        Ok(valor) => valor != "claro",
+        Err(e) => {
+            eprintln!("no se pudo leer el tema: {e}");
             true
         }
     }

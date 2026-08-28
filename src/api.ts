@@ -355,6 +355,66 @@ export function borrarNotificacionesVistas(): Promise<number> {
   return invoke("borrar_notificaciones_vistas");
 }
 
+/*
+ * El menú de la bandeja. PROTOTIPO DE LA INVESTIGACIÓN.
+ *
+ * Vive en su propia ventana, así que necesita pedir por su cuenta lo que el
+ * calendario ya tiene cargado.
+ */
+
+/** Cierra la ventana del menú sin hacer nada más. */
+export function cerrarMenuBandeja(): Promise<void> {
+  return invoke("cerrar_menu_bandeja");
+}
+
+/** Abre el calendario y cierra el menú. Con `avisos`, además abre el panel. */
+export function abrirCalendario(avisos: boolean): Promise<void> {
+  return invoke("abrir_calendario", { avisos });
+}
+
+/** Termina la aplicación. */
+export function salir(): Promise<void> {
+  return invoke("salir");
+}
+
+/** El aviso que pide abrir el panel de recordatorios al llegar desde la bandeja. */
+export const PIDEN_AVISOS = "bandeja://avisos";
+
+/*
+ * El menú de la bandeja.
+ *
+ * Vive en su propia ventana y no sabe qué entradas hay: las recibe armadas del
+ * lado nativo y devuelve la que se apretó, igual que el menú del clic derecho.
+ */
+
+/** Una entrada del menú, tal como la manda el lado nativo. */
+export interface EntradaBandeja {
+  /** Estable. Es lo que se devuelve al elegirla. */
+  id: string;
+  texto: string;
+  /** Un punto de color delante, para lo que pide que lo miren. */
+  marca: boolean;
+  /** Lo que no se puede deshacer se dibuja aparte. */
+  malo: boolean;
+  /** Una línea encima, para separarla de lo anterior. */
+  separada: boolean;
+}
+
+export function entradasDelMenu(): Promise<EntradaBandeja[]> {
+  return invoke("entradas_del_menu");
+}
+
+/** Ejecuta lo elegido. `cerrar` solo aparta el menú. */
+export function elegirDelMenu(id: string): Promise<void> {
+  return invoke("elegir_del_menu", { id });
+}
+
+/** El aviso que recibe el menú para volver a armarse al despertar. */
+export const REARMAR = "bandeja://rearmar";
+
+/** El aviso que pide abrir un panel al llegar desde el menú de la bandeja. */
+export const PIDEN_PANEL = "bandeja://panel";
+
 /** El aviso que emite el temporizador nativo cuando nacen notificaciones. */
 export const NACIERON = "notificaciones://nuevas";
 

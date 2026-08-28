@@ -3656,3 +3656,59 @@ button:focus-visible {
 .buscador-flecha:disabled {
   color: var(--tx-inactivo);
 }
+
+
+/* --- el menú de la bandeja --- */
+
+/*
+ * Es el menú del clic derecho en su propia ventana. No trae estilo propio: se
+ * apoya en `.menu-contextual`, y lo único que cambia es que no se coloca contra
+ * un punto de la pantalla —de eso se encarga el lado nativo, contra el ícono—
+ * sino que ocupa la ventana entera.
+ */
+
+:root[data-ventana="bandeja"] body {
+  background: transparent;
+  /* Sin esto, la sombra de la caja se recorta contra el borde de la ventana. */
+  overflow: hidden;
+}
+
+.menu-contextual.anclado {
+  position: static;
+  height: 100%;
+  animation: none;
+}
+
+/* El separador del menú. La misma línea que separa las secciones de un panel. */
+
+.raya-menu {
+  height: 1px;
+  background: var(--line);
+  margin: 4px 6px;
+}
+
+/*
+ * El texto de una entrada, con su punto si lo lleva.
+ *
+ * Va en su propia caja para no heredar lo del signo del menú del clic derecho,
+ * que es el otro hijo que una entrada puede tener y se dibuja gris y aparte.
+ */
+
+.opcion-menu > .txt-menu {
+  display: flex;
+  align-items: center;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* El círculo de los recordatorios pendientes, igual que el de la campana. */
+
+.punto-menu {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hoy);
+  display: inline-block;
+  margin-right: 7px;
+  vertical-align: 1px;
+}

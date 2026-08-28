@@ -237,9 +237,14 @@ pub fn primera_desde(
 
     let fuera = excluidas(conexion, evento.id)?;
 
-    Ok(recorrer(evento.inicio, &regla)
+    // El resultado se nombra antes de devolverlo: el iterador presta `regla`, y
+    // devolverlo directo lo deja vivo hasta el final del bloque, cuando `regla`
+    // ya se destruyó.
+    let encontrada = recorrer(evento.inicio, &regla)
         .filter(|f| !fuera.contains(&f.format(FORMATO).to_string()))
-        .find(|f| f.date() >= dia))
+        .find(|f| f.date() >= dia);
+
+    Ok(encontrada)
 }
 
 /// La última ocurrencia que cae en `dia` o antes. `None` si no hay ninguna.
@@ -254,10 +259,12 @@ pub fn ultima_hasta(
 
     let fuera = excluidas(conexion, evento.id)?;
 
-    Ok(recorrer(evento.inicio, &regla)
+    let encontrada = recorrer(evento.inicio, &regla)
         .take_while(|f| f.date() <= dia)
         .filter(|f| !fuera.contains(&f.format(FORMATO).to_string()))
-        .last())
+        .last();
+
+    Ok(encontrada)
 }
 
 /// La regla del evento, o `None` si no se repite.
