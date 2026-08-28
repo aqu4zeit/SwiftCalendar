@@ -153,7 +153,7 @@ pub fn run() {
             comandos::borrar_evento,
             comandos::listar_eventos,
             comandos::pagina_buscador,
-            menu_bandeja::entradas_del_menu,
+            menu_bandeja::menu_de_bandeja,
             menu_bandeja::elegir_del_menu,
             comandos::borrar_todos,
             comandos::generar_notificaciones,

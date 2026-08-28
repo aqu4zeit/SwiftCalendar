@@ -217,10 +217,18 @@ fn crear(app: &AppHandle, rect: Rect, alto: f64) -> tauri::Result<()> {
         .unwrap_or(1.0);
     let (x, y) = sitio(rect, alto, escala);
 
+    // El tema va en la dirección para que esté puesto antes del primer dibujo:
+    // pedirlo después dejaría un parpadeo con la paleta que trae `:root`.
+    let tema = if bandeja::tema_oscuro(app) {
+        "oscuro"
+    } else {
+        "claro"
+    };
+
     let ventana = WebviewWindowBuilder::new(
         app,
         VENTANA,
-        WebviewUrl::App("index.html?ventana=bandeja".into()),
+        WebviewUrl::App(format!("index.html?ventana=bandeja&tema={tema}").into()),
     )
     // Sin marco ni barra: el borde y las esquinas los dibuja el CSS, igual que
     // en el menú del clic derecho.
@@ -282,10 +290,30 @@ fn sobre_el_icono(app: &AppHandle) -> bool {
         && cursor.y <= icono.y + tamano.height
 }
 
+/// Todo lo que el menú necesita para dibujarse.
+///
+/// El tema viaja con las entradas y no aparte: el menú vive en otra ventana, y
+/// quien marca la raíz del documento con el tema elegido es la ventana del
+/// calendario. Sin esto el menú se dibujaría siempre con la paleta oscura, que
+/// es la que trae `:root`.
+#[derive(Debug, Clone, Serialize)]
+pub struct Dibujo {
+    /// `oscuro` o `claro`, tal como lo espera `data-tema`.
+    pub tema: &'static str,
+    pub entradas: Vec<Entrada>,
+}
+
 /// Lo que el menú tiene que dibujar. Lo pide al abrirse y cada vez que despierta.
 #[tauri::command]
-pub fn entradas_del_menu(app: AppHandle) -> Vec<Entrada> {
-    entradas(&app)
+pub fn menu_de_bandeja(app: AppHandle) -> Dibujo {
+    Dibujo {
+        tema: if bandeja::tema_oscuro(&app) {
+            "oscuro"
+        } else {
+            "claro"
+        },
+        entradas: entradas(&app),
+    }
 }
 
 /// El aviso que la ventana principal escucha para abrir uno de sus paneles.

@@ -400,8 +400,19 @@ export interface EntradaBandeja {
   separada: boolean;
 }
 
-export function entradasDelMenu(): Promise<EntradaBandeja[]> {
-  return invoke("entradas_del_menu");
+/**
+ * Todo lo que el menú necesita para dibujarse.
+ *
+ * El tema viene con las entradas porque el menú vive en su propia ventana, y
+ * quien marca la raíz del documento con el tema elegido es la del calendario.
+ */
+export interface MenuDelSistema {
+  tema: Tema;
+  entradas: EntradaBandeja[];
+}
+
+export function menuDeBandeja(): Promise<MenuDelSistema> {
+  return invoke("menu_de_bandeja");
 }
 
 /** Ejecuta lo elegido. `cerrar` solo aparta el menú. */
