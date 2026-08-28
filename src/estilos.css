@@ -2458,6 +2458,7 @@ button:focus-visible {
 .aviso-ok,
 .control-fila,
 .control-borrar,
+.buscador-flecha,
 .avisos-link,
 .elegido,
 .elegido .quitar,
@@ -3265,12 +3266,17 @@ button:focus-visible {
  * ventana centrada que cambia de alto se mueve entera bajo el cursor.
  */
 
-.velo:has(> .paleta) {
+/* La comparte el buscador de eventos: es el mismo gesto, escribir y elegir, y
+   una sola definición evita que las dos ventanas se separen. */
+
+.velo:has(> .paleta),
+.velo:has(> .buscador) {
   align-items: flex-start;
   padding-top: 14vh;
 }
 
-.modal.paleta {
+.modal.paleta,
+.modal.buscador {
   width: 480px;
   padding: 0;
   overflow: hidden;
@@ -3386,9 +3392,14 @@ button:focus-visible {
   pointer-events: none;
 }
 
+/* El signo, cuando lo hay, se va al otro extremo y ocupa el hueco que deja el
+   texto: una fila sola en una caja ancha se ve a medio terminar. */
+
 .opcion-menu {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 18px;
   height: 30px;
   padding: 0 10px;
   border: none;
@@ -3401,9 +3412,18 @@ button:focus-visible {
   cursor: default;
 }
 
+.opcion-menu > span {
+  color: var(--tx-3);
+  font-size: 14px;
+}
+
 .opcion-menu:hover {
   background: var(--hover-2);
   color: var(--tx);
+}
+
+.opcion-menu:hover > span {
+  color: var(--tx-2);
 }
 
 /* La que no se puede deshacer se distingue antes de apretarla, no después:
@@ -3536,4 +3556,103 @@ button:focus-visible {
   align-self: center;
   font-size: 12px;
   color: var(--tx-3);
+}
+
+
+/* --- buscador de eventos --- */
+
+/*
+ * La fila del buscador es la de la paleta con el punto de color y la segunda
+ * línea encima: se declara `paleta-fila buscador-fila` y acá solo va lo que
+ * cambia, en vez de una copia entera que se desincronice.
+ */
+
+.buscador-fila {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.buscador-fila .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.buscador-txt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.buscador-txt .t {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buscador-txt .h {
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+/* El grupo va a la derecha y no crece: el título es lo que manda el ancho. */
+
+.buscador-grupo {
+  flex: none;
+  max-width: 120px;
+  font-size: 11px;
+  color: var(--tx-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* La cabecera de la página: qué mes se está viendo y cómo cambiarlo. Las
+   flechas saltan al mes con eventos, no al mes de al lado, así que apagarlas
+   es la única forma de decir que ya no hay más hacia ese lado. */
+
+.buscador-mes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--tx-2);
+}
+
+.buscador-flecha {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  color: var(--tx-3);
+  cursor: default;
+}
+
+.buscador-flecha svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.buscador-flecha:hover:not(:disabled) {
+  background: var(--line);
+  color: var(--tx);
+}
+
+.buscador-flecha:disabled {
+  color: var(--tx-inactivo);
 }

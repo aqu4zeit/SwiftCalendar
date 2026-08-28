@@ -4,6 +4,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 export interface Entrada {
   id: string;
   texto: string;
+  /** Un signo al otro extremo de la fila, en el hueco que deja el texto. */
+  signo?: string;
   /** Las que no se pueden deshacer se dibujan aparte. */
   malo?: boolean;
 }
@@ -122,6 +124,7 @@ export function MenuContextual({
             onClick={() => onElegir(entrada.id)}
           >
             {entrada.texto}
+            {entrada.signo && <span>{entrada.signo}</span>}
           </button>
         ))}
       </div>

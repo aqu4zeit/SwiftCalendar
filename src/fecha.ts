@@ -89,6 +89,11 @@ export function clave(fecha: Date): string {
   return `${fecha.getFullYear()}-${dosDigitos(fecha.getMonth() + 1)}-${dosDigitos(fecha.getDate())}`;
 }
 
+/** `AAAA-MM`. Es como viaja un mes por el borde. */
+export function claveMes(anio: number, mes: number): string {
+  return `${anio}-${dosDigitos(mes)}`;
+}
+
 export function mismoDia(a: Date, b: Date): boolean {
   return clave(a) === clave(b);
 }

@@ -6,16 +6,9 @@ import {
   listarEventos,
   type Resumen,
 } from "./api";
-import {
-  fechaCompacta,
-  fechaDe,
-  horaDe,
-  mismoDia,
-  rangoCompacto,
-  type FormatoHora,
-} from "./fecha";
+import type { FormatoHora } from "./fecha";
 import { useListaConSalida } from "./presencia";
-import { desdeRrule, textoRepeticion } from "./rrule";
+import { cuandoOcurre } from "./texto";
 
 interface Props {
   formatoHora: FormatoHora;
@@ -127,7 +120,7 @@ export function Control({
 
                   <span className="control-txt">
                     <span className="t">{evento.titulo}</span>
-                    <span className="h">{cuando(evento, formatoHora)}</span>
+                    <span className="h">{cuandoOcurre(evento, formatoHora)}</span>
                   </span>
 
                   <span className="control-grupo">{evento.grupo}</span>
@@ -193,7 +186,7 @@ export function Control({
               ) : (
                 <p className="parrafo">
                   {preguntando.evento.titulo},{" "}
-                  {cuando(preguntando.evento, formatoHora)}.
+                  {cuandoOcurre(preguntando.evento, formatoHora)}.
                   {preguntando.evento.rrule !== null &&
                     " Se borra la serie completa, incluidas las que ya pasaron."}
                 </p>
@@ -224,21 +217,3 @@ export function Control({
   );
 }
 
-/** Cuándo empieza el evento y, si se repite, cada cuánto vuelve. */
-function cuando(evento: Resumen, formato: FormatoHora): string {
-  const inicio = fechaDe(evento.inicio);
-  const fin = evento.fin === null ? null : fechaDe(evento.fin);
-
-  const partes: string[] = [
-    fin && !mismoDia(inicio, fin)
-      ? rangoCompacto(inicio, fin)
-      : fechaCompacta(inicio),
-  ];
-
-  if (!evento.todo_el_dia) partes.push(horaDe(evento.inicio, formato));
-  if (evento.rrule !== null) {
-    partes.push(`se repite ${textoRepeticion(desdeRrule(evento.rrule))}`);
-  }
-
-  return partes.join(" · ");
-}

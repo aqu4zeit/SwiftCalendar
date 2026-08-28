@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useVelo } from "./flotante";
+import { plano } from "./texto";
 
 /** Una acción que la paleta puede ejecutar. */
 export interface Comando {
@@ -18,17 +19,6 @@ interface Props {
   saliendo: boolean;
   onElegir: (id: string) => void;
   onCerrar: () => void;
-}
-
-/**
- * Sin acentos y en minúsculas, para que "mes" encuentre "Mes anterior" y
- * "proximo" encuentre "Mes próximo".
- */
-function plano(texto: string): string {
-  return texto
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
 }
 
 /**

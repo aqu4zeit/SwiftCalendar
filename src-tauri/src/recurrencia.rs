@@ -124,6 +124,59 @@ fn periodo(inicio: NaiveDate, regla: &Regla, n: u32) -> Option<(i32, u32, u32)> 
     }
 }
 
+/// Recorre las ocurrencias de una serie en orden, desde la primera.
+///
+/// Es el recorrido puro, sin rango de fechas: se corta solo donde la regla
+/// declara su final, o donde se acaba el calendario que la biblioteca sabe
+/// representar. Una serie sin final es un iterador infinito, así que quien lo
+/// consuma tiene que declarar dónde para.
+///
+/// Existe para que la expansión por rango y la búsqueda de la próxima ocurrencia
+/// compartan el recorrido en vez de escribirlo cada una: la aritmética de los
+/// periodos y los dos finales de la regla viven acá y en ningún otro sitio.
+fn recorrer<'a>(
+    inicio: NaiveDateTime,
+    regla: &'a Regla,
+) -> impl Iterator<Item = NaiveDateTime> + 'a {
+    let mut n = 0u32;
+    let mut emitidas = 0u32;
+    let mut terminada = false;
+
+    std::iter::from_fn(move || {
+        loop {
+            if terminada {
+                return None;
+            }
+
+            let (anio, mes, dia) = periodo(inicio.date(), regla, n)?;
+            n = n.checked_add(1)?;
+
+            // El primer día del periodo avanza siempre, exista o no el día
+            // pedido. Que no se pueda ni nombrar significa que el calendario se
+            // acabó, y ahí la serie termina aunque la regla no lo diga.
+            NaiveDate::from_ymd_opt(anio, mes, 1)?;
+
+            // El día pedido puede no existir: un 31 en un mes de 30.
+            let Some(fecha) = NaiveDate::from_ymd_opt(anio, mes, dia) else {
+                continue;
+            };
+
+            if let Final::Hasta(limite) = regla.final_ {
+                if fecha > limite {
+                    return None;
+                }
+            }
+
+            emitidas += 1;
+            if let Final::Veces(cuantas) = regla.final_ {
+                terminada = emitidas >= cuantas;
+            }
+
+            return Some(fecha.and_time(inicio.time()));
+        }
+    })
+}
+
 /// Expande una serie dentro de un rango de fechas, en hora de reloj.
 pub fn expandir(
     inicio: NaiveDateTime,
@@ -131,49 +184,10 @@ pub fn expandir(
     desde: NaiveDate,
     hasta: NaiveDate,
 ) -> Vec<NaiveDateTime> {
-    let mut fechas = Vec::new();
-    let mut encontradas = 0u32;
-
-    for n in 0u32.. {
-        let Some((anio, mes, dia)) = periodo(inicio.date(), regla, n) else {
-            break;
-        };
-
-        // El primer día del periodo avanza siempre, exista o no el día pedido.
-        let Some(referencia) = NaiveDate::from_ymd_opt(anio, mes, 1) else {
-            break;
-        };
-        if referencia > hasta {
-            break;
-        }
-
-        // El día pedido puede no existir: un 31 en un mes de 30.
-        let Some(fecha) = NaiveDate::from_ymd_opt(anio, mes, dia) else {
-            continue;
-        };
-
-        if let Final::Hasta(limite) = regla.final_ {
-            if fecha > limite {
-                break;
-            }
-        }
-        if fecha > hasta {
-            break;
-        }
-
-        encontradas += 1;
-        if fecha >= desde {
-            fechas.push(fecha.and_time(inicio.time()));
-        }
-
-        if let Final::Veces(cuantas) = regla.final_ {
-            if encontradas >= cuantas {
-                break;
-            }
-        }
-    }
-
-    fechas
+    recorrer(inicio, regla)
+        .take_while(|f| f.date() <= hasta)
+        .filter(|f| f.date() >= desde)
+        .collect()
 }
 
 /// Las ocurrencias excluidas de una serie.
@@ -205,6 +219,58 @@ pub fn ocurrencias(
         .into_iter()
         .filter(|f| !fuera.contains(&f.format(FORMATO).to_string()))
         .collect())
+}
+
+/// La primera ocurrencia que cae en `dia` o después. `None` si no hay ninguna.
+///
+/// Recorrer hasta encontrarla siempre acaba: o aparece una, o la regla declara
+/// su final. Por eso nadie tiene que decir hasta dónde mirar, que con intervalos
+/// de hasta 999 años sería un número inventado.
+pub fn primera_desde(
+    conexion: &Connection,
+    evento: &Evento,
+    dia: NaiveDate,
+) -> Result<Option<NaiveDateTime>, Error> {
+    let Some(regla) = regla_de(evento)? else {
+        return Ok(suelta(evento, |f| f.date() >= dia));
+    };
+
+    let fuera = excluidas(conexion, evento.id)?;
+
+    Ok(recorrer(evento.inicio, &regla)
+        .filter(|f| !fuera.contains(&f.format(FORMATO).to_string()))
+        .find(|f| f.date() >= dia))
+}
+
+/// La última ocurrencia que cae en `dia` o antes. `None` si no hay ninguna.
+pub fn ultima_hasta(
+    conexion: &Connection,
+    evento: &Evento,
+    dia: NaiveDate,
+) -> Result<Option<NaiveDateTime>, Error> {
+    let Some(regla) = regla_de(evento)? else {
+        return Ok(suelta(evento, |f| f.date() <= dia));
+    };
+
+    let fuera = excluidas(conexion, evento.id)?;
+
+    Ok(recorrer(evento.inicio, &regla)
+        .take_while(|f| f.date() <= dia)
+        .filter(|f| !fuera.contains(&f.format(FORMATO).to_string()))
+        .last())
+}
+
+/// La regla del evento, o `None` si no se repite.
+fn regla_de(evento: &Evento) -> Result<Option<Regla>, Error> {
+    match &evento.rrule {
+        None => Ok(None),
+        Some(texto) => Regla::parsear(texto).map(Some),
+    }
+}
+
+/// La única ocurrencia de un evento sin regla, si cumple.
+fn suelta(evento: &Evento, cumple: impl Fn(NaiveDateTime) -> bool) -> Option<NaiveDateTime> {
+    Some(evento.inicio).filter(|f| cumple(*f))
 }
 
 #[cfg(test)]
@@ -491,5 +557,93 @@ mod pruebas {
                 "'{regla}' debería ser rechazada"
             );
         }
+    }
+
+    /// La serie infinita no obliga a declarar hasta dónde mirar.
+    #[test]
+    fn la_primera_desde_de_una_serie_sin_final() {
+        let c = db::en_memoria();
+        let id = serie_semanal(&c, momento(2020, 1, 6, 18));
+        let evento = evento::leer(&c, id).unwrap();
+
+        // El 6 de enero de 2020 fue lunes; el primer lunes desde el 26 de agosto
+        // de 2026, que es miércoles, es el 31.
+        let encontrada = primera_desde(&c, &evento, dia(2026, 8, 26)).unwrap();
+
+        assert_eq!(encontrada, Some(momento(2026, 8, 31, 18)));
+    }
+
+    /// Si la serie ya terminó no hay ninguna por delante.
+    #[test]
+    fn la_primera_desde_de_una_serie_terminada_no_existe() {
+        let c = db::en_memoria();
+        let id = serie_semanal(&c, momento(2026, 8, 3, 18));
+
+        c.execute(
+            "UPDATE evento SET rrule = 'FREQ=WEEKLY;COUNT=3' WHERE id = ?1",
+            [id],
+        )
+        .unwrap();
+        let evento = evento::leer(&c, id).unwrap();
+
+        // Los lunes 3, 10 y 17 de agosto.
+        assert_eq!(primera_desde(&c, &evento, dia(2026, 12, 25)).unwrap(), None);
+        assert_eq!(
+            ultima_hasta(&c, &evento, dia(2026, 12, 25)).unwrap(),
+            Some(momento(2026, 8, 17, 18))
+        );
+    }
+
+    /// Una ocurrencia excluida no cuenta, ni hacia adelante ni hacia atrás.
+    #[test]
+    fn las_excluidas_no_cuentan() {
+        let c = db::en_memoria();
+        let id = serie_semanal(&c, momento(2026, 8, 3, 18));
+        excluir(&c, id, "2026-08-31 18:00");
+        let evento = evento::leer(&c, id).unwrap();
+
+        assert_eq!(
+            primera_desde(&c, &evento, dia(2026, 8, 26)).unwrap(),
+            Some(momento(2026, 9, 7, 18))
+        );
+        assert_eq!(
+            ultima_hasta(&c, &evento, dia(2026, 8, 31)).unwrap(),
+            Some(momento(2026, 8, 24, 18))
+        );
+    }
+
+    /// Un evento sin regla está donde está: cuenta si cae del lado pedido.
+    #[test]
+    fn un_evento_suelto_cuenta_una_sola_vez() {
+        let c = db::en_memoria();
+        let grupo_id = grupo::listar(&c).unwrap()[0].id;
+        let (id, _) = evento::crear(
+            &c,
+            EventoNuevo {
+                grupo_id,
+                titulo: "Entrega informe HPC".to_string(),
+                inicio: momento(2024, 3, 7, 18),
+                fin: None,
+                cuando: Cuando::Fija,
+                importancia: Importancia::Comun,
+                color: None,
+                descripcion: None,
+                ubicacion: None,
+                url: None,
+                imagen: None,
+                rrule: None,
+                recordatorio_min: None,
+                adjuntos: Vec::new(),
+                uid: None,
+            },
+        )
+        .unwrap();
+        let evento = evento::leer(&c, id).unwrap();
+
+        assert_eq!(primera_desde(&c, &evento, dia(2026, 8, 26)).unwrap(), None);
+        assert_eq!(
+            ultima_hasta(&c, &evento, dia(2026, 8, 26)).unwrap(),
+            Some(momento(2024, 3, 7, 18))
+        );
     }
 }

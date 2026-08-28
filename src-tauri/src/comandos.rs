@@ -9,7 +9,7 @@ use tauri::{AppHandle, Manager, State};
 use crate::ajuste;
 use crate::archivo::{self, Carpeta};
 use crate::bandeja;
-use crate::catalogo::{self, Resumen};
+use crate::catalogo::{self, Pagina, Resumen};
 use crate::compartir;
 use crate::respaldo;
 use crate::db::Base;
@@ -541,6 +541,26 @@ pub fn borrar_evento(
         .registrar(accion);
 
     Ok(())
+}
+
+/// La página del buscador para un mes, filtrada por lo que se haya escrito.
+///
+/// `None` significa que no hay ningún evento que coincida. El mes que vuelve
+/// puede no ser el pedido: si ese no tiene nada, se devuelve el más cercano que
+/// sí, para que escribir reduzca la lista sin dejar una página vacía.
+#[tauri::command]
+pub fn pagina_buscador(
+    base: State<'_, Base>,
+    mes: String,
+    busca: String,
+) -> Result<Option<Pagina>, String> {
+    let zona = hora::zona_del_equipo().map_err(|e| e.to_string())?;
+    let hoy = chrono::Local::now().date_naive();
+    let mes = catalogo::mes_desde_texto(&mes).map_err(|e| e.to_string())?;
+
+    let conexion = base.0.lock().expect("la conexión quedó envenenada");
+
+    catalogo::pagina(&conexion, mes, &busca, hoy, zona).map_err(|e| e.to_string())
 }
 
 /// Todos los eventos guardados, para el panel de control.

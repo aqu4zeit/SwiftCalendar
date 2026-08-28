@@ -33,8 +33,16 @@ import {
   type Tema,
   type PorDia,
 } from "./api";
-import { clave, fechaDe, fechaLarga, rejilla, type FormatoHora } from "./fecha";
+import {
+  clave,
+  claveMes,
+  fechaDe,
+  fechaLarga,
+  rejilla,
+  type FormatoHora,
+} from "./fecha";
 import { Ajustes } from "./Ajustes";
+import { Buscador } from "./Buscador";
 import { Control } from "./Control";
 import { AvisoBandeja } from "./AvisoBandeja";
 import {
@@ -86,6 +94,7 @@ export default function App() {
   const [avisoVisto, setAvisoVisto] = useState(true);
   const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
   const [controlAbierto, setControlAbierto] = useState(false);
+  const [buscadorAbierto, setBuscadorAbierto] = useState(false);
   const [paletaAbierta, setPaletaAbierta] = useState(false);
 
   /*
@@ -387,7 +396,7 @@ export default function App() {
           { id: "exportar", texto: "Exportar evento" },
           { id: "borrar", texto: "Borrar evento", malo: true },
         ]
-      : [{ id: "nuevo-aqui", texto: "Nuevo evento aquí" }];
+      : [{ id: "nuevo-aqui", texto: "Nuevo evento aquí", signo: "+" }];
   }
 
   /**
@@ -468,12 +477,14 @@ export default function App() {
   }
 
   /**
-   * Abrir la ficha de la ocurrencia que originó una notificación.
+   * Abrir la ficha de una ocurrencia concreta.
    *
-   * El mes de fondo se mueve al de la ocurrencia: cerrar la ficha tiene que dejar
-   * al usuario mirando el día del que vino, no el mes donde estaba antes.
+   * La piden los avisos y el buscador: los dos saben de qué evento y de qué
+   * ocurrencia hablan, y ninguno tiene el tramo ya resuelto. El mes de fondo se
+   * mueve al de la ocurrencia, porque cerrar la ficha tiene que dejar al usuario
+   * mirando el día del que vino y no el mes donde estaba antes.
    */
-  function abrirDesdeAviso(evento_id: number, ocurrencia: string) {
+  function abrirOcurrencia(evento_id: number, ocurrencia: string) {
     const fecha = fechaDe(ocurrencia);
     setAnio(fecha.getFullYear());
     setMes(fecha.getMonth() + 1);
@@ -514,6 +525,8 @@ export default function App() {
       ? "alcance"
       : paletaAbierta
       ? "paleta"
+      : buscadorAbierto
+      ? "buscador"
       : controlAbierto
       ? "control"
       : ajustesAbiertos
@@ -552,6 +565,7 @@ export default function App() {
         ? "Cerrar los recordatorios"
         : "Ver los recordatorios",
     },
+    { id: "buscar", nombre: "Buscar un evento", atajo: "Ctrl+F" },
     { id: "ajustes", nombre: "Abrir los ajustes", atajo: "Ctrl+," },
     {
       id: "tema",
@@ -582,6 +596,8 @@ export default function App() {
         return mostrarTodos();
       case "avisos":
         return setAvisosAbiertos(!avisosAbiertos);
+      case "buscar":
+        return setBuscadorAbierto(true);
       case "ajustes":
         return setAjustesAbiertos(true);
       case "tema":
@@ -640,6 +656,14 @@ export default function App() {
         return;
       }
 
+      // El buscador, por la misma razón y con la misma excepción: Ctrl+F no
+      // tiene otro uso, salvo dentro de un campo de texto.
+      if (e.ctrlKey && e.key.toLowerCase() === "f" && !escribiendo()) {
+        e.preventDefault();
+        setBuscadorAbierto(true);
+        return;
+      }
+
       if (arriba !== null || escribiendo()) return;
 
       if (e.ctrlKey) {
@@ -686,6 +710,7 @@ export default function App() {
   const menuVisible = usePresencia(menu);
   const ajustesVisible = usePresencia(ajustesAbiertos ? true : null);
   const controlVisible = usePresencia(controlAbierto ? true : null);
+  const buscadorVisible = usePresencia(buscadorAbierto ? true : null);
   const avisoVisible = usePresencia(avisandoBandeja ? true : null);
 
   const filtrado = grupos
@@ -752,7 +777,7 @@ export default function App() {
                 onCambio={() => void refrescarAvisos()}
                 onAbrirEvento={(evento_id, ocurrencia) => {
                   setAvisosAbiertos(false);
-                  abrirDesdeAviso(evento_id, ocurrencia);
+                  abrirOcurrencia(evento_id, ocurrencia);
                 }}
                 onError={setError}
                 onCerrar={() => setAvisosAbiertos(false)}
@@ -917,6 +942,21 @@ export default function App() {
             void refrescarAvisos();
           }}
           onCerrar={() => setControlAbierto(false)}
+        />
+      )}
+
+      {buscadorVisible.valor && (
+        <Buscador
+          mes={claveMes(anio, mes)}
+          formatoHora={formatoHora}
+          activo={arriba === "buscador"}
+          saliendo={buscadorVisible.saliendo}
+          onIr={(evento) => {
+            setBuscadorAbierto(false);
+            abrirOcurrencia(evento.evento_id, evento.ocurrencia);
+          }}
+          onError={setError}
+          onCerrar={() => setBuscadorAbierto(false)}
         />
       )}
 

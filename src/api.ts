@@ -443,10 +443,35 @@ export interface Resumen {
   grupo: string;
   color: string;
   importancia: Importancia;
+  /** La ocurrencia que esta fila representa, en hora guardada. Abre su ficha. */
+  ocurrencia: string;
   inicio: string;
   fin: string | null;
   todo_el_dia: boolean;
   rrule: string | null;
+}
+
+/** Una página del buscador: un mes, sus eventos y los meses vecinos. */
+export interface Pagina {
+  /** `AAAA-MM`. */
+  mes: string;
+  eventos: Resumen[];
+  /** `null` es que no hay: es lo que apaga cada flecha. */
+  anterior: string | null;
+  siguiente: string | null;
+}
+
+/**
+ * La página del buscador para un mes, filtrada por lo que se haya escrito.
+ *
+ * `null` significa que no coincide ningún evento. El mes que vuelve puede no ser
+ * el pedido: si ese no tiene nada, se devuelve el más cercano que sí.
+ */
+export function paginaBuscador(
+  mes: string,
+  busca: string,
+): Promise<Pagina | null> {
+  return invoke("pagina_buscador", { mes, busca });
 }
 
 /** Todos los eventos guardados, del más antiguo al más nuevo. */

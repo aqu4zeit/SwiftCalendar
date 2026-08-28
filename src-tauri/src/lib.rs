@@ -138,6 +138,7 @@ pub fn run() {
             comandos::editar_evento,
             comandos::borrar_evento,
             comandos::listar_eventos,
+            comandos::pagina_buscador,
             comandos::borrar_todos,
             comandos::generar_notificaciones,
             comandos::listar_notificaciones,
