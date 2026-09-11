@@ -32,7 +32,6 @@ import {
   type Importancia,
   type EventoDetalle,
   type Instancia,
-  type Tema,
   type PorDia,
 } from "./api";
 import {
@@ -78,7 +77,6 @@ export default function App() {
   const [mes, setMes] = useState(HOY.getMonth() + 1);
   const [porDia, setPorDia] = useState<PorDia>({});
   const [grupos, setGrupos] = useState<Grupos | null>(null);
-  const [tema, setTema] = useState<Tema>("oscuro");
   const [densidad, setDensidad] = useState<Densidad>("comoda");
   const [formatoHora, setFormatoHora] = useState<FormatoHora>("24");
   const [carpeta, setCarpeta] = useState<string | null>(null);
@@ -176,7 +174,6 @@ export default function App() {
   useEffect(() => {
     listarAjustes()
       .then((ajustes) => {
-        if (ajustes.tema === "claro") setTema("claro");
         if (ajustes.densidad === "compacta") setDensidad("compacta");
         if (ajustes.formato_hora === "12") setFormatoHora("12");
         setBandeja(ajustes.bandeja === "1");
@@ -268,17 +265,6 @@ export default function App() {
     return () => void quitar.then((f) => f());
   }, []);
 
-  /*
-   * El tema se marca en la raíz del documento y no en `.app`.
-   *
-   * El fondo lo pinta `body`, que está fuera del árbol de React, y los velos y
-   * el globo se dibujan con posición fija. Marcando la raíz, la paleta entera
-   * cambia sin que ninguna regla del CSS tenga que saber en qué tema está.
-   */
-  useEffect(() => {
-    document.documentElement.dataset.tema = tema;
-  }, [tema]);
-
 
   useEffect(() => {
     listarGrupos()
@@ -349,7 +335,6 @@ export default function App() {
         if (clave === "bandeja") setBandeja(valor === "1");
         if (clave === "arranque") setArranque(valor === "1");
         if (clave === "aviso_bandeja_visto") setAvisoVisto(valor === "1");
-        if (clave === "tema") setTema(valor as Tema);
         if (clave === "densidad") setDensidad(valor as Densidad);
         if (clave === "formato_hora") setFormatoHora(valor as FormatoHora);
       })
@@ -597,10 +582,6 @@ export default function App() {
     },
     { id: "buscar", nombre: "Buscar un evento", atajo: "Ctrl+F" },
     { id: "ajustes", nombre: "Abrir los ajustes", atajo: "Ctrl+," },
-    {
-      id: "tema",
-      nombre: tema === "oscuro" ? "Usar el tema claro" : "Usar el tema oscuro",
-    },
     { id: "deshacer", nombre: "Deshacer", atajo: "Ctrl+Z" },
     { id: "rehacer", nombre: "Rehacer", atajo: "Ctrl+Shift+Z" },
     { id: "pantalla-completa", nombre: "Pantalla completa", atajo: "F11" },
@@ -630,8 +611,6 @@ export default function App() {
         return setBuscadorAbierto(true);
       case "ajustes":
         return setAjustesAbiertos(true);
-      case "tema":
-        return guardar("tema", tema === "oscuro" ? "claro" : "oscuro");
       case "pantalla-completa": {
         const ventana = getCurrentWindow();
         return void ventana.setFullscreen(!(await ventana.isFullscreen()));
@@ -947,7 +926,6 @@ export default function App() {
 
       {ajustesVisible.valor && carpeta && (
         <Ajustes
-          tema={tema}
           densidad={densidad}
           formatoHora={formatoHora}
           carpeta={carpeta}

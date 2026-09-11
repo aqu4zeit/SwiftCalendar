@@ -159,24 +159,6 @@ pub fn esconde_al_cerrar(app: &AppHandle) -> bool {
     }
 }
 
-/// Si el tema elegido en la aplicación es el oscuro.
-///
-/// Lo pregunta a la base, igual que el resto de los ajustes: la única verdad es
-/// la fila de `ajuste`. Si no se deja leer, la respuesta es el tema con el que
-/// nace la aplicación.
-pub fn tema_oscuro(app: &AppHandle) -> bool {
-    let base = app.state::<Base>();
-    let conexion = base.0.lock().expect("la conexión quedó envenenada");
-
-    match ajuste::leer(&conexion, "tema") {
-        Ok(valor) => valor != "claro",
-        Err(e) => {
-            eprintln!("no se pudo leer el tema: {e}");
-            true
-        }
-    }
-}
-
 /// Destruye la ventana y deja solo el proceso nativo.
 ///
 /// Destruir y no esconder: una ventana escondida conserva su webview, que en este

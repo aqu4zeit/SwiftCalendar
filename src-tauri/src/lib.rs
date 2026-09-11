@@ -75,9 +75,10 @@ pub fn run() {
             app.manage(historial::Pila(Default::default()));
             app.manage(menu_bandeja::SitioDelIcono::default());
 
-            // Lo que dibuja Windows —el menú del ícono y los diálogos del
-            // sistema— sigue el tema de la aplicación, no el del equipo.
-            tema_nativo::aplicar(bandeja::tema_oscuro(app.handle()));
+            // Los diálogos que dibuja Windows —elegir imagen, elegir respaldo—
+            // salen oscuros aunque el equipo esté en claro, porque la
+            // aplicación lo está.
+            tema_nativo::aplicar();
 
             // La limpieza corre acá y no después: es el único momento en que el
             // historial está vacío, así que ningún archivo hace falta todavía
@@ -153,7 +154,7 @@ pub fn run() {
             comandos::borrar_evento,
             comandos::listar_eventos,
             comandos::pagina_buscador,
-            menu_bandeja::menu_de_bandeja,
+            menu_bandeja::entradas_del_menu,
             menu_bandeja::elegir_del_menu,
             comandos::borrar_todos,
             comandos::generar_notificaciones,

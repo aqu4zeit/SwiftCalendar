@@ -3,11 +3,10 @@ import { openPath } from "@tauri-apps/plugin-opener";
 import { open, save } from "@tauri-apps/plugin-dialog";
 
 import { exportarRespaldo, restaurarRespaldo } from "./api";
-import type { Densidad, Tema } from "./api";
+import type { Densidad } from "./api";
 import type { FormatoHora } from "./fecha";
 
 interface Props {
-  tema: Tema;
   densidad: Densidad;
   formatoHora: FormatoHora;
   /** Si cerrar la ventana deja la aplicación viva en la bandeja. */
@@ -67,7 +66,6 @@ function Sw({ on, onCambiar }: { on: boolean; onCambiar: () => void }) {
  * tocar la que ya estaba: era el plan desde el principio.
  */
 export function Ajustes({
-  tema,
   densidad,
   formatoHora,
   bandeja,
@@ -133,25 +131,6 @@ export function Ajustes({
 
         <div className="modal-cuerpo apilado">
           <div className="seccion">APARIENCIA</div>
-
-          <Fila titulo="Tema">
-            <div className="segmentado">
-              <button
-                type="button"
-                className={tema === "oscuro" ? "on" : undefined}
-                onClick={() => onGuardar("tema", "oscuro")}
-              >
-                Oscuro
-              </button>
-              <button
-                type="button"
-                className={tema === "claro" ? "on" : undefined}
-                onClick={() => onGuardar("tema", "claro")}
-              >
-                Claro
-              </button>
-            </div>
-          </Fila>
 
           <Fila
             titulo="Densidad de la celda"

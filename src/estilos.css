@@ -1,6 +1,12 @@
 /* Variables del tema. Son las mismas de los bocetos. */
 
 :root {
+  /*
+   * Si este color cambia, cambia también `backgroundColor` de la ventana
+   * principal en `tauri.conf.json`: es el mismo fondo, pintado por la ventana
+   * nativa antes de que exista la hoja de estilos. Sin él, el primer fotograma
+   * es el blanco por defecto del webview.
+   */
   --bg: #131110;
   --cell: #1a1817;
   --cell-out: #171514;
@@ -56,69 +62,6 @@
   --fila-min: 24px;
   --fila-max: 38px;
   --tarjeta-max: 126px;
-}
-
-/*
- * El tema claro.
- *
- * Redefine la paleta y nada más: ninguna regla del archivo sabe en qué tema
- * está. Por eso el paso previo fue sacar los sesenta colores escritos a mano,
- * no agregar un selector delante de cada uno.
- *
- * Sigue siendo cálido. Un gris neutro al lado del rojo de "hoy" y de los colores
- * de grupo, que son todos cálidos, los hace ver sucios.
- */
-
-:root[data-tema="claro"] {
-  --bg: #efeae2;
-  --cell: #fffdfa;
-  --cell-out: #f4f0e8;
-  --panel: #faf7f2;
-  --raised: #fffdfa;
-  --campo: #f3efe8;
-  --line: #ded6ca;
-  --line-2: #cec7bb;
-  --tx: #241f1b;
-  --tx-2: #5e574e;
-  --tx-3: #8a8176;
-  --hoy: #c2452f;
-  --scroll: #cec7bb;
-  --scroll-activo: #a79d90;
-
-  --hover: #ebe5dc;
-  --hover-2: #ebe5dc;
-  --activo: #dcd3c5;
-  --borde-activo: #c3b9a9;
-  --tx-apagado: #b4aba0;
-  --tx-inactivo: #b4aba0;
-  /* A seis u ocho puntos de `--cell`, igual que en el oscuro. Estaba a veinte, y
-     sobre ese beige el evento —que también es beige— desaparecía. */
-  --semana: #f8f4ed;
-  --celda-hoy: #fbeae5;
-  --evento: #e4dbcb;
-  --evento-hover: #d8cdb9;
-  --pie: #f4f0e9;
-  --inactivo: #ece7df;
-  --segmento-on: #dcd3c5;
-  --opcion-on: #ebe5dc;
-  --separador: #c3b9a9;
-  --globo-fondo: #fffdfa;
-
-  --mal-tx: #a3392a;
-  --mal-fondo: #fbeeea;
-  --mal-borde: #e0b3aa;
-  --mal-borde-2: #cf8677;
-  --adv-tx: #85511f;
-  --adv-borde: #e5c9a6;
-
-  /* Sobre claro el velo tiñe en vez de apagar: el negro puro se ve sucio al
-     lado de una paleta cálida. */
-  --velo: rgba(60, 51, 42, 0.34);
-  --velo-2: rgba(60, 51, 42, 0.24);
-  --sombra-globo: rgba(60, 51, 42, 0.2);
-  --esquina: rgba(255, 253, 250, 0.82);
-  --esquina-hover: rgba(255, 253, 250, 0.95);
-  --tapa-filtro: rgba(250, 247, 242, 0.86);
 }
 
 * {

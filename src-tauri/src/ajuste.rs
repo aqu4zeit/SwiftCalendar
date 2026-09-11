@@ -68,12 +68,16 @@ mod pruebas {
     use crate::db;
 
     /// La semilla deja los ajustes que la interfaz necesita al arrancar.
+    ///
+    /// 'tema' no está: la migración 007 lo borró. La apariencia oscura dejó de
+    /// ser una opción y pasó a ser lo único que hay, así que un ajuste guardado
+    /// sería una segunda versión de la verdad.
     #[test]
     fn la_semilla_deja_los_ajustes_de_apariencia() {
         let c = db::en_memoria();
         let ajustes = todos(&c).unwrap();
 
-        assert_eq!(ajustes.get("tema").map(String::as_str), Some("oscuro"));
+        assert_eq!(ajustes.get("tema"), None);
         assert_eq!(ajustes.get("densidad").map(String::as_str), Some("comoda"));
     }
 

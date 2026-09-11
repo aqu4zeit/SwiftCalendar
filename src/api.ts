@@ -200,8 +200,6 @@ export type Ajustes = Record<string, string>;
 
 export type Densidad = "comoda" | "compacta";
 
-export type Tema = "oscuro" | "claro";
-
 export function listarAjustes(): Promise<Ajustes> {
   return invoke("listar_ajustes");
 }
@@ -400,19 +398,8 @@ export interface EntradaBandeja {
   separada: boolean;
 }
 
-/**
- * Todo lo que el menú necesita para dibujarse.
- *
- * El tema viene con las entradas porque el menú vive en su propia ventana, y
- * quien marca la raíz del documento con el tema elegido es la del calendario.
- */
-export interface MenuDelSistema {
-  tema: Tema;
-  entradas: EntradaBandeja[];
-}
-
-export function menuDeBandeja(): Promise<MenuDelSistema> {
-  return invoke("menu_de_bandeja");
+export function entradasDelMenu(): Promise<EntradaBandeja[]> {
+  return invoke("entradas_del_menu");
 }
 
 /** Ejecuta lo elegido. `cerrar` solo aparta el menú. */

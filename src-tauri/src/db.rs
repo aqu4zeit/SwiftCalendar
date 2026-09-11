@@ -15,6 +15,7 @@ const MIGRACIONES: &[&str] = &[
     include_str!("../migrations/004_aviso_bandeja.sql"),
     include_str!("../migrations/005_uid_evento.sql"),
     include_str!("../migrations/006_filtro_recordado.sql"),
+    include_str!("../migrations/007_sin_tema_claro.sql"),
 ];
 
 /// La conexión, guardada como estado de la aplicación.

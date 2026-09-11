@@ -8,33 +8,32 @@
 //! oscuro del sistema, y eso se enciende por ordinal en `uxtheme.dll`.
 //!
 //! `tao` ya deja puesto `AllowDark` al crear el bucle de eventos, que significa
-//! "oscuro si Windows lo está". Acá se sube a forzado, para que el menú siga el
-//! tema que el usuario eligió en la aplicación y no el del equipo. De paso lo
-//! siguen los diálogos del sistema: el de elegir imagen y el del respaldo.
+//! "oscuro si Windows lo está". Acá se sube a forzado: la aplicación es oscura
+//! siempre, así que lo que dibuja Windows —los diálogos de elegir archivo y de
+//! respaldo— tiene que serlo aunque el equipo esté en claro.
 //!
 //! Los ordinales no están documentados por Microsoft. El proyecto ya depende de
 //! ellos sin saberlo: `tao` usa el 132, el 133, el 135 y el 104, y `muda` el 132.
 //! Agregar el 136 no cambia la clase de riesgo, y si un día dejan de existir,
 //! `GetProcAddress` devuelve `None` y todo sigue como hoy.
 
-/// Aplica el tema de la aplicación a lo que dibuja el sistema.
+/// Pone en oscuro lo que dibuja el sistema.
 ///
 /// En cualquier sistema que no sea Windows no hay nada que hacer.
 #[cfg(not(windows))]
-pub fn aplicar(_oscuro: bool) {}
+pub fn aplicar() {}
 
 #[cfg(windows)]
-pub fn aplicar(oscuro: bool) {
+pub fn aplicar() {
     use std::ffi::c_void;
     use windows_sys::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryA};
 
     /// Qué modo quiere la aplicación. Los valores son los de `uxtheme.dll`.
     #[repr(C)]
     enum ModoPreferido {
-        // Default = 0 y AllowDark = 1 no se usan: `tao` ya deja AllowDark, y lo
-        // que hace falta acá es forzar, no permitir.
+        // Default = 0, AllowDark = 1 y ForzarClaro = 3 no se usan: `tao` ya deja
+        // AllowDark, y lo que hace falta acá es forzar el oscuro.
         ForzarOscuro = 2,
-        ForzarClaro = 3,
     }
 
     type SetPreferredAppMode = unsafe extern "system" fn(ModoPreferido) -> ModoPreferido;
@@ -56,11 +55,7 @@ pub fn aplicar(oscuro: bool) {
 
         if let Some(puntero) = por_ordinal(SET_PREFERRED_APP_MODE) {
             let poner: SetPreferredAppMode = std::mem::transmute(puntero);
-            poner(if oscuro {
-                ModoPreferido::ForzarOscuro
-            } else {
-                ModoPreferido::ForzarClaro
-            });
+            poner(ModoPreferido::ForzarOscuro);
         }
 
         // Sin esto, los menús que ya existen conservan el tema con el que

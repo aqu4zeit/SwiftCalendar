@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 
 import {
   elegirDelMenu,
-  menuDeBandeja,
+  entradasDelMenu,
   REARMAR,
   type EntradaBandeja,
 } from "./api";
@@ -28,13 +28,8 @@ export function MenuBandeja() {
   const [entradas, setEntradas] = useState<EntradaBandeja[]>([]);
 
   const armar = useCallback(() => {
-    menuDeBandeja()
-      .then(({ tema, entradas }) => {
-        // El tema se marca en la raíz igual que en la ventana del calendario,
-        // que es lo que hace que las 42 variables de color cambien de golpe.
-        document.documentElement.dataset.tema = tema;
-        setEntradas(entradas);
-      })
+    entradasDelMenu()
+      .then(setEntradas)
       .catch(() => {
         // Un menú que no aparece por no poder armarse sería peor que uno corto.
         // El lado nativo sigue atendiendo el clic izquierdo del ícono.
