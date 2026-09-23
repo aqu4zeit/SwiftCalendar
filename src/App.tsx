@@ -673,6 +673,14 @@ export default function App() {
         return;
       }
 
+      // La pregunta de alcance que abre el menú contextual es la única ventana
+      // sin un Escape propio: su estado es `pedido`, que vive acá. Las demás
+      // lo escuchan ellas mismas; esta la cierra quien la abrió.
+      if (e.key === "Escape" && arriba === "alcance") {
+        setPedido(null);
+        return;
+      }
+
       if (arriba !== null || escribiendo()) return;
 
       if (e.ctrlKey) {

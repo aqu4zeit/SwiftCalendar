@@ -127,7 +127,13 @@ select {
 body {
   background: var(--bg);
   color: var(--tx);
-  font-family: Inter, system-ui, sans-serif;
+  /*
+   * La letra del sistema y no una descargada. Inter venía de Google Fonts: la
+   * aplicación no se conecta a internet, así que sin conexión se caía a otra
+   * letra con otras medidas y la interfaz cambiaba según hubiera red o no.
+   * Segoe UI Variable viene con Windows 11; Segoe UI, con el 10.
+   */
+  font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   /*
    * La caja de un texto mide exactamente su texto.

@@ -20,11 +20,15 @@ export function SelectorMes({ anio, mes, onElegir }: Props) {
   const visible = usePresencia(abierto ? true : null);
   const seleccionado = useRef<HTMLButtonElement>(null);
 
+  // Abrir en el mes que se está mirando. Espera a que la lista exista: cuando
+  // cambia `abierto` todavía no está dibujada, porque `usePresencia` la monta
+  // un render después, y el desplazamiento no encontraba a quién llevar.
+  useEffect(() => {
+    if (visible.valor) seleccionado.current?.scrollIntoView({ block: "center" });
+  }, [visible.valor]);
+
   useEffect(() => {
     if (!abierto) return;
-
-    // Abrir en el mes que se está mirando.
-    seleccionado.current?.scrollIntoView({ block: "center" });
 
     function fuera(evento: MouseEvent) {
       if (!contenedor.current?.contains(evento.target as Node)) {
