@@ -136,6 +136,9 @@ impl Historial {
         }
     }
 
+    // Solo lo pide una prueba: la interfaz no pregunta si hay algo que rehacer,
+    // lo intenta y recibe `false`. Fuera de las pruebas no se compila.
+    #[cfg(test)]
     pub fn hay_para_rehacer(&self) -> bool {
         !self.deshecho.is_empty()
     }
