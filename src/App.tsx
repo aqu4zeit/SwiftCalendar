@@ -54,6 +54,7 @@ import {
   type Alcance,
 } from "./acciones";
 import { Ficha } from "./Ficha";
+import { Foco } from "./Foco";
 import { Globo } from "./Globo";
 import { MenuContextual, type Entrada } from "./MenuContextual";
 
@@ -1036,6 +1037,7 @@ export default function App() {
 
       {/* Uno solo para toda la aplicación, encima de todo lo demás. */}
       <Globo />
+      <Foco />
 
       {grupoVisible.valor && (
         <FormularioGrupo
