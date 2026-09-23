@@ -11,6 +11,7 @@ import {
 } from "./fecha";
 import { useListaConSalida } from "./presencia";
 import { useVelo } from "./flotante";
+import { nombreDeInstancia } from "./texto";
 
 /** La ventana crece hasta acá y desde el siguiente hace scroll. */
 const EVENTOS_VISIBLES = 5;
@@ -178,6 +179,8 @@ function Fila({
     <button
       type="button"
       className={saliendo ? "dia-ev saliendo" : "dia-ev"}
+      data-globo="cortado"
+      aria-label={nombreDeInstancia(instancia, formato)}
       onClick={() => onAbrir(instancia)}
       onContextMenu={(e) => {
         e.preventDefault();

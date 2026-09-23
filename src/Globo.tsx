@@ -11,6 +11,13 @@ import { MS_SALIDA } from "./presencia";
  */
 const ESPERA = 350;
 
+/** Si el nodo o algo de adentro tiene más texto del que muestra. */
+function algoCortado(nodo: HTMLElement): boolean {
+  return [nodo, ...nodo.querySelectorAll<HTMLElement>("*")].some(
+    (e) => e.scrollWidth > e.clientWidth,
+  );
+}
+
 /** La separación entre el globo y lo que describe. */
 const AIRE = 7;
 
@@ -102,6 +109,14 @@ export function Globo() {
       const atajo = nodo?.getAttribute("aria-keyshortcuts")?.replace("Control", "Ctrl");
       const texto = nombre && atajo ? `${nombre} (${atajo})` : nombre;
       if (!nodo || !texto) {
+        esconder();
+        return;
+      }
+
+      // Con `data-globo="cortado"` sale solo si algún texto de adentro no
+      // entra en su lugar. Sobre un evento que se lee entero, un globo que
+      // repite lo mismo aparecería a cada paso por el calendario.
+      if (nodo.dataset.globo === "cortado" && !algoCortado(nodo)) {
         esconder();
         return;
       }

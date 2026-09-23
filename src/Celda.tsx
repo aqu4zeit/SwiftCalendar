@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Instancia } from "./api";
 import { fechaLarga, horaDe, type FormatoHora } from "./fecha";
 import { useListaConSalida } from "./presencia";
+import { nombreDeInstancia } from "./texto";
 
 interface Props {
   fecha: Date;
@@ -152,6 +153,9 @@ function EventoSolo({
     <button
       type="button"
       className={clases.join(" ")}
+      // El globo muestra el nombre entero solo cuando el título no entra.
+      data-globo="cortado"
+      aria-label={nombreDeInstancia(instancia, formato)}
       onClick={(e) => {
 /** El clic en el evento no debe llegar a la celda, que abre el día. */
         e.stopPropagation();
@@ -191,6 +195,8 @@ function EventoCompacto({
     <button
       type="button"
       className={saliendo ? "ev saliendo" : "ev"}
+      data-globo="cortado"
+      aria-label={nombreDeInstancia(instancia, formato)}
       onClick={(e) => {
         e.stopPropagation();
         onAbrir(instancia);

@@ -1,4 +1,4 @@
-import type { Resumen } from "./api";
+import type { Instancia, Resumen } from "./api";
 import {
   fechaCompacta,
   fechaDe,
@@ -46,4 +46,29 @@ export function cuandoOcurre(evento: Resumen, formato: FormatoHora): string {
   }
 
   return partes.join(" · ");
+}
+
+/**
+ * Cómo se nombra un evento del calendario: el título, su horario y, si abarca
+ * varios días, cuál de ellos es este.
+ *
+ * Es lo que lee el lector de pantalla y lo que muestra el globo cuando el
+ * título no entra en su fila. Sin esto el nombre era el texto de la fila
+ * pegado, "9:00 AMReunión", y el título cortado no se podía leer entero sin
+ * abrir el evento.
+ */
+export function nombreDeInstancia(
+  instancia: Instancia,
+  formato: FormatoHora,
+): string {
+  const partes = [instancia.titulo];
+  if (!instancia.todo_el_dia) {
+    partes.push(
+      instancia.fin
+        ? `${horaDe(instancia.inicio, formato)} a ${horaDe(instancia.fin, formato)}`
+        : horaDe(instancia.inicio, formato),
+    );
+  }
+  if (instancia.de > 1) partes.push(`día ${instancia.dia} de ${instancia.de}`);
+  return partes.join(", ");
 }
