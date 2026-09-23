@@ -16,13 +16,20 @@
   --line: #2c2927;
   --line-2: #3a3634;
   --tx: #eae6e0;
-  --tx-2: #9c968d;
-  --tx-3: #6a655e;
+  /*
+   * El texto secundario llega a 4,5 a 1 contra todos los fondos, incluida la
+   * fila elegida de las listas (#302c2a), que es el más claro. Antes el
+   * terciario quedaba en 2,7 a 1 dentro de los modales, justo en las
+   * etiquetas y notas de 10 a 12 px, que son las que más lo necesitan. El
+   * secundario sube lo justo para seguir siendo un escalón más claro.
+   */
+  --tx-2: #aea79d;
+  --tx-3: #97938c;
   /* El foco con teclado: más claro que cualquier texto secundario para que el
      anillo contraste también dentro de los modales, que son más claros. */
-  --foco: #b0a99f;
+  --foco: #c8c1b6;
   --foco-campo: #7d776f;
-  --foco-halo: rgb(176 169 159 / 0.12);
+  --foco-halo: rgb(200 193 182 / 0.12);
   --hoy: #d0503c;
   --ancho-filtros: 224px;
   --scroll: #3a3634;
@@ -34,7 +41,7 @@
   --hover-2: #302c2a;
   --activo: #3b3633;
   --borde-activo: #4a4542;
-  --tx-apagado: #4a453f;
+  --tx-apagado: #5e5953;
   --tx-inactivo: #4f4a45;
   --semana: #201d1b;
   --celda-hoy: #241d1b;
@@ -42,7 +49,10 @@
   --evento-hover: #2b2827;
   --pie: #221f1e;
   --inactivo: #242120;
-  --segmento-on: #332f2d;
+  --segmento-on: #3d3835;
+  /* El borde de los controles que se prenden y apagan (interruptor, casilla):
+     con el gris de las líneas, apagados casi no se distinguían del fondo. */
+  --borde-control: #5a5450;
   --opcion-on: #2e2a28;
   --separador: #443f3a;
   --globo-fondo: #322e2c;
@@ -769,10 +779,12 @@ body {
   color: var(--tx);
 }
 
+/* El principal tiene que ganarle al destructivo: con el fondo casi igual al
+   del modal, en la ficha el ojo iba primero a "Borrar". */
 .btn.pri {
-  background: var(--activo);
+  background: var(--borde-activo);
   color: var(--tx);
-  border-color: var(--borde-activo);
+  border-color: var(--borde-control);
 }
 
 /* El botón inactivo se ve, no se esconde. */
@@ -783,9 +795,21 @@ body {
   border-color: var(--hover-2);
 }
 
+/*
+ * Lo destructivo dice qué es con el texto, y el rojo completo aparece al
+ * acercarse. Con el borde rojo siempre puesto, un "Borrar" al lado de
+ * "Editar" era lo más llamativo de la ficha. En una confirmación sí es la
+ * acción que se está por hacer, y ahí lleva el rojo desde el principio.
+ */
 .btn.malo {
-  border-color: var(--mal-borde);
+  border-color: var(--line-2);
   color: var(--mal-tx);
+}
+
+.btn.malo:hover,
+.velo.interno .btn.malo {
+  border-color: var(--mal-borde-2);
+  background: var(--mal-fondo);
 }
 
 /* --- campos del formulario --- */
@@ -847,7 +871,7 @@ button:focus-visible {
 .campo-titulo {
   width: 100%;
   background: var(--campo);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-2);
   border-radius: 6px;
   padding: 11px 10px;
   font-family: inherit;
@@ -889,7 +913,9 @@ button:focus-visible {
   align-items: center;
   gap: 8px;
   background: var(--campo);
-  border: 1px solid var(--line);
+  /* Con el gris de las líneas, el borde del campo casi no se separaba del
+     modal (1,1 a 1): no se veía dónde había que escribir. */
+  border: 1px solid var(--line-2);
   border-radius: 6px;
   padding: 10px 10px;
 }
@@ -1050,6 +1076,9 @@ button:focus-visible {
   width: calc((100% - 6px - 3px * (var(--n) - 1)) / var(--n));
   border-radius: 4px;
   background: var(--segmento-on);
+  /* El fondo solo apenas se separaba del campo: el borde dice cuál está
+     elegida sin depender del color del texto. */
+  box-shadow: inset 0 0 0 1px var(--borde-activo);
   transform: translateX(calc((100% + 3px) * var(--i)));
 }
 
@@ -1102,7 +1131,7 @@ button:focus-visible {
   height: 17px;
   border-radius: 9px;
   background: var(--hover-2);
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--borde-control);
   position: relative;
   flex: none;
   padding: 0;
@@ -1231,7 +1260,7 @@ button:focus-visible {
   min-height: 58px;
   resize: vertical;
   background: var(--campo);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-2);
   border-radius: 6px;
   padding: 9px 10px;
   font-family: inherit;
@@ -1983,7 +2012,7 @@ button:focus-visible {
   height: 14px;
   border-radius: 3px;
   flex: none;
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--borde-control);
   display: grid;
   place-items: center;
 }
