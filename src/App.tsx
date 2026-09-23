@@ -851,7 +851,7 @@ export default function App() {
             onClick={() => setFormulario({ modo: "crear", fecha: clave(HOY) })}
             disabled={!grupos}
           >
-            Nuevo evento <span className="gesto gesto-mas" aria-hidden="true">+</span>
+            Nuevo evento <span aria-hidden="true">+</span>
           </button>
         </div>
       </header>

@@ -121,7 +121,7 @@ export function FormularioGrupo({
         <div className="modal-cab">
           <h2 id={`${id}-titulo`}>{grupo ? "Editar grupo" : "Nuevo grupo"}</h2>
           <button type="button" className="cerrar" aria-label="Cerrar" onClick={intentarCerrar}>
-            <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
 

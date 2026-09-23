@@ -11,7 +11,7 @@ export function BotonBorrar({ onBorrar }: Props) {
       onClick={onBorrar}
       data-globo aria-label="Vaciar"
     >
-      <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
+      <span aria-hidden="true">✕</span>
     </button>
   );
 }

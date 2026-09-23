@@ -106,7 +106,7 @@ export function Control({
         <div className="modal-cab">
           <h2 id={`${id}-titulo`}>Todos los eventos</h2>
           <button type="button" className="cerrar" aria-label="Cerrar" onClick={onCerrar}>
-            <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
 

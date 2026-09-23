@@ -406,7 +406,7 @@ export function Formulario({
             {edicion ? "Editar evento" : "Nuevo evento"}
           </h2>
           <button type="button" className="cerrar" aria-label="Cerrar" onClick={intentarCerrar}>
-            <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
 

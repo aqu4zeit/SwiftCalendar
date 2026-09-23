@@ -179,7 +179,7 @@ export function Ajustes({
         <div className="modal-cab">
           <h2 id={`${id}-titulo`}>Ajustes</h2>
           <button type="button" className="cerrar" aria-label="Cerrar" onClick={onCerrar}>
-            <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
 

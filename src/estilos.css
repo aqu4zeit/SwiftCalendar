@@ -2957,8 +2957,13 @@ button:focus-visible {
  * entonces el puntero no cuenta como hover.
  *
  * Los que giran lo hacen justo lo que su propia simetría permite (el
- * engranaje, el aspa y el más, un cuarto de vuelta), y así volver al reposo
- * al terminar no se nota como salto.
+ * engranaje, un cuarto de vuelta), y así volver al reposo al terminar no se
+ * nota como salto.
+ *
+ * La cruz de cerrar y el más de crear no tienen gesto. Girando un cuarto de
+ * vuelta, la cruz pasa por un más y el más por una cruz: en medio del giro
+ * cada uno parecía el otro, y son justo los dos signos que no pueden
+ * confundirse.
  */
 /* Solo con un puntero que de verdad pasa por encima. En una pantalla táctil
    el toque simula el hover y el gesto saltaba al tocar, junto con la acción. */
@@ -2985,18 +2990,12 @@ span.gesto {
   display: inline-block;
 }
 
-.gesto-mas {
-  --animacion: gesto-cuarto;
-  transform-origin: 50% 50%;
-}
-
 .gesto-campana {
   --animacion: gesto-campana;
   transform-origin: 50% 12%;
 }
 
-.gesto-engranaje,
-.gesto-aspa {
+.gesto-engranaje {
   --animacion: gesto-cuarto;
   transform-origin: 50% 50%;
 }

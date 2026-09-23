@@ -153,7 +153,7 @@ export function Archivos({
               onClick={elegirImagen}
             >
               <span className="nombre">Arrastra una imagen o haz clic</span>
-              <span className="mas gesto gesto-mas" aria-hidden="true">+</span>
+              <span className="mas" aria-hidden="true">+</span>
             </button>
           ) : (
             <div
@@ -180,7 +180,7 @@ export function Archivos({
                 }}
                 data-globo aria-label="Quitar la imagen"
               >
-                <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
+                <span aria-hidden="true">✕</span>
               </button>
             </div>
           )}
@@ -210,7 +210,7 @@ export function Archivos({
                 }
                 data-globo aria-label="Quitar el archivo"
               >
-                <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
+                <span aria-hidden="true">✕</span>
               </button>
             </div>
           ))}
@@ -223,7 +223,7 @@ export function Archivos({
             onClick={elegirAdjuntos}
           >
             <span className="nombre">Arrastra archivos o haz clic</span>
-            <span className="mas gesto gesto-mas" aria-hidden="true">+</span>
+            <span className="mas" aria-hidden="true">+</span>
           </button>
         </div>
       </div>
