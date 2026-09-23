@@ -3,6 +3,7 @@ import { useEffect, useId, useState } from "react";
 import {
   crearEvento,
   editarEvento,
+  finAntesDelInicio,
   type Cuando,
   type AdjuntoPedido,
   type Edicion,
@@ -278,22 +279,38 @@ export function Formulario({
   const relojInicio = horaValida(campos.horaInicio);
   const relojFin = horaValida(campos.horaFin);
 
-  // El fin queda antes del inicio si cae en una fecha anterior, o el mismo día
-  // a una hora anterior. Antes solo se miraba el caso del fin sin fecha: con
-  // la fecha escrita, "Crear" quedaba habilitado y el error llegaba recién al
-  // guardar, al pie del formulario y lejos de este campo. Fechas AAAA-MM-DD y
-  // horas HH:MM con ceros se ordenan como texto igual que en el tiempo.
-  const fechasAlReves =
-    campos.fechaInicio !== "" &&
-    fechaFinReal !== "" &&
-    fechaFinReal < campos.fechaInicio;
-  const horasAlReves =
-    !campos.todoElDia &&
-    fechaFinReal === campos.fechaInicio &&
-    relojInicio !== null &&
-    relojFin !== null &&
-    relojFin < relojInicio;
-  const finAlReves = fechasAlReves || horasAlReves;
+  // Los extremos tal como se guardan, o `null` mientras falte algo para
+  // armarlos. Todo el día guarda los dos a las 00:00.
+  const inicioTexto = inicioValido
+    ? `${campos.fechaInicio} ${campos.todoElDia ? "00:00" : relojInicio}`
+    : null;
+  const finTexto =
+    fechaFinReal !== "" && (campos.todoElDia || relojFin !== null)
+      ? `${fechaFinReal} ${campos.todoElDia ? "00:00" : relojFin}`
+      : null;
+
+  // Si el fin cae antes del inicio lo contesta el lado nativo, con la misma
+  // regla que usa al guardar: acá no se comparan fechas. Se pregunta mientras
+  // se escribe para avisar junto al campo y apagar "Crear" antes de intentar.
+  const [finAlReves, setFinAlReves] = useState(false);
+  useEffect(() => {
+    if (inicioTexto === null || finTexto === null) {
+      setFinAlReves(false);
+      return;
+    }
+
+    let vigente = true;
+    finAntesDelInicio(inicioTexto, finTexto)
+      .then((respuesta) => {
+        if (vigente) setFinAlReves(respuesta);
+      })
+      .catch((e: unknown) => {
+        if (vigente) setError(String(e));
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [inicioTexto, finTexto]);
 
   const finVacio = campos.fechaFin === "" && !horaFinEscrita;
   const finCompleto =
@@ -331,18 +348,10 @@ export function Formulario({
   );
 
   async function guardar() {
-    const inicio = `${campos.fechaInicio} ${
-      campos.todoElDia ? "00:00" : horaValida(campos.horaInicio)
-    }`;
-    const fin =
-      fechaFinReal === ""
-        ? null
-        : `${fechaFinReal} ${campos.todoElDia ? "00:00" : relojFin}`;
-
-    if (fin !== null && fin < inicio) {
-      setError("El fin no puede ser anterior al inicio");
-      return;
-    }
+    // "Crear" solo se habilita con el inicio armado.
+    if (inicioTexto === null) return;
+    const inicio = inicioTexto;
+    const fin = finTexto;
 
     setGuardando(true);
     try {

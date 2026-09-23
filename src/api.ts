@@ -510,6 +510,16 @@ export function paginaBuscador(
   return invoke("pagina_buscador", { mes, busca });
 }
 
+/**
+ * Si el fin cae antes que el inicio, los dos en `AAAA-MM-DD HH:MM`.
+ *
+ * Es la regla con la que el lado nativo rechaza el guardado: el formulario la
+ * pregunta para avisar antes, no la repite.
+ */
+export function finAntesDelInicio(inicio: string, fin: string): Promise<boolean> {
+  return invoke("fin_antes_del_inicio", { inicio, fin });
+}
+
 /** Todos los eventos guardados, del más antiguo al más nuevo. */
 export function listarEventos(): Promise<Resumen[]> {
   return invoke("listar_eventos");

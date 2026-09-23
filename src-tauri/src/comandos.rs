@@ -458,6 +458,19 @@ pub fn crear_evento(
     Ok(id)
 }
 
+/// Si el fin que escribió el formulario cae antes que su inicio.
+///
+/// El formulario la pregunta mientras se escribe, para avisar junto al campo y
+/// apagar "Crear" antes de intentar guardar. Es la misma regla que aplica el
+/// guardado, así que el aviso y el rechazo no pueden contradecirse.
+#[tauri::command]
+pub fn fin_antes_del_inicio(inicio: String, fin: String) -> Result<bool, String> {
+    Ok(evento::fin_antes_del_inicio(
+        momento(&inicio)?,
+        Some(momento(&fin)?),
+    ))
+}
+
 /// Los campos que edita el formulario, encima de la fila que ya existe.
 ///
 /// El color no lo toca el formulario, así que se conserva.

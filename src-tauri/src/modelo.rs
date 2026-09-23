@@ -242,6 +242,8 @@ pub enum Error {
     OrdenIncompleto,
     /// Algo salió mal leyendo o escribiendo un archivo de la carpeta de datos.
     Archivo(String),
+    /// El fin cae antes que el inicio.
+    FinAntesDelInicio,
 }
 
 impl From<rusqlite::Error> for Error {
@@ -271,6 +273,7 @@ impl fmt::Display for Error {
                 "el orden recibido no nombra exactamente a los grupos que existen"
             ),
             Error::Archivo(que) => write!(f, "{que}"),
+            Error::FinAntesDelInicio => write!(f, "El fin no puede ser anterior al inicio."),
         }
     }
 }

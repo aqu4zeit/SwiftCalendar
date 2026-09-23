@@ -217,8 +217,26 @@ pub fn ids_todos(conexion: &Connection) -> Result<Vec<i64>, Error> {
     Ok(filas.collect::<rusqlite::Result<Vec<i64>>>()?)
 }
 
+/// Si el fin cae antes que el inicio. Un fin igual al inicio vale, y sin fin
+/// no hay nada que comparar.
+///
+/// Es la única regla: la usan el guardado y el formulario, que la pregunta
+/// mientras se escribe para avisar junto al campo. El esquema tiene un CHECK
+/// equivalente, pero ese solo sabe decir "error de base de datos".
+pub fn fin_antes_del_inicio(inicio: NaiveDateTime, fin: Option<NaiveDateTime>) -> bool {
+    fin.is_some_and(|fin| fin < inicio)
+}
+
+fn revisar_tramo(inicio: NaiveDateTime, fin: Option<NaiveDateTime>) -> Result<(), Error> {
+    if fin_antes_del_inicio(inicio, fin) {
+        return Err(Error::FinAntesDelInicio);
+    }
+    Ok(())
+}
+
 /// Inserta la fila y devuelve su identificador.
 pub fn insertar(conexion: &Connection, nuevo: EventoNuevo) -> Result<i64, Error> {
+    revisar_tramo(nuevo.inicio, nuevo.fin)?;
     let (todo_el_dia, hora_fija, zona) = columnas_de_cuando(nuevo.cuando);
     let (imagen, miniatura) = match &nuevo.imagen {
         Some(i) => (Some(&i.original), Some(&i.miniatura)),
@@ -288,6 +306,7 @@ pub fn escribir(
     notificaciones: Option<&[Notificacion]>,
     adjuntos: &[Adjunto],
 ) -> Result<Accion, Error> {
+    revisar_tramo(evento.inicio, evento.fin)?;
     let antes = leer(conexion, evento.id)?;
     let tx = conexion.unchecked_transaction()?;
 
@@ -939,15 +958,58 @@ mod pruebas {
         assert!(matches!(crear(&c, nuevo), Err(Error::Sqlite(_))));
     }
 
+    /// Guardar un fin anterior al inicio falla con su propio error, antes de
+    /// llegar al CHECK del esquema, que solo sabría decir "error de base".
     #[test]
-    fn el_esquema_rechaza_un_fin_anterior_al_inicio() {
+    fn guardar_rechaza_un_fin_anterior_al_inicio() {
         let c = db::en_memoria();
         let g = grupo_defecto(&c);
 
         let mut nuevo = minimo(g);
         nuevo.fin = Some(momento(2026, 8, 12, 17, 0));
+        assert!(matches!(crear(&c, nuevo), Err(Error::FinAntesDelInicio)));
 
-        assert!(matches!(crear(&c, nuevo), Err(Error::Sqlite(_))));
+        let id = crear(&c, minimo(g)).unwrap().0;
+        let mut editado = leer(&c, id).unwrap();
+        editado.fin = Some(momento(2026, 8, 11, 20, 0));
+        assert!(matches!(
+            editar(&c, &editado, &[]),
+            Err(Error::FinAntesDelInicio)
+        ));
+    }
+
+    #[test]
+    fn el_mismo_dia_a_una_hora_anterior_es_fin_antes_del_inicio() {
+        let inicio = momento(2026, 9, 22, 9, 0);
+        assert!(fin_antes_del_inicio(inicio, Some(momento(2026, 9, 22, 8, 0))));
+    }
+
+    #[test]
+    fn una_fecha_anterior_es_fin_antes_del_inicio() {
+        let inicio = momento(2026, 9, 22, 9, 0);
+        // Más tarde en el reloj, pero un día antes.
+        assert!(fin_antes_del_inicio(inicio, Some(momento(2026, 9, 21, 23, 0))));
+    }
+
+    #[test]
+    fn un_fin_igual_al_inicio_vale() {
+        let inicio = momento(2026, 9, 22, 9, 0);
+        assert!(!fin_antes_del_inicio(inicio, Some(inicio)));
+    }
+
+    /// Todo el día guarda los dos extremos a las 00:00: el mismo día vale y
+    /// solo una fecha anterior queda al revés.
+    #[test]
+    fn todo_el_dia_solo_mira_la_fecha() {
+        let inicio = momento(2026, 9, 22, 0, 0);
+        assert!(!fin_antes_del_inicio(inicio, Some(momento(2026, 9, 22, 0, 0))));
+        assert!(!fin_antes_del_inicio(inicio, Some(momento(2026, 9, 24, 0, 0))));
+        assert!(fin_antes_del_inicio(inicio, Some(momento(2026, 9, 21, 0, 0))));
+    }
+
+    #[test]
+    fn sin_fecha_de_fin_no_hay_nada_al_reves() {
+        assert!(!fin_antes_del_inicio(momento(2026, 9, 22, 9, 0), None));
     }
 
     fn cuantos_eventos(conexion: &Connection) -> i64 {

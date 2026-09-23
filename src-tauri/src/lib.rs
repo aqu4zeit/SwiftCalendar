@@ -151,6 +151,7 @@ pub fn run() {
             comandos::leer_evento,
             comandos::crear_evento,
             comandos::editar_evento,
+            comandos::fin_antes_del_inicio,
             comandos::borrar_evento,
             comandos::listar_eventos,
             comandos::pagina_buscador,
