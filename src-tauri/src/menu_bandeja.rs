@@ -106,13 +106,14 @@ pub fn entradas(app: &AppHandle) -> Vec<Entrada> {
     ];
 
     // La cuenta solo aparece cuando hay algo que contar. Una entrada que dice
-    // "0 recordatorios" ocupa sitio para no decir nada, y el ícono ya lo dice
-    // callándose: sin círculo rojo no hay nada pendiente.
+    // "0 notificaciones" ocupa sitio para no decir nada, y el ícono ya lo dice
+    // callándose: sin círculo rojo no hay nada pendiente. Se llaman igual que
+    // en la campana, que es adonde lleva esta entrada.
     if pendientes > 0 {
         let texto = if pendientes == 1 {
-            "1 recordatorio".to_string()
+            "1 notificación".to_string()
         } else {
-            format!("{pendientes} recordatorios")
+            format!("{pendientes} notificaciones")
         };
         lista.push(Entrada::nueva("avisos", texto).marcada().separada());
     }

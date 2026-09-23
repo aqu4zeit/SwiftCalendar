@@ -45,8 +45,10 @@ fn icono(hay_pendientes: bool) -> tauri::Result<Image<'static>> {
 fn globo(pendientes: i64) -> String {
     match pendientes {
         0 => "SwiftCalendar".to_string(),
-        1 => "SwiftCalendar — 1 recordatorio pendiente".to_string(),
-        n => format!("SwiftCalendar — {n} recordatorios pendientes"),
+        // "Notificaciones", como la campana y su panel: con dos nombres para lo
+        // mismo no se sabía si la bandeja avisaba de otra cosa.
+        1 => "SwiftCalendar — 1 notificación pendiente".to_string(),
+        n => format!("SwiftCalendar — {n} notificaciones pendientes"),
     }
 }
 
