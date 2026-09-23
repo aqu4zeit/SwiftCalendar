@@ -3018,6 +3018,11 @@ span.gesto {
 }
 
 /* El lápiz gira sobre la punta, que es donde se apoya. */
+/* La lupa da una vuelta corta, como quien recorre algo buscando. */
+.gesto-lupa {
+  --animacion: gesto-lupa;
+}
+
 .gesto-lapiz {
   --animacion: gesto-lapiz;
   transform-origin: 12% 84%;
@@ -3078,6 +3083,12 @@ span.gesto {
 
 @keyframes gesto-derecha {
   45% { transform: translateX(2px); }
+}
+
+@keyframes gesto-lupa {
+  25% { transform: translate(-1.5px, 0); }
+  50% { transform: translate(0, -1.5px); }
+  75% { transform: translate(1.5px, 0); }
 }
 
 @keyframes gesto-lapiz {

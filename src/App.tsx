@@ -760,6 +760,20 @@ export default function App() {
         </div>
 
         <div className="acciones">
+          {/* El buscador solo se abría con Ctrl+F o desde la paleta: quien no
+              conocía el atajo no tenía cómo saber que existía. */}
+          <button
+            className={buscadorAbierto ? "icono on" : "icono"}
+            onClick={() => setBuscadorAbierto(true)}
+            data-globo aria-label="Buscar"
+            aria-keyshortcuts="Control+F"
+          >
+            <svg className="gesto gesto-lupa" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="6" />
+              <path d="M20 20l-4.3-4.3" />
+            </svg>
+          </button>
+
           <button
             className={panelAbierto ? "icono on" : "icono"}
             onClick={() => setPanelAbierto(!panelAbierto)}
