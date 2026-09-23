@@ -144,8 +144,9 @@ export function Control({
                     onClick={() => setPreguntando({ que: "uno", evento })}
                     data-globo aria-label="Borrar este evento"
                   >
-                    <svg className="gesto gesto-aspa" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M6 6l12 12M18 6L6 18" />
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path className="gesto gesto-sube" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
                     </svg>
                   </button>
                 </div>

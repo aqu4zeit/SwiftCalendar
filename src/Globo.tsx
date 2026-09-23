@@ -95,7 +95,12 @@ export function Globo() {
       // muestran, porque no todo lo que tiene nombre necesita globo: los días
       // del calendario llevan su fecha y aparecerían al pasar por cada uno.
       const nodo = destino.closest<HTMLElement>("[data-globo]");
-      const texto = nodo?.getAttribute("aria-label");
+      const nombre = nodo?.getAttribute("aria-label");
+      // El atajo, si el botón tiene uno, se enseña donde se mira: sin esto
+      // solo se descubría abriendo la paleta. Sale del mismo atributo que le
+      // anuncia el atajo al lector de pantalla.
+      const atajo = nodo?.getAttribute("aria-keyshortcuts")?.replace("Control", "Ctrl");
+      const texto = nombre && atajo ? `${nombre} (${atajo})` : nombre;
       if (!nodo || !texto) {
         esconder();
         return;

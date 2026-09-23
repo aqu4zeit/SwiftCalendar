@@ -577,8 +577,8 @@ export default function App() {
     {
       id: "avisos",
       nombre: avisosAbiertos
-        ? "Cerrar los recordatorios"
-        : "Ver los recordatorios",
+        ? "Cerrar las notificaciones"
+        : "Ver las notificaciones",
     },
     { id: "buscar", nombre: "Buscar un evento", atajo: "Ctrl+F" },
     { id: "ajustes", nombre: "Abrir los ajustes", atajo: "Ctrl+," },
@@ -821,6 +821,7 @@ export default function App() {
             className={ajustesAbiertos ? "icono on" : "icono"}
             onClick={() => setAjustesAbiertos(!ajustesAbiertos)}
             data-globo aria-label="Ajustes"
+            aria-keyshortcuts="Control+,"
           >
             <svg className="gesto gesto-engranaje" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="3" />
@@ -830,6 +831,8 @@ export default function App() {
 
           <button
             className="nuevo-evento"
+            data-globo aria-label="Nuevo evento"
+            aria-keyshortcuts="Control+N"
             onClick={() => setFormulario({ modo: "crear", fecha: clave(HOY) })}
             disabled={!grupos}
           >

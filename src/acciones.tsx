@@ -177,7 +177,7 @@ export function PreguntaAlcance({
           ) : (
             <p className="parrafo">
               {detalle?.titulo}, {fechaCompacta(fechaDe(instancia.inicio))}.
-              Esta acción no se puede deshacer desde acá.
+              Si te arrepientes, Ctrl+Z lo devuelve.
             </p>
           )}
         </div>

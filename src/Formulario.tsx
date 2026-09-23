@@ -507,7 +507,7 @@ export function Formulario({
                 id={`${id}-fin`}
                 valor={campos.fechaFin}
                 onCambiar={(fechaFin) => set({ fechaFin })}
-                placeholder="Sin fin declarado"
+                placeholder="Sin fecha de fin"
               />
               {!campos.todoElDia && (
                 <div
