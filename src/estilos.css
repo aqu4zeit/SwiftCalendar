@@ -162,10 +162,36 @@ body {
    * líneas y nunca se alinea contra un ícono.
    */
   line-height: 1;
+  /*
+   * Los tamaños de letra son siete: 11, 12, 13, 14, 15, 18 y 26. Había doce,
+   * con pasos de medio píxel entre 10 y 13.5 que no se distinguían a simple
+   * vista y solo agregaban ruido. Un tamaño nuevo sale de esta lista.
+   */
   /* La ventana no es un documento: no se arrastra el texto ni se selecciona por */
   user-select: none;
   cursor: default;
   overflow: hidden;
+}
+
+/*
+ * Donde hay horas, fechas y cuentas, las cifras miden todas lo mismo. En esta
+ * letra el 1 es más angosto que el resto, y "9:00" y "11:00" en filas
+ * seguidas empujaban el título a sitios distintos. En la prosa no: ahí un 1
+ * ancho deja huecos.
+ */
+.hora,
+.numero,
+.dia-hr,
+.mini-dia,
+.boton-hoy,
+.ficha-meta,
+.buscador-txt .h,
+.aviso-txt .h,
+.control-txt .h,
+.selector-anio,
+.control-cuenta,
+.campo input {
+  font-variant-numeric: tabular-nums;
 }
 
 .app {
@@ -254,7 +280,7 @@ body {
 }
 
 .selector-anio {
-  font-size: 10.5px;
+  font-size: 11px;
   letter-spacing: 0.8px;
   color: var(--tx-3);
   padding: 9px 11px 5px;
@@ -292,7 +318,7 @@ body {
   border-radius: 5px;
   padding: 5px 11px;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--tx-2);
   cursor: default;
 }
@@ -489,7 +515,7 @@ body {
 
 .continuidad {
   color: var(--tx-3);
-  font-size: 10px;
+  font-size: 11px;
   flex: none;
 }
 
@@ -526,7 +552,7 @@ body {
   background: var(--evento);
   border-radius: 4px;
   padding: 4px 6px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--tx);
   white-space: nowrap;
   overflow: hidden;
@@ -559,7 +585,7 @@ body {
 }
 
 .ev-solo.centrado .titulo-ev {
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .ev-solo .texto {
@@ -582,7 +608,7 @@ body {
 
 .ev-solo .titulo-ev {
   display: block;
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .ev-solo .descripcion {
@@ -590,7 +616,7 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--tx-2);
   line-height: 1.35;
   margin-top: 2px;
@@ -948,7 +974,7 @@ button:focus-visible {
 }
 
 .msg-error {
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.45;
   color: var(--mal-tx);
   margin-top: 7px;
@@ -1188,7 +1214,7 @@ button:focus-visible {
   border-radius: 4px;
   padding: 8px 4px;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--tx-2);
   cursor: default;
   /* En Ajustes el control va en la columna derecha, que es angosta: sin esto
@@ -1279,7 +1305,7 @@ button:focus-visible {
 /* --- ajustes --- */
 
 .seccion {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   color: var(--tx-3);
   padding-bottom: 4px;
@@ -1437,7 +1463,7 @@ button:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--tx);
   padding: 2px 2px 8px;
 }
@@ -1467,7 +1493,7 @@ button:focus-visible {
 
 .mini-dow span {
   text-align: center;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--tx-3);
 }
 
@@ -1483,7 +1509,7 @@ button:focus-visible {
   border: none;
   border-radius: 5px;
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--tx);
   cursor: default;
 }
@@ -1518,7 +1544,7 @@ button:focus-visible {
   padding: 12px 0 3px;
   margin-top: 4px;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--tx-2);
   cursor: default;
 }
@@ -1667,7 +1693,7 @@ button:focus-visible {
   flex-wrap: wrap;
   align-items: center;
   gap: 7px;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--tx-2);
   margin-bottom: 10px;
 }
@@ -1691,7 +1717,7 @@ button:focus-visible {
   border: 1px solid var(--line);
   border-radius: 5px;
   padding: 3px 8px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--tx-2);
 }
 
@@ -1748,7 +1774,7 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--tx);
 }
 
@@ -1831,7 +1857,7 @@ button:focus-visible {
 }
 
 .opcion-s {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--tx-3);
   margin-top: 3px;
   line-height: 1.45;
@@ -1950,7 +1976,7 @@ button:focus-visible {
 }
 
 .dia-tit {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.3;
   white-space: nowrap;
@@ -1959,7 +1985,7 @@ button:focus-visible {
 }
 
 .dia-hr {
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.35;
   color: var(--tx-2);
   margin-top: 3px;
@@ -1971,7 +1997,7 @@ button:focus-visible {
 }
 
 .dia-ds {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--tx-3);
   margin-top: 4px;
   line-height: 1.45;
@@ -1982,7 +2008,7 @@ button:focus-visible {
 
 .dia-txt .chip {
   margin-top: 5px;
-  font-size: 10.5px;
+  font-size: 11px;
   padding: 2px 6px;
   color: var(--tx-3);
 }
@@ -1998,7 +2024,7 @@ button:focus-visible {
 }
 
 .vacio-s {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--tx-3);
   margin-top: 6px;
   line-height: 1.5;
@@ -2108,7 +2134,7 @@ button:focus-visible {
 }
 
 .grupo-titulo {
-  font-size: 10.5px;
+  font-size: 11px;
   letter-spacing: 0.7px;
   color: var(--tx-3);
   margin: 16px 0 8px;
@@ -2123,7 +2149,7 @@ button:focus-visible {
   align-items: center;
   gap: 9px;
   padding: 5px 0;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--tx);
   width: 100%;
   background: none;
@@ -2248,16 +2274,23 @@ button:focus-visible {
   stroke-linejoin: round;
 }
 
-.fila-grupo:hover .editar-grupo {
-  opacity: 1;
-}
-
 .editar-grupo:hover {
   background: var(--raised);
   color: var(--tx);
 }
 
+/*
+ * El asa y el lápiz aparecen juntos, al pasar por la fila o al llegar con el
+ * teclado. Antes el asa, que casi no se usa, estaba siempre a la vista, y el
+ * lápiz, que es lo útil, solo con el ratón encima: con el teclado nunca.
+ */
+.fila-grupo:is(:hover, :focus-within) :is(.asa, .editar-grupo) {
+  opacity: 1;
+}
+
 .asa {
+  opacity: 0;
+  transition: opacity var(--responde) ease;
   color: var(--tx-apagado);
   font-size: 12px;
   letter-spacing: 1px;
@@ -3111,7 +3144,7 @@ span.gesto {
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 6px 8px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .elegido.encima {
@@ -3139,7 +3172,7 @@ span.gesto {
 
 .elegido .peso {
   color: var(--tx-3);
-  font-size: 11.5px;
+  font-size: 12px;
   flex: none;
 }
 
@@ -3238,7 +3271,7 @@ span.gesto {
   background: none;
   padding: 0;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   text-align: left;
   color: var(--tx);
   cursor: default;
@@ -3254,7 +3287,7 @@ span.gesto {
 
 .ficha-fila.archivo .peso {
   color: var(--tx-3);
-  font-size: 11.5px;
+  font-size: 12px;
   flex: none;
 }
 
@@ -3610,7 +3643,7 @@ span.gesto {
   background: none;
   padding: 0;
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--tx-3);
   cursor: default;
 }
@@ -3621,7 +3654,7 @@ span.gesto {
 
 .avisos-vacio {
   padding: 4px 14px 18px;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--tx-3);
 }
 
@@ -3632,7 +3665,7 @@ span.gesto {
 
 .avisos-sec {
   padding: 10px 14px 6px;
-  font-size: 10.5px;
+  font-size: 11px;
   letter-spacing: 0.7px;
   color: var(--tx-3);
 }
@@ -3695,7 +3728,7 @@ span.gesto {
 }
 
 .aviso-txt .t {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--tx);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4069,7 +4102,7 @@ span.gesto {
 }
 
 .control-txt .t {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--tx);
   overflow: hidden;
   text-overflow: ellipsis;
