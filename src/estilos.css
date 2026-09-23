@@ -3018,9 +3018,11 @@ span.gesto {
 }
 
 /* El lápiz gira sobre la punta, que es donde se apoya. */
-/* La lupa da una vuelta corta, como quien recorre algo buscando. */
+/* La lupa se inclina apenas sobre el centro del lente y vuelve. Moverla de
+   lugar la hacía pasear por el botón, más de lo que un ícono quieto pide. */
 .gesto-lupa {
   --animacion: gesto-lupa;
+  transform-origin: 46% 46%;
 }
 
 .gesto-lapiz {
@@ -3086,9 +3088,7 @@ span.gesto {
 }
 
 @keyframes gesto-lupa {
-  25% { transform: translate(-1.5px, 0); }
-  50% { transform: translate(0, -1.5px); }
-  75% { transform: translate(1.5px, 0); }
+  45% { transform: rotate(-10deg); }
 }
 
 @keyframes gesto-lapiz {
