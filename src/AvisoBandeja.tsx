@@ -56,7 +56,7 @@ export function AvisoBandeja({
         <div className="modal-cuerpo apilado">
           <p className="parrafo">
             Cerraste la ventana, pero el calendario sigue corriendo en la bandeja
-            del sistema para poder avisarte de tus recordatorios.
+            del sistema para poder mandarte tus notificaciones.
           </p>
           <p className="parrafo">
             Para cerrarlo del todo, haz clic derecho en el ícono de la bandeja y

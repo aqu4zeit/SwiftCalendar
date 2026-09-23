@@ -84,6 +84,12 @@ export function VistaMes({
         className="rejilla"
         key={`${anio}-${mes}`}
         data-sentido={paso.sentido}
+        // El sentido vale mientras el mes entra. Después se quita, para que
+        // un evento creado más tarde tenga su propia entrada; los de las
+        // celdas también terminan animaciones, y esas no cuentan.
+        onAnimationEnd={(e) => {
+          if (e.target === e.currentTarget) setPaso({ indice });
+        }}
       >
         {dias.map((fecha) => (
           <Celda

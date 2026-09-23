@@ -2498,6 +2498,10 @@ button:focus-visible {
   --entra-panel: 150ms;
   --sale-panel: 110ms;
   --responde: 140ms;
+  /* Cambiar de mes con las flechas se hace a ráfagas y cada tecla reinicia
+     la animación: tiene que ser más corta que una respuesta al puntero, que
+     pasa una vez por gesto. */
+  --cambio-mes: 110ms;
   /* El gesto dura más que todo lo demás porque no hace esperar a nadie:
      adorna un botón que ya se puede pulsar, y un balanceo de 140 ms no se
      llega a ver como balanceo. */
@@ -2706,12 +2710,22 @@ button:focus-visible {
 
 .rejilla[data-sentido="adelante"],
 .mini-rejilla[data-sentido="adelante"] {
-  animation: mes-adelante var(--responde) var(--curva-entra);
+  animation: mes-adelante var(--cambio-mes) var(--curva-entra);
 }
 
 .rejilla[data-sentido="atras"],
 .mini-rejilla[data-sentido="atras"] {
-  animation: mes-atras var(--responde) var(--curva-entra);
+  animation: mes-atras var(--cambio-mes) var(--curva-entra);
+}
+
+/* Los eventos del mes nuevo llegan con su cuadrícula, no por su cuenta: con
+   su propia entrada encima, cada tecla animaba dos veces lo mismo y los que
+   traía la consulta un momento después seguían moviéndose cuando la
+   cuadrícula ya había terminado. `data-sentido` dura solo lo que dura el
+   cambio de mes (VistaMes lo quita al terminar), así que un evento creado
+   después sigue entrando como siempre. */
+.rejilla[data-sentido] :is(.ev, .ev-solo):not(.saliendo) {
+  animation: none;
 }
 
 /* --- eventos --- */
@@ -2946,7 +2960,15 @@ button:focus-visible {
  * engranaje, el aspa y el más, un cuarto de vuelta), y así volver al reposo
  * al terminar no se nota como salto.
  */
-button:hover:not(:disabled) .gesto,
+/* Solo con un puntero que de verdad pasa por encima. En una pantalla táctil
+   el toque simula el hover y el gesto saltaba al tocar, junto con la acción. */
+@media (hover: hover) {
+  button:hover:not(:disabled) .gesto {
+    animation: var(--animacion) var(--gesto) ease-in-out var(--retraso, 0ms);
+  }
+}
+
+/* Arrastrar un archivo encima no es hover: pasa igual con cualquier puntero. */
 .campo.suelta.encima .gesto {
   animation: var(--animacion) var(--gesto) ease-in-out var(--retraso, 0ms);
 }

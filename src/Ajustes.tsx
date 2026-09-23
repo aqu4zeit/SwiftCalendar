@@ -248,7 +248,7 @@ export function Ajustes({
 
           <Fila
             titulo="Seguir activa en la bandeja"
-            nota="Al cerrar la ventana, la aplicación sigue corriendo y el ícono avisa si hay recordatorios. Apagado, cerrar la ventana cierra la aplicación"
+            nota="Al cerrar la ventana, la aplicación sigue corriendo y el ícono avisa si hay notificaciones. Apagado, cerrar la ventana cierra la aplicación"
           >
             {(ids) => (
               <Sw
