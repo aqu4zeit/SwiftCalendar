@@ -277,11 +277,23 @@ export function Formulario({
 
   const relojInicio = horaValida(campos.horaInicio);
   const relojFin = horaValida(campos.horaFin);
-  const finAlReves =
-    finImplicito &&
+
+  // El fin queda antes del inicio si cae en una fecha anterior, o el mismo día
+  // a una hora anterior. Antes solo se miraba el caso del fin sin fecha: con
+  // la fecha escrita, "Crear" quedaba habilitado y el error llegaba recién al
+  // guardar, al pie del formulario y lejos de este campo. Fechas AAAA-MM-DD y
+  // horas HH:MM con ceros se ordenan como texto igual que en el tiempo.
+  const fechasAlReves =
+    campos.fechaInicio !== "" &&
+    fechaFinReal !== "" &&
+    fechaFinReal < campos.fechaInicio;
+  const horasAlReves =
+    !campos.todoElDia &&
+    fechaFinReal === campos.fechaInicio &&
     relojInicio !== null &&
     relojFin !== null &&
     relojFin < relojInicio;
+  const finAlReves = fechasAlReves || horasAlReves;
 
   const finVacio = campos.fechaFin === "" && !horaFinEscrita;
   const finCompleto =
@@ -290,8 +302,13 @@ export function Formulario({
     !finAlReves;
   const finValido = finVacio || finCompleto;
 
+  // Sin fecha de fin, la salida es escribirla (el evento sigue al otro día);
+  // con fecha, lo que está mal es el fin en sí. El mismo texto que devuelve el
+  // lado nativo cuando lo rechaza.
   const errorFin = finAlReves
-    ? "Termina antes de empezar. Declara la fecha de fin o cambia la hora."
+    ? finImplicito
+      ? "Termina antes de empezar. Declara la fecha de fin o cambia la hora."
+      : "El fin no puede ser anterior al inicio."
     : campos.fechaFin !== "" && !campos.todoElDia && campos.horaFin === ""
       ? "Falta la hora de fin"
       : null;
