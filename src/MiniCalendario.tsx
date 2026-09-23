@@ -33,14 +33,18 @@ export function MiniCalendario({ valor, onElegir }: Props) {
           aria-label="Mes anterior"
           onClick={() => mover(-1)}
         >
-          <span className="gesto gesto-izquierda" aria-hidden="true">‹</span>
+          <svg className="gesto gesto-izquierda" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
         </button>
         <span>{mesYAnio(anio, mes)}</span>
         <button type="button" className="mini-paso"
           aria-label="Mes siguiente"
           onClick={() => mover(1)}
         >
-          <span className="gesto gesto-derecha" aria-hidden="true">›</span>
+          <svg className="gesto gesto-derecha" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 5l7 7-7 7" />
+          </svg>
         </button>
       </div>
 

@@ -719,8 +719,44 @@ body {
   cursor: default;
 }
 
-.nuevo-evento span {
+.nuevo-evento .mas-icono {
   color: var(--tx-2);
+}
+
+/* El más de crear (Mas.tsx), del alto de las minúsculas del texto que lo
+   acompaña. Lo centra siempre una fila flexible: suelto en la línea, con
+   `vertical-align: middle`, quedaba 2 px abajo, porque ese "medio" sale de la
+   altura de x que declara la fuente y no de la letra dibujada.
+
+   La fila centra cajas, no tinta: con `line-height: 1` esta letra dibuja el
+   texto 1 px por debajo del centro de su caja. Centrado de verdad, el más
+   quedaba 1 px por encima de su texto, y el que se veía corrido era el texto.
+   Baja ese píxel para ir con el texto que acompaña. */
+.mas-icono {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  position: relative;
+  top: 1px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+/* Un botón de texto que lo lleva se vuelve fila para centrarlo; el alto no
+   cambia, porque el texto sigue marcando la línea. */
+.btn:has(> .mas-icono) {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* Solo, sin texto al lado, es el ícono entero del botón: va al centro. */
+.icono-chico .mas-icono {
+  width: 11px;
+  height: 11px;
+  top: 0;
 }
 
 .nuevo-evento:hover {
@@ -1471,6 +1507,9 @@ button:focus-visible {
 .mini-paso {
   width: 22px;
   height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
   background: none;
   border: 1px solid var(--line-2);
   border-radius: 5px;
@@ -1483,6 +1522,19 @@ button:focus-visible {
 .mini-paso:hover {
   background: var(--hover);
   color: var(--tx);
+}
+
+/* La flecha del buscador, más chica porque el botón lo es. Eran los
+   caracteres ‹ ›, que en esta letra tienen 5 × 4 px de tinta y caían 2 px
+   por debajo del centro del botón. */
+.mini-paso svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .mini-dow {

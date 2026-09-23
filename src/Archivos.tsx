@@ -9,6 +9,7 @@ import {
   type ImagenPedida,
 } from "./api";
 import { Encuadre } from "./Encuadre";
+import { Mas } from "./Mas";
 import { useListaConSalida, usePresencia } from "./presencia";
 
 /** Los formatos que sabe decodificar el lado nativo. */
@@ -153,7 +154,7 @@ export function Archivos({
               onClick={elegirImagen}
             >
               <span className="nombre">Arrastra una imagen o haz clic</span>
-              <span className="mas" aria-hidden="true">+</span>
+              <Mas className="mas" />
             </button>
           ) : (
             <div
@@ -223,7 +224,7 @@ export function Archivos({
             onClick={elegirAdjuntos}
           >
             <span className="nombre">Arrastra archivos o haz clic</span>
-            <span className="mas" aria-hidden="true">+</span>
+            <Mas className="mas" />
           </button>
         </div>
       </div>

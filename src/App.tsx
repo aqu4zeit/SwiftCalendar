@@ -56,6 +56,7 @@ import {
 import { Ficha } from "./Ficha";
 import { Foco } from "./Foco";
 import { Globo } from "./Globo";
+import { Mas } from "./Mas";
 import { MenuContextual, type Entrada } from "./MenuContextual";
 
 /** Sobre qué se hizo el clic derecho: un evento, o un día sin nada. */
@@ -851,7 +852,7 @@ export default function App() {
             onClick={() => setFormulario({ modo: "crear", fecha: clave(HOY) })}
             disabled={!grupos}
           >
-            Nuevo evento <span aria-hidden="true">+</span>
+            Nuevo evento <Mas />
           </button>
         </div>
       </header>

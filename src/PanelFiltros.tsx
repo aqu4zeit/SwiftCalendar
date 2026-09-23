@@ -13,6 +13,7 @@ import {
   type Grupos,
   type Importancia,
 } from "./api";
+import { Mas } from "./Mas";
 
 const NOMBRE_IMPORTANCIA: Record<Importancia, string> = {
   urgente: "Urgente",
@@ -318,7 +319,7 @@ export function PanelFiltros({
 
       <button type="button" className="nuevo-grupo" onClick={onNuevoGrupo}>
         <span>Nuevo grupo</span>
-        <span aria-hidden="true">+</span>
+        <Mas />
       </button>
 
       <div className="grupo-titulo">IMPORTANCIA</div>

@@ -9,6 +9,7 @@ import {
   nombreDia,
   type FormatoHora,
 } from "./fecha";
+import { Mas } from "./Mas";
 import { useListaConSalida } from "./presencia";
 import { useVelo } from "./flotante";
 import { nombreDeInstancia } from "./texto";
@@ -102,7 +103,7 @@ export function VistaDia({
               onClick={onCrear}
               data-globo aria-label="Nuevo evento este día"
             >
-              <span aria-hidden="true">+</span>
+              <Mas />
             </button>
             <button type="button" className="cerrar" aria-label="Cerrar" onClick={onCerrar}>
               <span aria-hidden="true">✕</span>
@@ -117,7 +118,7 @@ export function VistaDia({
               Puedes crear un evento desde acá o cerrar y volver al mes.
             </p>
             <button type="button" className="btn" onClick={onCrear}>
-              Nuevo evento +
+              Nuevo evento <Mas />
             </button>
           </div>
         ) : (
