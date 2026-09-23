@@ -32,6 +32,22 @@
   --foco-halo: rgb(200 193 182 / 0.12);
   --hoy: #d0503c;
   --ancho-filtros: 224px;
+  /*
+   * Las capas, de abajo hacia arriba. Estaban escritas a mano en cada regla
+   * (10, 50, 60, 70, 89, 90, 200) y la próxima se iba a poner a ojo. Lo que
+   * cuelga de un botón va sobre el velo de la ventana que lo contiene; lo que
+   * se abre desde una ventana, sobre sus paneles; el menú y el globo, encima
+   * de todo.
+   */
+  --z-selector: 10;
+  --z-velo: 50;
+  --z-flotante: 60;
+  --z-velo-interno: 70;
+  --z-menu: 90;
+  --z-globo: 200;
+  /* Lo que dibuja el navegador por su cuenta —el asa que agranda la
+     descripción, las barras que no se pintan acá— sale en oscuro. */
+  color-scheme: dark;
   --scroll: #3a3634;
   --scroll-activo: #4f4a46;
 
@@ -227,7 +243,7 @@ body {
   position: absolute;
   top: calc(100% + 6px);
   left: -12px;
-  z-index: 10;
+  z-index: var(--z-selector);
   width: 190px;
   max-height: 330px;
   overflow-y: auto;
@@ -696,7 +712,7 @@ body {
 .velo {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: var(--z-velo);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -708,7 +724,7 @@ body {
 .velo.interno {
   background: var(--velo-2);
   /* Por encima de los paneles emergentes: lo último que se abre manda. */
-  z-index: 70;
+  z-index: var(--z-velo-interno);
 }
 
 .modal {
@@ -736,7 +752,9 @@ body {
   flex: none;
 }
 
+/* Un título largo no deja una palabra sola en la última línea. */
 .modal-cab h2 {
+  text-wrap: balance;
   font-size: 14px;
   font-weight: 500;
 }
@@ -798,6 +816,7 @@ body {
 }
 
 .parrafo {
+  text-wrap: pretty;
   font-size: 13px;
   color: var(--tx-2);
   line-height: 1.6;
@@ -1289,6 +1308,7 @@ button:focus-visible {
 }
 
 .ajuste-nota {
+  text-wrap: pretty;
   font-size: 12px;
   color: var(--tx-3);
   line-height: 1.5;
@@ -1368,7 +1388,7 @@ button:focus-visible {
 
 .flotante {
   position: fixed;
-  z-index: 60;
+  z-index: var(--z-flotante);
 }
 
 .lista-opciones {
@@ -1534,6 +1554,7 @@ button:focus-visible {
 }
 
 .nota {
+  text-wrap: pretty;
   font-size: 11px;
   color: var(--tx-3);
   line-height: 1.5;
@@ -1633,6 +1654,7 @@ button:focus-visible {
 }
 
 .ficha-cuerpo h1 {
+  text-wrap: balance;
   font-size: 18px;
   font-weight: 500;
   line-height: 1.3;
@@ -1681,7 +1703,29 @@ button:focus-visible {
   flex: none;
 }
 
+/*
+ * Lo que el usuario escribió en un evento se puede seleccionar y copiar: la
+ * dirección, el enlace, la descripción. La ventana entera tiene la selección
+ * apagada para no comportarse como una página, y eso se llevaba por delante lo
+ * que sí se quiere pegar en otro lado. La ruta de la carpeta de datos, igual.
+ */
+.ficha-cuerpo h1,
+.ficha-desc,
+.ficha-fila:not(.archivo) span,
+.ruta {
+  user-select: text;
+  cursor: text;
+}
+
+/* El resaltado de la selección en los tonos de la aplicación, no en el azul
+   del sistema. */
+::selection {
+  background: rgb(200 193 182 / 0.3);
+  color: var(--tx);
+}
+
 .ficha-desc {
+  text-wrap: pretty;
   font-size: 13px;
   color: var(--tx-2);
   line-height: 1.62;
@@ -3224,6 +3268,14 @@ span.gesto {
 
 /* --- la miniatura en la vista día --- */
 
+/* Una foto oscura se fundía con el fondo oscuro: un borde apenas visible
+   marca dónde termina, sin teñirla con ningún color de la aplicación. */
+.ficha-imagen img,
+.dia-mini {
+  outline: 1px solid rgb(255 255 255 / 0.08);
+  outline-offset: -1px;
+}
+
 .dia-mini {
   width: 40px;
   height: 40px;
@@ -3522,7 +3574,7 @@ span.gesto {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  z-index: 60;
+  z-index: var(--z-flotante);
   width: 340px;
   max-height: 460px;
   display: flex;
@@ -3708,7 +3760,7 @@ span.gesto {
 
 .globo {
   position: fixed;
-  z-index: 200;
+  z-index: var(--z-globo);
   pointer-events: none;
   max-width: 260px;
   width: max-content;
@@ -3882,7 +3934,7 @@ span.gesto {
 .tapa-menu {
   position: fixed;
   inset: 0;
-  z-index: 89;
+  z-index: calc(var(--z-menu) - 1);
 }
 
 .tapa-menu.saliendo {
@@ -3891,7 +3943,7 @@ span.gesto {
 
 .menu-contextual {
   position: fixed;
-  z-index: 90;
+  z-index: var(--z-menu);
   min-width: 168px;
   display: flex;
   flex-direction: column;
