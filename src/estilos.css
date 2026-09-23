@@ -741,19 +741,37 @@ body {
   font-weight: 500;
 }
 
+/*
+ * La cruz de cerrar mide 28 × 28, como la de la ficha: con su texto solo
+ * quedaba en 19 × 18 y había que apuntarle. El margen negativo devuelve lo que
+ * crece: la cabecera sigue midiendo lo mismo y la cruz queda centrada donde
+ * estaba. La de la ficha y la del día ya se dibujaban a su tamaño y no lo
+ * necesitan.
+ */
 .cerrar {
+  width: 28px;
+  height: 28px;
+  margin: -5px -5px -5px 0;
+  display: grid;
+  place-items: center;
   background: none;
   border: none;
   color: var(--tx-3);
   font-size: 14px;
   font-family: inherit;
   cursor: default;
-  padding: 2px 4px;
-  border-radius: 4px;
+  padding: 0;
+  border-radius: 6px;
 }
 
 .cerrar:hover {
+  background: var(--hover-2);
   color: var(--tx);
+}
+
+.ficha-cab .cerrar,
+.dia-acciones .cerrar {
+  margin: 0;
 }
 
 .modal-cuerpo {
@@ -947,14 +965,33 @@ button:focus-visible {
   border-color: var(--mal-borde-2);
 }
 
+/*
+ * El texto ocupa la caja entera. Se ve como un campo de 38 px, pero solo
+ * respondía la línea de 16 del medio: un clic cerca del borde no hacía nada.
+ * El margen negativo lo estira hasta el borde y el relleno deja la letra donde
+ * estaba.
+ */
 .campo input {
   flex: 1;
   min-width: 0;
+  align-self: stretch;
+  margin-block: -10px;
+  padding-block: 10px;
   background: none;
   border: none;
   font-family: inherit;
   font-size: 13px;
   color: var(--tx);
+}
+
+.campo > input:first-child {
+  margin-left: -10px;
+  padding-left: 10px;
+}
+
+.campo > input:last-child {
+  margin-right: -10px;
+  padding-right: 10px;
 }
 
 .campo input::placeholder {
@@ -1011,9 +1048,12 @@ button:focus-visible {
   flex: none;
 }
 
+/* Crece a 24 × 24 para el dedo y el ratón, y el margen negativo le devuelve
+   al campo los 16 que ocupaba: la caja no cambia de alto. */
 .borrar-campo {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
+  margin: -4px;
   display: grid;
   place-items: center;
   background: none;
@@ -1032,6 +1072,9 @@ button:focus-visible {
 }
 
 .icono-cal {
+  width: 24px;
+  height: 24px;
+  margin: -4px;
   background: none;
   border: none;
   padding: 0;
@@ -1056,8 +1099,14 @@ button:focus-visible {
 
 /* --- segmentado de importancia --- */
 
+/* Columnas iguales y no botones que crecen: el indicador de abajo supone que
+   todas miden lo mismo, y donde el segmentado no se estira —en Ajustes—
+   "Compacta" medía más que "Cómoda" y el indicador no calzaba. */
 .segmentado {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  /* Con 1fr solo, una opción de texto más largo se ensanchaba igual. */
+  grid-auto-columns: minmax(0, 1fr);
   gap: 3px;
   background: var(--campo);
   border: 1px solid var(--line);
@@ -1111,7 +1160,6 @@ button:focus-visible {
 
 .segmentado button {
   position: relative;
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1133,6 +1181,17 @@ button:focus-visible {
   color: var(--tx);
 }
 
+/* En Ajustes el segmentado va en la columna angosta y no se estira: con el
+   relleno del formulario, "Compacta" tocaba el borde de su opción. */
+.ajuste .segmentado button {
+  padding: 7px 12px;
+}
+
+/* Y no se encoge: apretado, las columnas iguales le cortaban el texto. */
+.ajuste .segmentado {
+  flex: none;
+}
+
 .segmentado .marca {
   width: 5px;
   height: 13px;
@@ -1147,6 +1206,14 @@ button:focus-visible {
   gap: 9px;
   font-size: 13px;
   color: var(--tx-2);
+}
+
+/* El círculo se dibuja en 30 × 17, pero se aprieta en 30 × 25: la franja
+   invisible de arriba y abajo es parte del botón. */
+.sw::after {
+  content: "";
+  position: absolute;
+  inset: -5px -1px;
 }
 
 .sw {
@@ -2743,6 +2810,48 @@ button:focus-visible {
   transition: transform var(--responde) ease;
 }
 
+/*
+ * Al apretar, el fondo se oscurece en el acto y vuelve con su transición al
+ * soltar. Ningún botón cambiaba mientras se lo mantenía apretado, así que el
+ * clic no tenía respuesta hasta que llegaba el resultado. Solo el fondo:
+ * escalar mueve el texto, y en esta interfaz nada que tenga texto escala.
+ */
+:is(
+    .btn,
+    .nuevo-evento,
+    .icono,
+    .icono-chico,
+    .cerrar,
+    .boton-hoy,
+    .selector-boton,
+    .selector-mes,
+    .fila-opcion,
+    .opcion-menu,
+    .paleta-fila,
+    .mini-dia,
+    .mini-paso,
+    .aviso-ok,
+    .control-borrar,
+    .buscador-flecha,
+    .avisos-link,
+    .fila-filtro,
+    .editar-grupo,
+    .nuevo-grupo,
+    .campo.suelta,
+    .ev,
+    .ev-solo,
+    .dia-ev
+  ):active:not(:disabled) {
+  background-color: var(--activo);
+  transition-duration: 0ms;
+}
+
+/* El destructivo se aprieta en su propio rojo. */
+.btn.malo:active:not(:disabled) {
+  background-color: var(--mal-fondo);
+  border-color: var(--mal-borde-2);
+}
+
 /* --- el gesto de los íconos --- */
 
 /*
@@ -3734,8 +3843,15 @@ span.gesto {
   color: var(--tx);
 }
 
+/* El atajo no define el alto de su fila: con su propio relleno, las filas con
+   atajo medían más que las otras y la lista bailaba al recorrerla. El margen
+   negativo le quita lo que su caja sobresale del texto. */
 .paleta-fila kbd {
   flex: none;
+  line-height: 1;
+  margin-block: -2px;
+  min-width: 22px;
+  text-align: center;
   font-family: inherit;
   font-size: 11px;
   color: var(--tx-3);
