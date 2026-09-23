@@ -318,6 +318,14 @@ body {
   grid-template-rows: repeat(6, minmax(112px, 1fr));
 }
 
+/* En una pantalla baja las seis filas de 112 no entraban y la última semana
+   quedaba cortada, sin scroll para verla. Se achican antes de que eso pase. */
+@media (max-height: 820px) {
+  .rejilla {
+    grid-template-rows: repeat(6, minmax(76px, 1fr));
+  }
+}
+
 .celda {
   background: var(--cell);
   border-right: 1px solid var(--line);
@@ -480,6 +488,15 @@ body {
 
 @container (max-width: 172px) {
   .hora-fin {
+    display: none;
+  }
+}
+
+/* En una celda todavía más angosta —ventana al mínimo con los filtros
+   abiertos— la hora, que no cede, dejaba al título sin lugar: solo se leía
+   "9:00 AM". Ahí se va la hora, que sigue en la ficha y en la vista día. */
+@container (max-width: 130px) {
+  .ev .hora {
     display: none;
   }
 }
@@ -2342,7 +2359,9 @@ button:focus-visible {
      llega a ver como balanceo. */
   --gesto: 480ms;
   --curva-entra: cubic-bezier(0.16, 1, 0.3, 1);
-  --curva-sale: cubic-bezier(0.4, 0, 1, 1);
+  /* La salida también arranca rápido: una curva que empieza lenta hace que la
+     ventana parezca quedarse un instante después de cerrarla. */
+  --curva-sale: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 /* --- ventanas flotantes --- */
@@ -2411,6 +2430,17 @@ button:focus-visible {
 .velo.saliendo > .ficha,
 .velo.saliendo > .vista-dia {
   animation: ventana-sale var(--sale) var(--curva-sale) forwards;
+}
+
+/*
+ * La paleta y el buscador aparecen sin animación. Se abren con el teclado,
+ * decenas de veces al día, y quien los abre ya está por escribir: cualquier
+ * entrada es un rato de espera. Al cerrarse sí se van como las demás.
+ */
+.velo:not(.saliendo):has(> .modal.paleta, > .modal.buscador),
+.velo:not(.saliendo) > .modal.paleta,
+.velo:not(.saliendo) > .modal.buscador {
+  animation: none;
 }
 
 /* --- paneles emergentes --- */
@@ -2500,25 +2530,30 @@ button:focus-visible {
  * dice por sí sola si se fue al futuro o al pasado. La primera vez no hay
  * dirección y queda la entrada de arriba.
  *
+ * Con las flechas se cambia de mes a ráfagas, y cada tecla rehace la
+ * cuadrícula y reinicia la animación. Por eso arranca casi visible, corre
+ * poco y dura lo mismo que una respuesta al puntero: con la entrada completa,
+ * una ráfaga dejaba el mes lavado todo el tiempo que durara.
+ *
  * El calendario chico del campo de fecha hace lo mismo, con menos recorrido
  * porque es más angosto.
  */
 @keyframes mes-adelante {
   from {
-    opacity: 0;
+    opacity: 0.6;
     transform: translateX(var(--paso-mes));
   }
 }
 
 @keyframes mes-atras {
   from {
-    opacity: 0;
+    opacity: 0.6;
     transform: translateX(calc(var(--paso-mes) * -1));
   }
 }
 
 .rejilla {
-  --paso-mes: 18px;
+  --paso-mes: 8px;
 }
 
 .mini-rejilla {
@@ -2527,12 +2562,12 @@ button:focus-visible {
 
 .rejilla[data-sentido="adelante"],
 .mini-rejilla[data-sentido="adelante"] {
-  animation: mes-adelante var(--entra) var(--curva-entra);
+  animation: mes-adelante var(--responde) var(--curva-entra);
 }
 
 .rejilla[data-sentido="atras"],
 .mini-rejilla[data-sentido="atras"] {
-  animation: mes-atras var(--entra) var(--curva-entra);
+  animation: mes-atras var(--responde) var(--curva-entra);
 }
 
 /* --- eventos --- */
@@ -2711,9 +2746,11 @@ button:focus-visible {
 /* --- el gesto de los íconos --- */
 
 /*
- * Al pasar el puntero, o al llegar con el teclado, el ícono de un botón hace
- * una vez el gesto de lo que el botón hace: la campana suena, la flecha baja
- * a la bandeja, el engranaje gira. La regla que lo dispara es una sola; cada
+ * Al pasar el puntero, el ícono de un botón hace una vez el gesto de lo que
+ * el botón hace: la campana suena, la flecha baja a la bandeja, el engranaje
+ * gira. Con el teclado no: recorrer la barra con el tabulador encadenaba un
+ * gesto de medio segundo por cada botón, y lo que se repite no debe hacer
+ * esperar. La regla que lo dispara es una sola; cada
  * ícono aporta solo el nombre de su animación y su punto de giro. Un botón
  * desactivado no se ofrece, así que tampoco se mueve. La zona donde se sueltan
  * archivos también lo hace mientras uno pasa por encima arrastrando, porque
@@ -2723,7 +2760,7 @@ button:focus-visible {
  * engranaje, el aspa y el más, un cuarto de vuelta), y así volver al reposo
  * al terminar no se nota como salto.
  */
-button:is(:hover, :focus-visible):not(:disabled) .gesto,
+button:hover:not(:disabled) .gesto,
 .campo.suelta.encima .gesto {
   animation: var(--animacion) var(--gesto) ease-in-out var(--retraso, 0ms);
 }
