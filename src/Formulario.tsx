@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import {
   crearEvento,
@@ -213,6 +213,9 @@ export function Formulario({
   onGuardado,
   onNuevoGrupo,
 }: Props) {
+  // Enlaza cada campo con su etiqueta y cada ventana con su título, para que
+  // el lector de pantalla diga qué es cada cosa.
+  const id = useId();
   const edicion = apertura.modo === "editar" ? apertura.edicion : null;
 
   // Una ocurrencia separada de su serie es un evento suelto: no se repite.
@@ -366,11 +369,18 @@ export function Formulario({
 
   return (
     <div className={saliendo ? "velo saliendo" : "velo"}>
-      <div className="modal">
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-titulo`}
+      >
         <div className="modal-cab">
-          <h2>{edicion ? "Editar evento" : "Nuevo evento"}</h2>
-          <button type="button" className="cerrar" onClick={intentarCerrar}>
-            <span className="gesto gesto-aspa">✕</span>
+          <h2 id={`${id}-titulo`}>
+            {edicion ? "Editar evento" : "Nuevo evento"}
+          </h2>
+          <button type="button" className="cerrar" aria-label="Cerrar" onClick={intentarCerrar}>
+            <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
           </button>
         </div>
 
@@ -378,8 +388,11 @@ export function Formulario({
           {aviso && <div className="advertencia">{aviso}</div>}
 
           <div className="fila-campo">
-            <label>TÍTULO</label>
+            <label htmlFor={`${id}-campo-titulo`}>TÍTULO</label>
             <input
+              id={`${id}-campo-titulo`}
+              aria-invalid={reclamarTitulo}
+              aria-describedby={reclamarTitulo ? `${id}-falta-titulo` : undefined}
               className={reclamarTitulo ? "campo-titulo malo" : "campo-titulo"}
               type="text"
               placeholder="Título del evento"
@@ -392,13 +405,16 @@ export function Formulario({
               autoFocus
             />
             {reclamarTitulo && (
-              <div className="msg-error">El título es obligatorio</div>
+              <div className="msg-error" id={`${id}-falta-titulo`} role="alert">
+                El título es obligatorio
+              </div>
             )}
           </div>
 
           <div className="fila-campo">
-            <label>GRUPO</label>
+            <label id={`${id}-grupo`}>GRUPO</label>
             <Desplegable
+              etiqueta={`${id}-grupo`}
               valor={String(campos.grupoId)}
               opciones={grupos.todos.map((g) => ({
                 valor: String(g.id),
@@ -414,8 +430,12 @@ export function Formulario({
           </div>
 
           <div className="fila-campo">
-            <label>IMPORTANCIA</label>
-            <div className="segmentado">
+            <label id={`${id}-importancia`}>IMPORTANCIA</label>
+            <div
+              className="segmentado"
+              role="group"
+              aria-labelledby={`${id}-importancia`}
+            >
               {IMPORTANCIAS.map((opcion) => (
                 <button
                   key={opcion.valor}
@@ -423,6 +443,7 @@ export function Formulario({
                   className={
                     campos.importancia === opcion.valor ? "on" : undefined
                   }
+                  aria-pressed={campos.importancia === opcion.valor}
                   onClick={() => set({ importancia: opcion.valor })}
                 >
                   {/* Común no dibuja nada, pero la barra ocupa su ancho igual.
@@ -430,6 +451,7 @@ export function Formulario({
                       dos y las tres dejan de compartir un eje. */}
                   <span
                     className="marca"
+                    aria-hidden="true"
                     style={
                       opcion.valor === "urgente"
                         ? { background: colorDelGrupo }
@@ -445,9 +467,10 @@ export function Formulario({
           </div>
 
           <div className="fila-campo">
-            <label>INICIO</label>
+            <label htmlFor={`${id}-inicio`}>INICIO</label>
             <div className="par">
               <CampoFecha
+                id={`${id}-inicio`}
                 valor={campos.fechaInicio}
                 onCambiar={(fechaInicio) => set({ fechaInicio })}
               />
@@ -462,6 +485,7 @@ export function Formulario({
                   <input
                     type="text"
                     value={campos.horaInicio}
+                    aria-label="Hora de inicio"
                     placeholder="HH:MM"
                     inputMode="numeric"
                     onChange={(e) =>
@@ -477,9 +501,10 @@ export function Formulario({
           </div>
 
           <div className="fila-campo">
-            <label>FIN</label>
+            <label htmlFor={`${id}-fin`}>FIN</label>
             <div className="par">
               <CampoFecha
+                id={`${id}-fin`}
                 valor={campos.fechaFin}
                 onCambiar={(fechaFin) => set({ fechaFin })}
                 placeholder="Sin fin declarado"
@@ -496,6 +521,7 @@ export function Formulario({
                   <input
                     type="text"
                     value={campos.horaFin}
+                    aria-label="Hora de fin"
                     placeholder="HH:MM"
                     inputMode="numeric"
                     onChange={(e) =>
@@ -508,23 +534,33 @@ export function Formulario({
                 </div>
               )}
             </div>
-            {errorFin && <div className="msg-error">{errorFin}</div>}
+            {errorFin && (
+              <div className="msg-error" role="alert">
+                {errorFin}
+              </div>
+            )}
           </div>
 
           <div className="fila-campo interruptor">
             <button
               type="button"
+              id={`${id}-todo-el-dia`}
               className={campos.todoElDia ? "sw on" : "sw"}
+              role="switch"
+              aria-checked={campos.todoElDia}
               onClick={() => set({ todoElDia: !campos.todoElDia })}
             >
               <i />
             </button>
-            <span>Todo el día</span>
+            {/* Un `label` y no un texto suelto: tocarlo también cambia el
+                interruptor, como el texto de cualquier casilla del sistema. */}
+            <label htmlFor={`${id}-todo-el-dia`}>Todo el día</label>
           </div>
 
           <div className="fila-campo">
-            <label>DESCRIPCIÓN</label>
+            <label htmlFor={`${id}-descripcion`}>DESCRIPCIÓN</label>
             <textarea
+              id={`${id}-descripcion`}
               className="area"
               placeholder="Opcional"
               value={campos.descripcion}
@@ -570,7 +606,11 @@ export function Formulario({
             </div>
           )}
 
-          {error && <div className="msg-error">{error}</div>}
+          {error && (
+            <div className="msg-error" role="alert">
+              {error}
+            </div>
+          )}
         </div>
 
         <div className="modal-pie">
@@ -590,9 +630,14 @@ export function Formulario({
 
       {pregunta.valor && (
         <div className={pregunta.saliendo ? "velo interno saliendo" : "velo interno"}>
-          <div className="modal angosto">
+          <div
+            className="modal angosto"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby={`${id}-descartar`}
+          >
             <div className="modal-cab">
-              <h2>
+              <h2 id={`${id}-descartar`}>
                 {edicion ? "¿Descartar los cambios?" : "¿Descartar el evento?"}
               </h2>
             </div>

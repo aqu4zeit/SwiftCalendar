@@ -13,10 +13,20 @@ interface Props {
   valor: string;
   onCambiar: (iso: string) => void;
   placeholder?: string;
+  /** El id del campo, para que su etiqueta lo nombre. */
+  id: string;
+  /** El nombre, solo cuando no hay una etiqueta visible que lo diga. */
+  nombre?: string;
 }
 
 /** Un campo de fecha que se escribe a mano y también se elige del calendario. */
-export function CampoFecha({ valor, onCambiar, placeholder }: Props) {
+export function CampoFecha({
+  valor,
+  onCambiar,
+  placeholder,
+  id,
+  nombre,
+}: Props) {
   const [texto, setTexto] = useState(valor ? aNumerica(valor) : "");
   const { ancla, panel, posicion, abierto, saliendo, abrir, cerrar } =
     useFlotante(ALTO_CALENDARIO);
@@ -45,6 +55,9 @@ export function CampoFecha({ valor, onCambiar, placeholder }: Props) {
     <div className="campo-fecha" ref={ancla}>
       <div className={invalido ? "campo malo" : "campo"}>
         <input
+          id={id}
+          aria-label={nombre}
+          aria-invalid={invalido}
           type="text"
           inputMode="numeric"
           value={texto}
@@ -63,7 +76,7 @@ export function CampoFecha({ valor, onCambiar, placeholder }: Props) {
           type="button"
           className="icono-cal"
           onClick={() => (abierto ? cerrar() : abrir())}
-          data-texto="Elegir del calendario"
+          data-globo aria-label="Elegir del calendario"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="5" width="18" height="16" rx="2" />

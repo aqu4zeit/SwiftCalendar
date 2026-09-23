@@ -735,7 +735,7 @@ export default function App() {
 
   return (
     <div className="app" data-densidad={densidad}>
-      <div className="barra">
+      <header className="barra">
         <div className="titulo">
           <SelectorMes anio={anio} mes={mes} onElegir={ir} />
 
@@ -754,7 +754,7 @@ export default function App() {
           <button
             className={panelAbierto ? "icono on" : "icono"}
             onClick={() => setPanelAbierto(!panelAbierto)}
-            data-texto="Filtros"
+            data-globo aria-label="Filtros"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path className="gesto gesto-linea" d="M4 5h16" />
@@ -768,7 +768,7 @@ export default function App() {
             <button
               className={avisosAbiertos ? "icono on" : "icono"}
               onClick={() => setAvisosAbiertos(!avisosAbiertos)}
-              data-texto={
+              data-globo aria-label={
                 pendientes === 0
                   ? "Notificaciones"
                   : `${pendientes} ${pendientes === 1 ? "pendiente" : "pendientes"}`
@@ -800,7 +800,7 @@ export default function App() {
           <button
             className="icono"
             onClick={importar}
-            data-texto="Importar evento"
+            data-globo aria-label="Importar evento"
             disabled={!grupos}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -812,7 +812,7 @@ export default function App() {
           <button
             className={ajustesAbiertos ? "icono on" : "icono"}
             onClick={() => setAjustesAbiertos(!ajustesAbiertos)}
-            data-texto="Ajustes"
+            data-globo aria-label="Ajustes"
           >
             <svg className="gesto gesto-engranaje" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="3" />
@@ -825,15 +825,17 @@ export default function App() {
             onClick={() => setFormulario({ modo: "crear", fecha: clave(HOY) })}
             disabled={!grupos}
           >
-            Nuevo evento <span className="gesto gesto-mas">+</span>
+            Nuevo evento <span className="gesto gesto-mas" aria-hidden="true">+</span>
           </button>
         </div>
-      </div>
+      </header>
 
       {error ? (
-        <div className="error">{error}</div>
+        <div className="error" role="alert">
+          {error}
+        </div>
       ) : (
-        <div className="cuerpo">
+        <main className="cuerpo">
           <VistaMes
             anio={anio}
             mes={mes}
@@ -867,7 +869,7 @@ export default function App() {
               onReordenar={reordenar}
             />
           )}
-        </div>
+        </main>
       )}
 
       {diaVisible.valor && carpeta && (

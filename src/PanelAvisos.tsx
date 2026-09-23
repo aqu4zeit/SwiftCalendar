@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import {
   borrarNotificacion,
@@ -42,6 +42,8 @@ export function PanelAvisos({
   onError,
   onCerrar,
 }: Props) {
+  // Enlaza cada ventana con su título para que el lector de pantalla la anuncie.
+  const id = useId();
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [preguntando, setPreguntando] = useState(false);
   const pregunta = usePresencia(preguntando ? true : null);
@@ -123,10 +125,11 @@ export function PanelAvisos({
     <>
       <aside
         ref={caja}
+        aria-labelledby={`${id}-titulo`}
         className={saliendo ? "panel-avisos saliendo" : "panel-avisos"}
       >
         <div className="avisos-cab">
-          <h2>Notificaciones</h2>
+          <h2 id={`${id}-titulo`}>Notificaciones</h2>
 
           {/* Marcar todas mientras queden pendientes; cuando no quedan, lo que
             tiene sentido es vaciar el historial. Nunca los dos a la vez: la
@@ -186,9 +189,14 @@ export function PanelAvisos({
           className={pregunta.saliendo ? "velo interno saliendo" : "velo interno"}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          <div className="modal angosto">
+          <div
+            className="modal angosto"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby={`${id}-borrar`}
+          >
             <div className="modal-cab">
-              <h2>¿Borrar las notificaciones vistas?</h2>
+              <h2 id={`${id}-borrar`}>¿Borrar las notificaciones vistas?</h2>
             </div>
 
             <div className="modal-cuerpo">
@@ -281,7 +289,7 @@ function Seccion({
               type="button"
               className="aviso-ok"
               onClick={() => onMarcar(aviso.id)}
-              data-texto="Marcar como vista"
+              data-globo aria-label="Marcar como vista"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path className="gesto gesto-check" pathLength={1} d="M4 12l6 6L20 6" />
@@ -294,7 +302,7 @@ function Seccion({
               type="button"
               className="aviso-ok borrar"
               onClick={() => onBorrar(aviso.id)}
-              data-texto="Borrar esta notificación"
+              data-globo aria-label="Borrar esta notificación"
             >
               <svg className="gesto gesto-aspa" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 6l12 12M18 6L6 18" />

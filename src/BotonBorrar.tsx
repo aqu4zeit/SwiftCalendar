@@ -9,9 +9,9 @@ export function BotonBorrar({ onBorrar }: Props) {
       type="button"
       className="borrar-campo"
       onClick={onBorrar}
-      data-texto="Vaciar"
+      data-globo aria-label="Vaciar"
     >
-      <span className="gesto gesto-aspa">✕</span>
+      <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
     </button>
   );
 }

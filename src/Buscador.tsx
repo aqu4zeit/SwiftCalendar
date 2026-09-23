@@ -142,9 +142,15 @@ export function Buscador({
 
   return (
     <div className={saliendo ? "velo saliendo" : "velo"} {...velo}>
-      <div className="modal buscador">
+      <div
+        className="modal buscador"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Buscar un evento"
+      >
         <input
           className="paleta-campo"
+          aria-label="Buscar un evento"
           type="text"
           value={texto}
           placeholder="Buscar un evento…"
@@ -173,7 +179,7 @@ export function Buscador({
                 onClick={() =>
                   pagina.anterior && setPedido(pagina.anterior)
                 }
-                data-texto="Mes anterior con eventos"
+                data-globo aria-label="Mes anterior con eventos"
               >
                 <svg className="gesto gesto-izquierda" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M15 5l-7 7 7 7" />
@@ -189,7 +195,7 @@ export function Buscador({
                 onClick={() =>
                   pagina.siguiente && setPedido(pagina.siguiente)
                 }
-                data-texto="Mes siguiente con eventos"
+                data-globo aria-label="Mes siguiente con eventos"
               >
                 <svg className="gesto gesto-derecha" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M9 5l7 7-7 7" />

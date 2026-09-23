@@ -18,6 +18,11 @@
   --tx: #eae6e0;
   --tx-2: #9c968d;
   --tx-3: #6a655e;
+  /* El foco con teclado: más claro que cualquier texto secundario para que el
+     anillo contraste también dentro de los modales, que son más claros. */
+  --foco: #b0a99f;
+  --foco-campo: #7d776f;
+  --foco-halo: rgb(176 169 159 / 0.12);
   --hoy: #d0503c;
   --ancho-filtros: 224px;
   --scroll: #3a3634;
@@ -309,7 +314,45 @@ body {
   border-right: none;
 }
 
+/*
+ * Los días, los eventos y las filas de la vista día son botones: así el
+ * teclado llega a ellos y Enter los abre. Se les quita lo que el navegador le
+ * pone a un botón para que se vean igual que cuando eran cajas; sus propias
+ * reglas, más abajo, vuelven a poner fondo, borde y tamaño de letra.
+ */
+.numero,
+.ev,
+.ev-solo,
+.dia-ev {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  margin: 0;
+}
+
+/* Un botón no ocupa el ancho de su columna por sí solo, como sí lo hacía la caja. */
+.ev,
+.ev-solo,
+.dia-ev {
+  width: 100%;
+}
+
+/* Dentro del botón solo vale contenido en línea, así que el texto de la fila
+   del día va en `span`; estos vuelven a apilarse como antes. */
+.dia-txt,
+.dia-tit,
+.dia-hr,
+.dia-ds {
+  display: block;
+}
+
 .numero {
+  /* Pegado a su número: estirado a lo ancho, el anillo del foco marcaba toda
+     la franja de arriba de la celda. */
+  align-self: flex-start;
+  border-radius: 4px;
   display: block;
   font-size: 12px;
   color: var(--tx-2);
@@ -769,14 +812,28 @@ button:focus {
  * solo se activa navegando con teclado, no al hacer clic.
  */
 button:focus-visible {
-  outline: 1px solid var(--tx-3);
+  outline: 2px solid var(--foco);
   outline-offset: 2px;
 }
 
+/* En la celda y en la lista del día el anillo va por dentro: las dos recortan
+   lo que se sale de sus bordes, y por fuera se perdía. */
+.ev:focus-visible,
+.ev-solo:focus-visible,
+.dia-ev:focus-visible {
+  outline-offset: -2px;
+}
+
+/*
+ * El borde de un campo con foco pasaba de un gris a otro casi igual, 1,2 a 1:
+ * con el teclado no se veía dónde se iba a escribir. Ahora sube a un gris que
+ * se separa del modal y suma un halo.
+ */
 .campo:focus-within,
 .campo-titulo:focus,
 .area:focus {
-  border-color: var(--line-2);
+  border-color: var(--foco-campo);
+  box-shadow: 0 0 0 3px var(--foco-halo);
 }
 
 /* Un campo con error mantiene su borde rojo aunque tenga el foco. */
@@ -817,7 +874,9 @@ button:focus-visible {
   margin-bottom: 15px;
 }
 
-.fila-campo label {
+/* Solo la etiqueta que encabeza el campo: "Todo el día" también es un `label`,
+   pero va al lado de su interruptor y se lee como texto normal. */
+.fila-campo > label:first-child {
   display: block;
   font-size: 11px;
   letter-spacing: 0.6px;

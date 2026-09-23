@@ -112,7 +112,7 @@ export function SelectorColor({ color, onCambiar }: Props) {
         type="button"
         className="color-libre"
         onClick={() => (abierto ? cerrar() : abrirDesde())}
-        data-texto="Elegir otro color"
+        data-globo aria-label="Elegir otro color"
       >
         +
       </button>
@@ -172,6 +172,7 @@ export function SelectorColor({ color, onCambiar }: Props) {
             <span className="previa-hex" style={{ background: color }} />
             <div className="campo">
               <input
+                aria-label="Código del color"
                 type="text"
                 value={texto}
                 spellCheck={false}

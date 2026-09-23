@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { openPath } from "@tauri-apps/plugin-opener";
 
 import {
@@ -73,6 +73,8 @@ export function Ficha({
   onEditar,
   onBorrado,
 }: Props) {
+  // Enlaza cada ventana con su título para que el lector de pantalla la anuncie.
+  const id = useId();
   const [detalle, setDetalle] = useState<EventoDetalle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exportando, setExportando] = useState(false);
@@ -180,14 +182,19 @@ export function Ficha({
       className={saliendo ? "velo saliendo" : "velo"}
       {...velo}
     >
-      <div className="ficha">
+      <div
+        className="ficha"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-titulo`}
+      >
         <div className="ficha-cab">
           {/* Exportar vive acá y no en el pie: el pie ya tiene Editar y Borrar,
               y un tercer botón dejaría el destructivo entre otros dos. */}
           <button
             type="button"
             className="cerrar"
-            data-texto="Exportar evento"
+            data-globo aria-label="Exportar evento"
             disabled={!detalle || exportando}
             onClick={exportar}
           >
@@ -197,12 +204,16 @@ export function Ficha({
             </svg>
           </button>
 
-          <button type="button" className="cerrar" onClick={onCerrar}>
-            <span className="gesto gesto-aspa">✕</span>
+          <button type="button" className="cerrar" aria-label="Cerrar" onClick={onCerrar}>
+            <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
           </button>
         </div>
 
-        {error && <div className="msg-error ficha-error">{error}</div>}
+        {error && (
+          <div className="msg-error ficha-error" role="alert">
+            {error}
+          </div>
+        )}
 
         {detalle && (
           <>
@@ -218,13 +229,14 @@ export function Ficha({
                 {imagen !== "no" && (
                   <img
                     src={urlDeArchivo(carpeta, detalle.imagen as string)}
-                    alt=""
+                    // Es la imagen del evento: contenido, no adorno.
+                    alt={detalle.titulo}
                     onLoad={medir}
                   />
                 )}
 
                 <div className="ficha-datos">
-                  <h1>{detalle.titulo}</h1>
+                  <h1 id={`${id}-titulo`}>{detalle.titulo}</h1>
 
                   <div className="ficha-meta">
                     <Cuando instancia={instancia} formato={formatoHora} />

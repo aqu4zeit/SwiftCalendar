@@ -1,3 +1,5 @@
+import { useId } from "react";
+
 import { CampoFecha } from "./CampoFecha";
 import { Desplegable } from "./Desplegable";
 import {
@@ -46,6 +48,9 @@ interface Props {
 }
 
 export function MasOpciones(p: Props) {
+  // Enlaza cada campo con su etiqueta y cada ventana con su título, para que
+  // el lector de pantalla diga qué es cada cosa.
+  const id = useId();
   const unidad =
     FRECUENCIAS.find((f) => f.valor === p.repeticion.frecuencia)?.unidad ?? "";
 
@@ -70,8 +75,9 @@ export function MasOpciones(p: Props) {
           {p.permiteRepeticion && (
             <>
               <div className="fila-campo">
-                <label>REPETICIÓN</label>
+                <label id={`${id}-repeticion`}>REPETICIÓN</label>
                 <Desplegable
+                  etiqueta={`${id}-repeticion`}
                   valor={p.repeticion.frecuencia ?? ""}
                   opciones={[
                     { valor: "", texto: "No se repite" },
@@ -92,13 +98,14 @@ export function MasOpciones(p: Props) {
               {p.repeticion.frecuencia && (
                 <>
                   <div className="fila-campo">
-                    <label>INTERVALO</label>
+                    <label htmlFor={`${id}-intervalo`}>INTERVALO</label>
                     <div className="campo">
                       <span className="fijo">Cada</span>
                       <input
                         type="text"
                         inputMode="numeric"
                         className="numerito"
+                        id={`${id}-intervalo`}
                         value={p.repeticion.intervalo}
                         onChange={(e) =>
                           p.onRepeticion({
@@ -114,8 +121,9 @@ export function MasOpciones(p: Props) {
                   </div>
 
                   <div className="fila-campo">
-                    <label>TERMINA</label>
+                    <label id={`${id}-termina`}>TERMINA</label>
                     <Desplegable
+                      etiqueta={`${id}-termina`}
                       valor={p.repeticion.final}
                       opciones={FINALES.map((f) => ({
                         valor: f.valor,
@@ -130,6 +138,8 @@ export function MasOpciones(p: Props) {
                   {p.repeticion.final === "hasta" && (
                     <div className="fila-campo">
                       <CampoFecha
+                        id={`${id}-hasta`}
+                        nombre="Fecha en que termina"
                         valor={p.repeticion.hasta}
                         onCambiar={(hasta) =>
                           p.onRepeticion({ ...p.repeticion, hasta })
@@ -145,6 +155,7 @@ export function MasOpciones(p: Props) {
                           type="text"
                           inputMode="numeric"
                           className="numerito"
+                          aria-label="Cantidad de repeticiones"
                           value={p.repeticion.veces}
                           onChange={(e) =>
                             p.onRepeticion({
@@ -165,8 +176,9 @@ export function MasOpciones(p: Props) {
           )}
 
           <div className="fila-campo">
-            <label>RECORDATORIO</label>
+            <label id={`${id}-recordatorio`}>RECORDATORIO</label>
             <Desplegable
+              etiqueta={`${id}-recordatorio`}
               valor={p.recordatorio === null ? "" : String(p.recordatorio)}
               opciones={RECORDATORIOS.map((r) => ({
                 valor: r.valor === null ? "" : String(r.valor),
@@ -179,11 +191,17 @@ export function MasOpciones(p: Props) {
           {/* Un evento de todo el día no elige tipo de hora: un día es un día. */}
           {!p.todoElDia && (
             <div className="fila-campo">
-              <label>TIPO DE HORA</label>
-              <div className="segmentado">
+              <label id={`${id}-tipo-hora`}>TIPO DE HORA</label>
+              <div
+                className="segmentado"
+                role="group"
+                aria-labelledby={`${id}-tipo-hora`}
+                aria-describedby={`${id}-tipo-hora-nota`}
+              >
                 <button
                   type="button"
                   className={!p.adaptable ? "on" : undefined}
+                  aria-pressed={!p.adaptable}
                   onClick={() => p.onAdaptable(false)}
                 >
                   Fija
@@ -191,12 +209,13 @@ export function MasOpciones(p: Props) {
                 <button
                   type="button"
                   className={p.adaptable ? "on" : undefined}
+                  aria-pressed={p.adaptable}
                   onClick={() => p.onAdaptable(true)}
                 >
                   Se adapta a la zona horaria
                 </button>
               </div>
-              <p className="nota">
+              <p className="nota" id={`${id}-tipo-hora-nota`}>
                 {p.adaptable
                   ? "La hora queda anclada a tu zona horaria. Si cambia el horario de verano o compartes el evento, se muestra en el momento equivalente."
                   : "La hora que escribes es la que se muestra siempre, aunque cambie el horario o compartas el evento."}
@@ -205,11 +224,12 @@ export function MasOpciones(p: Props) {
           )}
 
           <div className="fila-campo">
-            <label>UBICACIÓN</label>
+            <label htmlFor={`${id}-ubicacion`}>UBICACIÓN</label>
             <div className="campo">
               <input
                 type="text"
                 placeholder="Opcional"
+                id={`${id}-ubicacion`}
                 value={p.ubicacion}
                 onChange={(e) => p.onUbicacion(e.target.value)}
               />
@@ -217,11 +237,12 @@ export function MasOpciones(p: Props) {
           </div>
 
           <div className="fila-campo">
-            <label>ENLACE</label>
+            <label htmlFor={`${id}-enlace`}>ENLACE</label>
             <div className="campo">
               <input
                 type="text"
                 placeholder="Opcional"
+                id={`${id}-enlace`}
                 value={p.url}
                 onChange={(e) => p.onUrl(e.target.value)}
               />

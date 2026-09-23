@@ -1,3 +1,5 @@
+import { useId } from "react";
+
 import { useFlotante } from "./flotante";
 
 const ALTO_FILA = 34;
@@ -21,10 +23,23 @@ interface Props {
    * lista obligaría a reservar un texto que nadie puede elegir de verdad.
    */
   accion?: { texto: string; onAccion: () => void };
+  /**
+   * El id del texto que lo nombra. El lector de pantalla lo anuncia junto con
+   * la opción elegida, "Grupo, Otro": con una sola de las dos no se sabe qué
+   * se está eligiendo o qué quedó elegido.
+   */
+  etiqueta: string;
 }
 
 /** El desplegable de toda la aplicación. No usa `select` porque su lista la dibuja el sistema operativo y no acepta el tema. */
-export function Desplegable({ opciones, valor, onElegir, accion }: Props) {
+export function Desplegable({
+  opciones,
+  valor,
+  onElegir,
+  accion,
+  etiqueta,
+}: Props) {
+  const propio = useId();
   const filas = opciones.length + (accion ? 1 : 0);
   const alto = Math.min(filas * ALTO_FILA + 10, ALTO_MAXIMO);
   const { ancla, panel, posicion, abierto, saliendo, abrir, cerrar } =
@@ -37,6 +52,10 @@ export function Desplegable({ opciones, valor, onElegir, accion }: Props) {
       <button
         type="button"
         className="campo como-boton"
+        id={propio}
+        aria-labelledby={`${etiqueta} ${propio}`}
+        aria-haspopup="listbox"
+        aria-expanded={abierto}
         onClick={() => (abierto ? cerrar() : abrir())}
       >
         {elegida?.color && (

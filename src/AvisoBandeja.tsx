@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 interface Props {
   /** Si es la ventana de arriba. Solo esa atiende Escape. */
@@ -27,6 +27,8 @@ export function AvisoBandeja({
   onEntendido,
   onAbrirAjustes,
 }: Props) {
+  // Enlaza cada ventana con su título para que el lector de pantalla la anuncie.
+  const id = useId();
   const [noRepetir, setNoRepetir] = useState(true);
 
   // Escape hace lo mismo que Entendido: es el botón que ya tiene el foco, y
@@ -41,9 +43,14 @@ export function AvisoBandeja({
 
   return (
     <div className={saliendo ? "velo saliendo" : "velo"}>
-      <div className="modal angosto">
+      <div
+        className="modal angosto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-titulo`}
+      >
         <div className="modal-cab">
-          <h2>La aplicación sigue abierta</h2>
+          <h2 id={`${id}-titulo`}>La aplicación sigue abierta</h2>
         </div>
 
         <div className="modal-cuerpo apilado">
@@ -63,9 +70,14 @@ export function AvisoBandeja({
           <button
             type="button"
             className="casilla"
+            role="checkbox"
+            aria-checked={noRepetir}
             onClick={() => setNoRepetir(!noRepetir)}
           >
-            <span className={noRepetir ? "caja marcada" : "caja"} />
+            <span
+              className={noRepetir ? "caja marcada" : "caja"}
+              aria-hidden="true"
+            />
             No volver a mostrar este aviso
           </button>
         </div>

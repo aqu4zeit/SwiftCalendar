@@ -112,6 +112,7 @@ export function MenuContextual({
       <div
         ref={caja}
         className={saliendo ? "menu-contextual saliendo" : "menu-contextual"}
+        role="menu"
         // Mientras no se ha medido se dibuja fuera de la vista: ponerlo en el
         // cursor y moverlo después se ve como un salto.
         style={sitio ?? { left: 0, top: 0, visibility: "hidden" as const }}
@@ -121,10 +122,11 @@ export function MenuContextual({
             key={entrada.id}
             type="button"
             className={entrada.malo ? "opcion-menu mala" : "opcion-menu"}
+            role="menuitem"
             onClick={() => onElegir(entrada.id)}
           >
             {entrada.texto}
-            {entrada.signo && <span>{entrada.signo}</span>}
+            {entrada.signo && <span aria-hidden="true">{entrada.signo}</span>}
           </button>
         ))}
       </div>

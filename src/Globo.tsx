@@ -90,8 +90,12 @@ export function Globo() {
       const destino = evento.target;
       if (!(destino instanceof Element)) return;
 
-      const nodo = destino.closest<HTMLElement>("[data-texto]");
-      const texto = nodo?.dataset.texto;
+      // El texto es el nombre accesible del botón: uno solo, que lee el lector
+      // de pantalla y que muestra el globo. `data-globo` solo dice cuáles lo
+      // muestran, porque no todo lo que tiene nombre necesita globo: los días
+      // del calendario llevan su fecha y aparecerían al pasar por cada uno.
+      const nodo = destino.closest<HTMLElement>("[data-globo]");
+      const texto = nodo?.getAttribute("aria-label");
       if (!nodo || !texto) {
         esconder();
         return;

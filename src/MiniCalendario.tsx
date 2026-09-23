@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { CABECERA_SEMANA, clave, mesYAnio, rejilla } from "./fecha";
+import { CABECERA_SEMANA, clave, fechaLarga, mesYAnio, rejilla } from "./fecha";
 import type { Sentido } from "./VistaMes";
 
 interface Props {
@@ -29,12 +29,18 @@ export function MiniCalendario({ valor, onElegir }: Props) {
   return (
     <div className="mini-cal">
       <div className="mini-cab">
-        <button type="button" className="mini-paso" onClick={() => mover(-1)}>
-          <span className="gesto gesto-izquierda">‹</span>
+        <button type="button" className="mini-paso"
+          aria-label="Mes anterior"
+          onClick={() => mover(-1)}
+        >
+          <span className="gesto gesto-izquierda" aria-hidden="true">‹</span>
         </button>
         <span>{mesYAnio(anio, mes)}</span>
-        <button type="button" className="mini-paso" onClick={() => mover(1)}>
-          <span className="gesto gesto-derecha">›</span>
+        <button type="button" className="mini-paso"
+          aria-label="Mes siguiente"
+          onClick={() => mover(1)}
+        >
+          <span className="gesto gesto-derecha" aria-hidden="true">›</span>
         </button>
       </div>
 
@@ -61,6 +67,10 @@ export function MiniCalendario({ valor, onElegir }: Props) {
               key={iso}
               type="button"
               className={clases.join(" ")}
+              // El número solo no dice de qué mes es; el nombre completo sí.
+              aria-label={`${fechaLarga(fecha)} de ${fecha.getFullYear()}`}
+              aria-pressed={iso === valor}
+              aria-current={iso === hoy ? "date" : undefined}
               onClick={() => onElegir(iso)}
             >
               {fecha.getDate()}

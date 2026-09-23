@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import { borrarGrupo, crearGrupo, editarGrupo, type Grupo } from "./api";
 import { usePresencia } from "./presencia";
@@ -39,6 +39,9 @@ export function FormularioGrupo({
   onGuardado,
   onBorrado,
 }: Props) {
+  // Enlaza cada campo con su etiqueta y cada ventana con su título, para que
+  // el lector de pantalla diga qué es cada cosa.
+  const id = useId();
   const [nombre, setNombre] = useState(grupo?.nombre ?? "");
   const [color, setColor] = useState(grupo?.color ?? PALETA[0]);
   const [confirmando, setConfirmando] = useState(false);
@@ -109,19 +112,27 @@ export function FormularioGrupo({
 
   return (
     <div className={saliendo ? "velo saliendo" : "velo"}>
-      <div className="modal angosto">
+      <div
+        className="modal angosto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-titulo`}
+      >
         <div className="modal-cab">
-          <h2>{grupo ? "Editar grupo" : "Nuevo grupo"}</h2>
-          <button type="button" className="cerrar" onClick={intentarCerrar}>
-            <span className="gesto gesto-aspa">✕</span>
+          <h2 id={`${id}-titulo`}>{grupo ? "Editar grupo" : "Nuevo grupo"}</h2>
+          <button type="button" className="cerrar" aria-label="Cerrar" onClick={intentarCerrar}>
+            <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
           </button>
         </div>
 
         <div className="modal-cuerpo">
           <div className="fila-campo">
-            <label>NOMBRE</label>
+            <label htmlFor={`${id}-nombre`}>NOMBRE</label>
             <div className={reclamarNombre ? "campo malo" : "campo"}>
               <input
+                id={`${id}-nombre`}
+                aria-invalid={reclamarNombre}
+                aria-describedby={reclamarNombre ? `${id}-falta-nombre` : undefined}
                 type="text"
                 value={nombre}
                 placeholder="Nombre del grupo"
@@ -141,21 +152,24 @@ export function FormularioGrupo({
               </p>
             )}
             {reclamarNombre && (
-              <div className="msg-error">El nombre es obligatorio</div>
+              <div className="msg-error" id={`${id}-falta-nombre`} role="alert">
+                El nombre es obligatorio
+              </div>
             )}
           </div>
 
           <div className="fila-campo">
-            <label>COLOR</label>
-            <div className="paleta">
+            <label id={`${id}-color`}>COLOR</label>
+            <div className="paleta" role="group" aria-labelledby={`${id}-color`}>
               {PALETA.map((c) => (
                 <button
                   key={c}
                   type="button"
                   className={c === color ? "muestra elegida" : "muestra"}
+                  aria-pressed={c === color}
                   style={{ background: c }}
                   onClick={() => setColor(c)}
-                  data-texto={c}
+                  data-globo aria-label={c}
                 />
               ))}
               <SelectorColor color={color} onCambiar={setColor} />
@@ -164,7 +178,9 @@ export function FormularioGrupo({
 
           <div className="fila-campo">
             <label>VISTA PREVIA</label>
-            <div className="previa">
+            {/* Es una muestra del color, no eventos de verdad: el lector de
+                pantalla la salta. */}
+            <div className="previa" aria-hidden="true">
               <div className="ev">
                 <span className="marca" style={{ background: color }} />
                 <span className="hora">08:30</span>
@@ -180,7 +196,11 @@ export function FormularioGrupo({
             </div>
           </div>
 
-          {error && <div className="msg-error">{error}</div>}
+          {error && (
+            <div className="msg-error" role="alert">
+              {error}
+            </div>
+          )}
         </div>
 
         <div className={grupo && !esPorDefecto ? "modal-pie entre" : "modal-pie"}>
@@ -211,9 +231,14 @@ export function FormularioGrupo({
 
       {pregunta.valor && (
         <div className={pregunta.saliendo ? "velo interno saliendo" : "velo interno"}>
-          <div className="modal angosto">
+          <div
+            className="modal angosto"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby={`${id}-descartar`}
+          >
             <div className="modal-cab">
-              <h2>¿Descartar los cambios?</h2>
+              <h2 id={`${id}-descartar`}>¿Descartar los cambios?</h2>
             </div>
             <div className="modal-cuerpo">
               <p className="parrafo">
@@ -239,9 +264,14 @@ export function FormularioGrupo({
 
       {confirmacion.valor && grupo && (
         <div className={confirmacion.saliendo ? "velo interno saliendo" : "velo interno"}>
-          <div className="modal angosto">
+          <div
+            className="modal angosto"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby={`${id}-borrar`}
+          >
             <div className="modal-cab">
-              <h2>¿Borrar {grupo.nombre}?</h2>
+              <h2 id={`${id}-borrar`}>¿Borrar {grupo.nombre}?</h2>
             </div>
             <div className="modal-cuerpo">
               <p className="parrafo">

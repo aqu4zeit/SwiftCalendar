@@ -100,9 +100,15 @@ export function Paleta({ comandos, activo, saliendo, onElegir, onCerrar }: Props
       className={saliendo ? "velo saliendo" : "velo"}
       {...velo}
     >
-      <div className="modal paleta">
+      <div
+        className="modal paleta"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Acciones"
+      >
         <input
           className="paleta-campo"
+          aria-label="Buscar una acción"
           type="text"
           value={texto}
           placeholder="Buscar una acción…"

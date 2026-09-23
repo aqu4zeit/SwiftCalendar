@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import {
   borrarEvento,
@@ -38,6 +38,8 @@ export function Control({
   onCambio,
   onCerrar,
 }: Props) {
+  // Enlaza cada ventana con su título para que el lector de pantalla la anuncie.
+  const id = useId();
   const [eventos, setEventos] = useState<Resumen[]>([]);
   const [preguntando, setPreguntando] = useState<Pregunta | null>(null);
   // Lo que se dibuja: sigue siendo la pregunta de recién mientras se va.
@@ -95,16 +97,25 @@ export function Control({
 
   return (
     <div className={saliendo ? "velo saliendo" : "velo"}>
-      <div className="modal ancho">
+      <div
+        className="modal ancho"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-titulo`}
+      >
         <div className="modal-cab">
-          <h2>Todos los eventos</h2>
-          <button type="button" className="cerrar" onClick={onCerrar}>
-            <span className="gesto gesto-aspa">✕</span>
+          <h2 id={`${id}-titulo`}>Todos los eventos</h2>
+          <button type="button" className="cerrar" aria-label="Cerrar" onClick={onCerrar}>
+            <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
           </button>
         </div>
 
         <div className="modal-cuerpo">
-          {error && <div className="msg-error">{error}</div>}
+          {error && (
+            <div className="msg-error" role="alert">
+              {error}
+            </div>
+          )}
 
           {/* Se pregunta por lo dibujado y no por la lista: los que se están
               yendo todavía ocupan su sitio, y con la lista ya vacía el mensaje
@@ -131,7 +142,7 @@ export function Control({
                     type="button"
                     className="control-borrar"
                     onClick={() => setPreguntando({ que: "uno", evento })}
-                    data-texto="Borrar este evento"
+                    data-globo aria-label="Borrar este evento"
                   >
                     <svg className="gesto gesto-aspa" viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M6 6l12 12M18 6L6 18" />
@@ -161,9 +172,14 @@ export function Control({
 
       {pregunta.valor && (
         <div className={pregunta.saliendo ? "velo interno saliendo" : "velo interno"}>
-          <div className="modal angosto">
+          <div
+            className="modal angosto"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby={`${id}-borrar`}
+          >
             <div className="modal-cab">
-              <h2>
+              <h2 id={`${id}-borrar`}>
                 {pregunta.valor.que === "todos"
                   ? "¿Borrar todos los eventos?"
                   : "¿Borrar este evento?"}

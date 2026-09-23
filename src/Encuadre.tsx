@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { vistaPreviaImagen, type Recorte } from "./api";
 
@@ -37,6 +37,8 @@ interface Props {
  * las tres vistas y en la base.
  */
 export function Encuadre({ origen, saliendo, onCerrar, onElegir }: Props) {
+  // Enlaza cada ventana con su título para que el lector de pantalla la anuncie.
+  const id = useId();
   const [vista, setVista] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [marco, setMarco] = useState<Recorte>(COMPLETA);
@@ -136,16 +138,25 @@ export function Encuadre({ origen, saliendo, onCerrar, onElegir }: Props) {
       className={saliendo ? "velo interno saliendo" : "velo interno"}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="modal ancho">
+      <div
+        className="modal ancho"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-titulo`}
+      >
         <div className="modal-cab">
-          <h2>Encuadrar la imagen</h2>
-          <button type="button" className="cerrar" onClick={onCerrar}>
-            <span className="gesto gesto-aspa">✕</span>
+          <h2 id={`${id}-titulo`}>Encuadrar la imagen</h2>
+          <button type="button" className="cerrar" aria-label="Cerrar" onClick={onCerrar}>
+            <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
           </button>
         </div>
 
         <div className="modal-cuerpo">
-          {error && <div className="msg-error">{error}</div>}
+          {error && (
+            <div className="msg-error" role="alert">
+              {error}
+            </div>
+          )}
 
           {!error && !vista && <p className="parrafo">Preparando la imagen…</p>}
 

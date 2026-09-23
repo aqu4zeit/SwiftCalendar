@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { Instancia } from "./api";
-import { horaDe, type FormatoHora } from "./fecha";
+import { fechaLarga, horaDe, type FormatoHora } from "./fecha";
 import { useListaConSalida } from "./presencia";
 
 interface Props {
@@ -79,7 +79,19 @@ export function Celda({
         onMenu(e.clientX, e.clientY, { fecha });
       }}
     >
-      <span className="numero">{fecha.getDate()}</span>
+      {/* Un botón para que el teclado llegue al día. El clic sube hasta la
+          celda, que es la que sabe qué hacer con él. Los días de otro mes
+          quedan fuera del recorrido del tabulador: solo sirven de atajo al mes
+          vecino, y para eso ya están las flechas. */}
+      <button
+        type="button"
+        className="numero"
+        aria-label={fechaLarga(fecha)}
+        aria-current={esHoy ? "date" : undefined}
+        tabIndex={esDeEsteMes ? undefined : -1}
+      >
+        {fecha.getDate()}
+      </button>
 
       <div className="eventos" ref={lista}>
         {dibujados.length === 1 ? (
@@ -137,7 +149,8 @@ function EventoSolo({
   if (saliendo) clases.push("saliendo");
 
   return (
-    <div
+    <button
+      type="button"
       className={clases.join(" ")}
       onClick={(e) => {
 /** El clic en el evento no debe llegar a la celda, que abre el día. */
@@ -162,7 +175,7 @@ function EventoSolo({
           <span className="descripcion">{instancia.descripcion}</span>
         )}
       </span>
-    </div>
+    </button>
   );
 }
 
@@ -175,7 +188,8 @@ function EventoCompacto({
   onMenu,
 }: FilaProps) {
   return (
-    <div
+    <button
+      type="button"
       className={saliendo ? "ev saliendo" : "ev"}
       onClick={(e) => {
         e.stopPropagation();
@@ -191,7 +205,7 @@ function EventoCompacto({
       <Hora instancia={instancia} formato={formato} />
       <span className="titulo-ev">{instancia.titulo}</span>
       <Continuidad instancia={instancia} />
-    </div>
+    </button>
   );
 }
 

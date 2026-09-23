@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { open, save } from "@tauri-apps/plugin-dialog";
 
@@ -29,7 +29,21 @@ interface Props {
   onCerrar: () => void;
 }
 
-/** Una fila de ajuste: qué es a la izquierda, con qué se cambia a la derecha. */
+/** Los ids del texto de una fila, para que su control se nombre con él. */
+interface IdsFila {
+  titulo: string;
+  nota: string | undefined;
+  /** El título y la nota juntos: describen un botón que ya tiene su texto. */
+  descripcion: string;
+}
+
+/**
+ * Una fila de ajuste: qué es a la izquierda, con qué se cambia a la derecha.
+ *
+ * El control recibe los ids del texto de la fila. Sin ellos el lector de
+ * pantalla anunciaba un interruptor sin decir qué enciende, y dos botones
+ * "Abrir" sin decir qué abre cada uno.
+ */
 function Fila({
   titulo,
   nota,
@@ -37,23 +51,52 @@ function Fila({
 }: {
   titulo: string;
   nota?: string;
-  children: React.ReactNode;
+  children: (ids: IdsFila) => React.ReactNode;
 }) {
+  const id = useId();
+  const ids: IdsFila = {
+    titulo: `${id}-titulo`,
+    nota: nota ? `${id}-nota` : undefined,
+    descripcion: nota ? `${id}-titulo ${id}-nota` : `${id}-titulo`,
+  };
+
   return (
     <div className="ajuste">
       <div className="ajuste-que">
-        <div className="ajuste-titulo">{titulo}</div>
-        {nota && <div className="ajuste-nota">{nota}</div>}
+        <div className="ajuste-titulo" id={ids.titulo}>
+          {titulo}
+        </div>
+        {nota && (
+          <div className="ajuste-nota" id={ids.nota}>
+            {nota}
+          </div>
+        )}
       </div>
-      {children}
+      {children(ids)}
     </div>
   );
 }
 
 /** El interruptor de sí o no, que es el control más repetido de esta pantalla. */
-function Sw({ on, onCambiar }: { on: boolean; onCambiar: () => void }) {
+function Sw({
+  on,
+  onCambiar,
+  ids,
+}: {
+  on: boolean;
+  onCambiar: () => void;
+  ids: IdsFila;
+}) {
   return (
-    <button type="button" className={on ? "sw on" : "sw"} onClick={onCambiar}>
+    <button
+      type="button"
+      className={on ? "sw on" : "sw"}
+      role="switch"
+      aria-checked={on}
+      aria-labelledby={ids.titulo}
+      aria-describedby={ids.nota}
+      onClick={onCambiar}
+    >
       <i />
     </button>
   );
@@ -79,6 +122,8 @@ export function Ajustes({
   onAbrirControl,
   onCerrar,
 }: Props) {
+  // Enlaza la ventana y su confirmación con sus títulos.
+  const id = useId();
   const [confirmando, setConfirmando] = useState<string | null>(null);
   // La ruta sigue dibujada mientras la confirmación se va.
   const { valor: aRestaurar, saliendo: restaurarSaliendo } =
@@ -125,11 +170,16 @@ export function Ajustes({
 
   return (
     <div className={saliendo ? "velo saliendo" : "velo"}>
-      <div className="modal">
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-titulo`}
+      >
         <div className="modal-cab">
-          <h2>Ajustes</h2>
-          <button type="button" className="cerrar" onClick={onCerrar}>
-            <span className="gesto gesto-aspa">✕</span>
+          <h2 id={`${id}-titulo`}>Ajustes</h2>
+          <button type="button" className="cerrar" aria-label="Cerrar" onClick={onCerrar}>
+            <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
           </button>
         </div>
 
@@ -140,41 +190,58 @@ export function Ajustes({
             titulo="Densidad de la celda"
             nota="Cuánto espacio ocupa cada evento en la vista mes"
           >
-            <div className="segmentado">
-              <button
-                type="button"
-                className={densidad === "comoda" ? "on" : undefined}
-                onClick={() => onGuardar("densidad", "comoda")}
+            {(ids) => (
+              <div
+                className="segmentado"
+                role="group"
+                aria-labelledby={ids.titulo}
+                aria-describedby={ids.nota}
               >
-                Cómoda
-              </button>
-              <button
-                type="button"
-                className={densidad === "compacta" ? "on" : undefined}
-                onClick={() => onGuardar("densidad", "compacta")}
-              >
-                Compacta
-              </button>
-            </div>
+                <button
+                  type="button"
+                  className={densidad === "comoda" ? "on" : undefined}
+                  aria-pressed={densidad === "comoda"}
+                  onClick={() => onGuardar("densidad", "comoda")}
+                >
+                  Cómoda
+                </button>
+                <button
+                  type="button"
+                  className={densidad === "compacta" ? "on" : undefined}
+                  aria-pressed={densidad === "compacta"}
+                  onClick={() => onGuardar("densidad", "compacta")}
+                >
+                  Compacta
+                </button>
+              </div>
+            )}
           </Fila>
 
           <Fila titulo="Formato de hora">
-            <div className="segmentado">
-              <button
-                type="button"
-                className={formatoHora === "24" ? "on" : undefined}
-                onClick={() => onGuardar("formato_hora", "24")}
+            {(ids) => (
+              <div
+                className="segmentado"
+                role="group"
+                aria-labelledby={ids.titulo}
               >
-                24 h
-              </button>
-              <button
-                type="button"
-                className={formatoHora === "12" ? "on" : undefined}
-                onClick={() => onGuardar("formato_hora", "12")}
-              >
-                12 h
-              </button>
-            </div>
+                <button
+                  type="button"
+                  className={formatoHora === "24" ? "on" : undefined}
+                  aria-pressed={formatoHora === "24"}
+                  onClick={() => onGuardar("formato_hora", "24")}
+                >
+                  24 h
+                </button>
+                <button
+                  type="button"
+                  className={formatoHora === "12" ? "on" : undefined}
+                  aria-pressed={formatoHora === "12"}
+                  onClick={() => onGuardar("formato_hora", "12")}
+                >
+                  12 h
+                </button>
+              </div>
+            )}
           </Fila>
 
           <div className="seccion">BANDEJA DEL SISTEMA</div>
@@ -183,32 +250,41 @@ export function Ajustes({
             titulo="Seguir activa en la bandeja"
             nota="Al cerrar la ventana, la aplicación sigue corriendo y el ícono avisa si hay recordatorios. Apagado, cerrar la ventana cierra la aplicación"
           >
-            <Sw
-              on={bandeja}
-              onCambiar={() => onGuardar("bandeja", bandeja ? "0" : "1")}
-            />
+            {(ids) => (
+              <Sw
+                ids={ids}
+                on={bandeja}
+                onCambiar={() => onGuardar("bandeja", bandeja ? "0" : "1")}
+              />
+            )}
           </Fila>
 
           <Fila
             titulo="Explicar al cerrar la ventana"
             nota="Vuelve a mostrar el aviso que recuerda que la aplicación sigue viva y dónde está el botón de salir"
           >
-            <Sw
-              on={avisar}
-              onCambiar={() =>
-                onGuardar("aviso_bandeja_visto", avisar ? "1" : "0")
-              }
-            />
+            {(ids) => (
+              <Sw
+                ids={ids}
+                on={avisar}
+                onCambiar={() =>
+                  onGuardar("aviso_bandeja_visto", avisar ? "1" : "0")
+                }
+              />
+            )}
           </Fila>
 
           <Fila
             titulo="Arrancar junto con Windows"
             nota="Se abre directamente en la bandeja, sin mostrar la ventana"
           >
-            <Sw
-              on={arranque}
-              onCambiar={() => onGuardar("arranque", arranque ? "0" : "1")}
-            />
+            {(ids) => (
+              <Sw
+                ids={ids}
+                on={arranque}
+                onCambiar={() => onGuardar("arranque", arranque ? "0" : "1")}
+              />
+            )}
           </Fila>
 
           <div className="seccion">EVENTOS</div>
@@ -217,23 +293,37 @@ export function Ajustes({
             titulo="Todos los eventos"
             nota="Ver lo que hay guardado y borrar desde ahí"
           >
-            <button type="button" className="btn" onClick={onAbrirControl}>
-              Abrir
-            </button>
+            {(ids) => (
+              <button
+                type="button"
+                className="btn"
+                aria-describedby={ids.descripcion}
+                onClick={onAbrirControl}
+              >
+                Abrir
+              </button>
+            )}
           </Fila>
 
           <div className="seccion">DATOS</div>
 
-          {error && <div className="msg-error">{error}</div>}
+          {error && (
+            <div className="msg-error" role="alert">
+              {error}
+            </div>
+          )}
 
           <Fila titulo="Carpeta de datos">
-            <button
-              type="button"
-              className="btn"
-              onClick={() => void openPath(carpeta).catch(() => {})}
-            >
-              Abrir
-            </button>
+            {(ids) => (
+              <button
+                type="button"
+                className="btn"
+                aria-describedby={ids.descripcion}
+                onClick={() => void openPath(carpeta).catch(() => {})}
+              >
+                Abrir
+              </button>
+            )}
           </Fila>
 
           {/* La ruta va debajo y a lo ancho: es larga y en la columna derecha
@@ -244,32 +334,47 @@ export function Ajustes({
             titulo="Exportar respaldo"
             nota="Empaqueta la carpeta completa en un solo archivo"
           >
-            <button
-              type="button"
-              className="btn"
-              disabled={ocupado}
-              onClick={exportar}
-            >
-              Exportar
-            </button>
+            {(ids) => (
+              <button
+                type="button"
+                className="btn"
+                aria-describedby={ids.descripcion}
+                disabled={ocupado}
+                onClick={exportar}
+              >
+                Exportar
+              </button>
+            )}
           </Fila>
 
           <Fila
             titulo="Restaurar desde respaldo"
             nota="Reemplaza todo el contenido actual y reinicia la aplicación"
           >
-            <button type="button" className="btn" onClick={elegirParaRestaurar}>
-              Restaurar
-            </button>
+            {(ids) => (
+              <button
+                type="button"
+                className="btn"
+                aria-describedby={ids.descripcion}
+                onClick={elegirParaRestaurar}
+              >
+                Restaurar
+              </button>
+            )}
           </Fila>
         </div>
       </div>
 
       {aRestaurar !== null && (
         <div className={restaurarSaliendo ? "velo interno saliendo" : "velo interno"}>
-          <div className="modal angosto">
+          <div
+            className="modal angosto"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby={`${id}-restaurar`}
+          >
             <div className="modal-cab">
-              <h2>¿Restaurar este respaldo?</h2>
+              <h2 id={`${id}-restaurar`}>¿Restaurar este respaldo?</h2>
             </div>
             <div className="modal-cuerpo apilado">
               <p className="parrafo">

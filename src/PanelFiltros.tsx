@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
@@ -54,6 +55,8 @@ export function PanelFiltros({
   onNuevoGrupo,
   onReordenar,
 }: Props) {
+  // Enlaza cada ventana con su título para que el lector de pantalla la anuncie.
+  const id = useId();
   /*
    * El orden mientras se arrastra.
    *
@@ -249,8 +252,11 @@ export function PanelFiltros({
     : grupos.todos;
 
   return (
-    <div className={saliendo ? "panel-filtros saliendo" : "panel-filtros"}>
-      <h2>
+    <aside
+      className={saliendo ? "panel-filtros saliendo" : "panel-filtros"}
+      aria-labelledby={`${id}-titulo`}
+    >
+      <h2 id={`${id}-titulo`}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 5h16M7 12h10M10 19h4" />
         </svg>
@@ -286,7 +292,7 @@ export function PanelFiltros({
               type="button"
               className="editar-grupo"
               onClick={() => onEditarGrupo(g)}
-              data-texto={`Editar ${g.nombre}`}
+              data-globo aria-label={`Editar ${g.nombre}`}
             >
               <svg className="gesto gesto-lapiz" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" />
@@ -295,7 +301,10 @@ export function PanelFiltros({
 
             <span
               className="asa"
-              data-texto="Arrastrar para reordenar"
+              data-globo aria-label="Arrastrar para reordenar"
+              // Solo se reordena con el ratón: para el lector de pantalla no
+              // hay nada que hacer acá.
+              aria-hidden="true"
               onMouseDown={(e) => {
                 e.preventDefault();
                 tomar(g.id);
@@ -309,7 +318,7 @@ export function PanelFiltros({
 
       <button type="button" className="nuevo-grupo" onClick={onNuevoGrupo}>
         <span>Nuevo grupo</span>
-        <span>+</span>
+        <span aria-hidden="true">+</span>
       </button>
 
       <div className="grupo-titulo">IMPORTANCIA</div>
@@ -334,7 +343,7 @@ export function PanelFiltros({
           />
         </Casilla>
       ))}
-    </div>
+    </aside>
   );
 }
 
@@ -350,9 +359,11 @@ function Casilla({ marcada, onAlternar, etiqueta, children }: CasillaProps) {
     <button
       type="button"
       className={marcada ? "fila-filtro" : "fila-filtro apagada"}
+      role="checkbox"
+      aria-checked={marcada}
       onClick={onAlternar}
     >
-      <span className={marcada ? "box on" : "box"} />
+      <span className={marcada ? "box on" : "box"} aria-hidden="true" />
       {children}
       <span className="etiqueta-filtro">{etiqueta}</span>
     </button>

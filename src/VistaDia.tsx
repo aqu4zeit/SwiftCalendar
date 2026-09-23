@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import { urlDeArchivo, type Instancia } from "./api";
 import {
@@ -44,6 +44,8 @@ export function VistaDia({
   onCrear,
   onMenu,
 }: Props) {
+  // Enlaza cada ventana con su título para que el lector de pantalla la anuncie.
+  const id = useId();
   const velo = useVelo(onCerrar);
 
   const lista = useRef<HTMLDivElement>(null);
@@ -84,20 +86,25 @@ export function VistaDia({
       className={saliendo ? "velo saliendo" : "velo"}
       {...velo}
     >
-      <div className="vista-dia">
+      <div
+        className="vista-dia"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-titulo`}
+      >
         <div className="dia-cab">
-          <h2>{fechaLarga(fecha)}</h2>
+          <h2 id={`${id}-titulo`}>{fechaLarga(fecha)}</h2>
           <div className="dia-acciones">
             <button
               type="button"
               className="icono-chico"
               onClick={onCrear}
-              data-texto="Nuevo evento este día"
+              data-globo aria-label="Nuevo evento este día"
             >
-              +
+              <span aria-hidden="true">+</span>
             </button>
-            <button type="button" className="cerrar" onClick={onCerrar}>
-              <span className="gesto gesto-aspa">✕</span>
+            <button type="button" className="cerrar" aria-label="Cerrar" onClick={onCerrar}>
+              <span className="gesto gesto-aspa" aria-hidden="true">✕</span>
             </button>
           </div>
         </div>
@@ -168,7 +175,8 @@ function Fila({
         : undefined;
 
   return (
-    <div
+    <button
+      type="button"
       className={saliendo ? "dia-ev saliendo" : "dia-ev"}
       onClick={() => onAbrir(instancia)}
       onContextMenu={(e) => {
@@ -188,21 +196,21 @@ function Fila({
           alt=""
         />
       )}
-      <div className="dia-txt">
-        <div className="dia-tit">{instancia.titulo}</div>
-        <div className="dia-hr">
+      <span className="dia-txt">
+        <span className="dia-tit">{instancia.titulo}</span>
+        <span className="dia-hr">
           <Horario instancia={instancia} formato={formato} />
-        </div>
+        </span>
         {instancia.descripcion && (
-          <div className="dia-ds">{instancia.descripcion}</div>
+          <span className="dia-ds">{instancia.descripcion}</span>
         )}
         {instancia.de > 1 && (
           <span className="chip">
             Día {instancia.dia} de {instancia.de}
           </span>
         )}
-      </div>
-    </div>
+      </span>
+    </button>
   );
 }
 

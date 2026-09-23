@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 
 import {
@@ -132,15 +133,22 @@ export function PreguntaAlcance({
   onSeguir: () => void;
 }) {
   const verbo = accion === "borrar" ? "Borra" : "Cambia";
+  // Enlaza cada ventana con su título para que el lector de pantalla la anuncie.
+  const id = useId();
 
   return (
     <div
       className={saliendo ? "velo interno saliendo" : "velo interno"}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="modal angosto">
+      <div
+        className="modal angosto"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-titulo`}
+      >
         <div className="modal-cab">
-          <h2>{esSerie ? "Este evento se repite" : "¿Borrar este evento?"}</h2>
+          <h2 id={`${id}-titulo`}>{esSerie ? "Este evento se repite" : "¿Borrar este evento?"}</h2>
         </div>
 
         <div className="modal-cuerpo">
