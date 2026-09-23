@@ -5,6 +5,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { exportarRespaldo, restaurarRespaldo } from "./api";
 import type { Densidad } from "./api";
 import type { FormatoHora } from "./fecha";
+import { usePresencia } from "./presencia";
 
 interface Props {
   densidad: Densidad;
@@ -79,6 +80,9 @@ export function Ajustes({
   onCerrar,
 }: Props) {
   const [confirmando, setConfirmando] = useState<string | null>(null);
+  // La ruta sigue dibujada mientras la confirmación se va.
+  const { valor: aRestaurar, saliendo: restaurarSaliendo } =
+    usePresencia(confirmando);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
@@ -125,7 +129,7 @@ export function Ajustes({
         <div className="modal-cab">
           <h2>Ajustes</h2>
           <button type="button" className="cerrar" onClick={onCerrar}>
-            ✕
+            <span className="gesto gesto-aspa">✕</span>
           </button>
         </div>
 
@@ -261,8 +265,8 @@ export function Ajustes({
         </div>
       </div>
 
-      {confirmando !== null && (
-        <div className="velo interno">
+      {aRestaurar !== null && (
+        <div className={restaurarSaliendo ? "velo interno saliendo" : "velo interno"}>
           <div className="modal angosto">
             <div className="modal-cab">
               <h2>¿Restaurar este respaldo?</h2>
@@ -276,7 +280,7 @@ export function Ajustes({
                 La aplicación se reinicia sola y vuelve con los datos del
                 respaldo puestos.
               </p>
-              <div className="ruta">{confirmando}</div>
+              <div className="ruta">{aRestaurar}</div>
             </div>
             <div className="modal-pie">
               <button
@@ -290,7 +294,7 @@ export function Ajustes({
                 type="button"
                 className="btn malo"
                 onClick={() => {
-                  void restaurarRespaldo(confirmando).catch((e: unknown) => {
+                  void restaurarRespaldo(aRestaurar).catch((e: unknown) => {
                     setError(String(e));
                     setConfirmando(null);
                   });

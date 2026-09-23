@@ -140,7 +140,7 @@ export function Encuadre({ origen, saliendo, onCerrar, onElegir }: Props) {
         <div className="modal-cab">
           <h2>Encuadrar la imagen</h2>
           <button type="button" className="cerrar" onClick={onCerrar}>
-            ✕
+            <span className="gesto gesto-aspa">✕</span>
           </button>
         </div>
 

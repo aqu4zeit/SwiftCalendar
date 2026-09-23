@@ -288,7 +288,7 @@ export function PanelFiltros({
               onClick={() => onEditarGrupo(g)}
               data-texto={`Editar ${g.nombre}`}
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
+              <svg className="gesto gesto-lapiz" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" />
               </svg>
             </button>

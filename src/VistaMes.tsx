@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import type { Instancia, PorDia } from "./api";
 import { Celda } from "./Celda";
 import {
@@ -32,6 +34,9 @@ interface Props {
   onMostrarTodos: () => void;
 }
 
+/** El lado desde el que entra un mes nuevo. */
+export type Sentido = "adelante" | "atras";
+
 export function VistaMes({
   anio,
   mes,
@@ -46,6 +51,17 @@ export function VistaMes({
   onMenu,
 }: Props) {
   const dias = rejilla(anio, mes);
+
+  // Hacia dónde se movió el calendario, para que el mes nuevo entre desde ese
+  // lado. Se compara al dibujar, antes de montar la cuadrícula nueva: si se
+  // guardara después, la primera vez que se ve ya habría entrado sin sentido.
+  const indice = anio * 12 + mes;
+  const [paso, setPaso] = useState<{ indice: number; sentido?: Sentido }>({
+    indice,
+  });
+  if (paso.indice !== indice) {
+    setPaso({ indice, sentido: indice > paso.indice ? "adelante" : "atras" });
+  }
   const lunesActual = clave(lunesDeLaSemana(hoy));
 
   // Un calendario en blanco por culpa de un filtro se lee como pérdida de
@@ -64,7 +80,11 @@ export function VistaMes({
       {/* La clave cambia con el mes, así que la cuadrícula se rehace y su
           animación de entrada vuelve a correr. Sin eso, cambiar de mes
           reemplaza el contenido sin que nada indique que cambió. */}
-      <div className="rejilla" key={`${anio}-${mes}`}>
+      <div
+        className="rejilla"
+        key={`${anio}-${mes}`}
+        data-sentido={paso.sentido}
+      >
         {dias.map((fecha) => (
           <Celda
             key={clave(fecha)}

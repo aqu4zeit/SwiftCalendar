@@ -29,6 +29,7 @@ import {
 import { RECORDATORIOS } from "./MasOpciones";
 import { desdeRrule, textoRepeticion } from "./rrule";
 import { useVelo } from "./flotante";
+import { usePresencia } from "./presencia";
 
 interface Props {
   instancia: Instancia;
@@ -80,6 +81,7 @@ export function Ficha({
   const [preguntando, setPreguntando] = useState<"editar" | "borrar" | null>(
     null,
   );
+  const pregunta = usePresencia(preguntando);
   const [alcance, setAlcance] = useState<Alcance>("solo_esta");
   const [borrando, setBorrando] = useState(false);
 
@@ -190,12 +192,13 @@ export function Ficha({
             onClick={exportar}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 15V3M8 7l4-4 4 4M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4" />
+              <path className="gesto gesto-sube" d="M12 15V3M8 7l4-4 4 4" />
+              <path d="M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4" />
             </svg>
           </button>
 
           <button type="button" className="cerrar" onClick={onCerrar}>
-            ✕
+            <span className="gesto gesto-aspa">✕</span>
           </button>
         </div>
 
@@ -294,18 +297,19 @@ export function Ficha({
         )}
       </div>
 
-      {preguntando && (
+      {pregunta.valor && (
         <PreguntaAlcance
-          accion={preguntando}
+          accion={pregunta.valor}
           detalle={detalle}
           instancia={instancia}
           esSerie={esSerie}
           alcance={alcance}
           ocupado={borrando}
           onAlcance={setAlcance}
+          saliendo={pregunta.saliendo}
           onCancelar={() => setPreguntando(null)}
           onSeguir={() =>
-            preguntando === "borrar" ? void borrar(alcance) : editar(alcance)
+            pregunta.valor === "borrar" ? void borrar(alcance) : editar(alcance)
           }
         />
       )}
@@ -454,7 +458,8 @@ function Detalles({
           onClick={() => void openPath(`${carpeta}/${adjunto.ruta}`)}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <path className="gesto gesto-sube" d="M17 8l-5-5-5 5M12 3v12" />
           </svg>
           <span>{adjunto.nombre_original}</span>
           <span className="peso">

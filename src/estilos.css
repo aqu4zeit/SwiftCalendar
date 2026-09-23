@@ -955,9 +955,51 @@ button:focus-visible {
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 3px;
+  position: relative;
+  /* Cuántas opciones hay y cuál está elegida, para el indicador. */
+  --n: 2;
+  --i: 0;
+}
+
+.segmentado:has(> button:nth-child(3)) {
+  --n: 3;
+}
+
+.segmentado:has(> button:nth-child(2).on) {
+  --i: 1;
+}
+
+.segmentado:has(> button:nth-child(3).on) {
+  --i: 2;
+}
+
+/*
+ * El fondo de la opción elegida es uno solo que se desliza, no uno por botón.
+ * Con uno por botón, cambiar de opción apaga uno y enciende otro en el mismo
+ * sitio de antes; con uno que viaja se ve de dónde vino la elección.
+ *
+ * Mide lo mismo que un botón: el hueco interior menos los espacios entre
+ * ellos, repartido entre `--n`. Se corre su propio ancho más un espacio por
+ * cada opción que salta.
+ */
+.segmentado::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px - 3px * (var(--n) - 1)) / var(--n));
+  border-radius: 4px;
+  background: var(--segmento-on);
+  transform: translateX(calc((100% + 3px) * var(--i)));
+}
+
+.segmentado:not(:has(> button.on))::before {
+  visibility: hidden;
 }
 
 .segmentado button {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: center;
@@ -977,7 +1019,6 @@ button:focus-visible {
 }
 
 .segmentado button.on {
-  background: var(--segmento-on);
   color: var(--tx);
 }
 
@@ -1030,9 +1071,11 @@ button:focus-visible {
   background: var(--borde-activo);
 }
 
+/* Se corre con `transform` y no pasando de `left` a `right`: entre un número y
+   `auto` no hay valores intermedios, así que el círculo saltaba de un lado al
+   otro aunque tuviera transición. El hueco mide 28; 28 − 11 − 2 − 2 = 13. */
 .sw.on i {
-  left: auto;
-  right: 2px;
+  transform: translateX(13px);
   background: var(--tx);
 }
 
@@ -2185,9 +2228,9 @@ button:focus-visible {
 /* ==========================================================================
    MOVIMIENTO
 
-   Tres duraciones y nada más. Entrar 140, salir 100, y 120 para lo que
-   responde al puntero. Salir es más rápido que entrar a propósito: cuando
-   cierras algo ya decidiste, y esperar molesta.
+   Todas las duraciones están en este bloque: entrar, salir, lo que responde al
+   puntero y el gesto de los íconos. Salir es más rápido que entrar a
+   propósito: cuando cierras algo ya decidiste, y esperar molesta.
 
    Los milisegundos de salida están también en `presencia.ts` y `flotante.ts`,
    que son los que mantienen viva la ventana mientras se va. Describen la misma
@@ -2200,6 +2243,10 @@ button:focus-visible {
   --entra-panel: 150ms;
   --sale-panel: 110ms;
   --responde: 140ms;
+  /* El gesto dura más que todo lo demás porque no hace esperar a nadie:
+     adorna un botón que ya se puede pulsar, y un balanceo de 140 ms no se
+     llega a ver como balanceo. */
+  --gesto: 480ms;
   --curva-entra: cubic-bezier(0.16, 1, 0.3, 1);
   --curva-sale: cubic-bezier(0.4, 0, 1, 1);
 }
@@ -2251,6 +2298,19 @@ button:focus-visible {
 
 .velo.saliendo {
   animation: velo-sale var(--sale) var(--curva-sale) forwards;
+}
+
+/*
+ * Lo de adentro deja de responder mientras se va: ya no está. Sin esto, el
+ * segundo clic de un doble clic repetía la acción que la cerró, y en una
+ * confirmación que falló eso era volver a borrar o a restaurar.
+ *
+ * El velo en sí sigue atrapando clics. Si también los dejara pasar, ese
+ * segundo clic caería en el calendario de abajo: sobre un día de otro mes,
+ * lo cambiaba de mes sin que nadie lo pidiera.
+ */
+.velo.saliendo > * {
+  pointer-events: none;
 }
 
 .velo.saliendo > .modal,
@@ -2340,6 +2400,47 @@ button:focus-visible {
   animation: mes-entra var(--entra) var(--curva-entra);
 }
 
+/*
+ * Al pasar de mes, el nuevo llega desde el lado hacia el que se avanzó: el
+ * siguiente desde la derecha, el anterior desde la izquierda. Así la dirección
+ * dice por sí sola si se fue al futuro o al pasado. La primera vez no hay
+ * dirección y queda la entrada de arriba.
+ *
+ * El calendario chico del campo de fecha hace lo mismo, con menos recorrido
+ * porque es más angosto.
+ */
+@keyframes mes-adelante {
+  from {
+    opacity: 0;
+    transform: translateX(var(--paso-mes));
+  }
+}
+
+@keyframes mes-atras {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--paso-mes) * -1));
+  }
+}
+
+.rejilla {
+  --paso-mes: 18px;
+}
+
+.mini-rejilla {
+  --paso-mes: 10px;
+}
+
+.rejilla[data-sentido="adelante"],
+.mini-rejilla[data-sentido="adelante"] {
+  animation: mes-adelante var(--entra) var(--curva-entra);
+}
+
+.rejilla[data-sentido="atras"],
+.mini-rejilla[data-sentido="atras"] {
+  animation: mes-atras var(--entra) var(--curva-entra);
+}
+
 /* --- eventos --- */
 
 /* Aparecen al crearlos y al volver de un filtro apagado. */
@@ -2406,11 +2507,14 @@ button:focus-visible {
 .elegido,
 .elegido .quitar,
 .ficha-fila.archivo {
+  /* La sombra es el anillo de la muestra de color elegida: crece desde el
+     borde en vez de aparecer. */
   transition:
     background-color var(--responde) ease,
     border-color var(--responde) ease,
     color var(--responde) ease,
-    opacity var(--responde) ease;
+    opacity var(--responde) ease,
+    box-shadow var(--responde) var(--curva-entra);
 }
 
 /* El campo marca el foco en su borde, así que ese cambio también se acompaña. */
@@ -2420,16 +2524,239 @@ button:focus-visible {
   transition: border-color var(--responde) ease;
 }
 
-.sw,
+.sw {
+  transition: background-color var(--responde) ease;
+}
+
 .sw i {
   transition:
     background-color var(--responde) ease,
-    left var(--responde) var(--curva-entra),
-    right var(--responde) var(--curva-entra);
+    transform var(--responde) var(--curva-entra);
+}
+
+.segmentado::before {
+  transition: transform var(--entra-panel) var(--curva-entra);
+}
+
+/* Las casillas se rellenan con transición, y su marca aparece creciendo. */
+.box,
+.casilla .caja,
+.opcion .radio {
+  transition:
+    background-color var(--responde) ease,
+    border-color var(--responde) ease;
+}
+
+/*
+ * `scale` y no `transform`: la marca de la casilla ya está girada con
+ * `transform`, y animar esa propiedad pisaría el giro. `scale` se compone con
+ * él. Una marca tan chica no tiene texto que tiemble al escalar.
+ */
+@keyframes marca-entra {
+  from {
+    opacity: 0;
+    scale: 0.3;
+  }
+}
+
+.box.on::after,
+.casilla .caja.marcada::after,
+.opcion.on .radio::after {
+  animation: marca-entra var(--responde) var(--curva-entra);
+}
+
+/* --- lo que aparece para avisar --- */
+
+/* El punto de la barra: nace creciendo, para que se note que llegó algo. */
+@keyframes punto-entra {
+  from {
+    opacity: 0;
+    scale: 0;
+  }
+}
+
+.icono .punto {
+  animation: punto-entra var(--entra) var(--curva-entra);
+}
+
+/* Los mensajes bajan un poco al llegar, como los paneles que cuelgan de un
+   campo: el error aparece debajo de lo que lo causó. */
+@keyframes mensaje-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.msg-error,
+.advertencia,
+.error {
+  animation: mensaje-entra var(--entra) var(--curva-entra);
+}
+
+/* Los vacíos y el indicador de "hay más" solo se funden: no vienen de ningún
+   lado, estaban ahí esperando que el contenido se fuera. */
+@keyframes funde-entra {
+  from {
+    opacity: 0;
+  }
+}
+
+.oculto-por-filtro,
+.dia-vacio,
+.paleta-vacia,
+.avisos-vacio,
+.hay-mas {
+  animation: funde-entra var(--entra) ease-out;
 }
 
 .caret {
   transition: transform var(--responde) ease;
+}
+
+/* --- el gesto de los íconos --- */
+
+/*
+ * Al pasar el puntero, o al llegar con el teclado, el ícono de un botón hace
+ * una vez el gesto de lo que el botón hace: la campana suena, la flecha baja
+ * a la bandeja, el engranaje gira. La regla que lo dispara es una sola; cada
+ * ícono aporta solo el nombre de su animación y su punto de giro. Un botón
+ * desactivado no se ofrece, así que tampoco se mueve. La zona donde se sueltan
+ * archivos también lo hace mientras uno pasa por encima arrastrando, porque
+ * entonces el puntero no cuenta como hover.
+ *
+ * Los que giran lo hacen justo lo que su propia simetría permite (el
+ * engranaje, el aspa y el más, un cuarto de vuelta), y así volver al reposo
+ * al terminar no se nota como salto.
+ */
+button:is(:hover, :focus-visible):not(:disabled) .gesto,
+.campo.suelta.encima .gesto {
+  animation: var(--animacion) var(--gesto) ease-in-out var(--retraso, 0ms);
+}
+
+/* Lo que gira dentro del SVG toma el origen de su propia figura, no el del
+   lienzo de 24 × 24. */
+.gesto {
+  transform-box: fill-box;
+}
+
+/* Los que son un carácter (✕, +, ‹ ›) necesitan caja propia para poder
+   girar o moverse; en línea, `transform` no les hace nada. */
+span.gesto {
+  display: inline-block;
+}
+
+.gesto-mas {
+  --animacion: gesto-cuarto;
+  transform-origin: 50% 50%;
+}
+
+.gesto-campana {
+  --animacion: gesto-campana;
+  transform-origin: 50% 12%;
+}
+
+.gesto-engranaje,
+.gesto-aspa {
+  --animacion: gesto-cuarto;
+  transform-origin: 50% 50%;
+}
+
+.gesto-baja {
+  --animacion: gesto-baja;
+}
+
+.gesto-sube {
+  --animacion: gesto-sube;
+}
+
+.gesto-izquierda {
+  --animacion: gesto-izquierda;
+}
+
+.gesto-derecha {
+  --animacion: gesto-derecha;
+}
+
+/* El lápiz gira sobre la punta, que es donde se apoya. */
+.gesto-lapiz {
+  --animacion: gesto-lapiz;
+  transform-origin: 12% 84%;
+}
+
+/* Las tres líneas del filtro se encogen una tras otra, como un embudo. */
+.gesto-linea {
+  --animacion: gesto-linea;
+  transform-origin: 50% 50%;
+}
+
+.gesto-linea:nth-child(2) {
+  --retraso: 50ms;
+}
+
+.gesto-linea:nth-child(3) {
+  --retraso: 100ms;
+}
+
+.gesto-anilla {
+  --animacion: gesto-anilla;
+}
+
+.gesto-anilla:nth-child(4) {
+  --retraso: 70ms;
+}
+
+/* El visto se vuelve a trazar. Mide 1 por `pathLength`, así que un guion de
+   1 lo cubre entero y correrlo desde 1 lo dibuja de punta a punta. */
+.gesto-check {
+  --animacion: gesto-check;
+  stroke-dasharray: 1;
+}
+
+@keyframes gesto-campana {
+  20% { transform: rotate(16deg); }
+  40% { transform: rotate(-11deg); }
+  60% { transform: rotate(6deg); }
+  80% { transform: rotate(-3deg); }
+}
+
+@keyframes gesto-cuarto {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(90deg); }
+}
+
+@keyframes gesto-baja {
+  45% { transform: translateY(3px); }
+}
+
+@keyframes gesto-sube {
+  45% { transform: translateY(-3px); }
+}
+
+@keyframes gesto-izquierda {
+  45% { transform: translateX(-2px); }
+}
+
+@keyframes gesto-derecha {
+  45% { transform: translateX(2px); }
+}
+
+@keyframes gesto-lapiz {
+  30% { transform: rotate(-14deg); }
+  65% { transform: rotate(6deg); }
+}
+
+@keyframes gesto-linea {
+  45% { transform: scaleX(0.55); }
+}
+
+@keyframes gesto-anilla {
+  45% { transform: translateY(-2px); }
+}
+
+@keyframes gesto-check {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
 }
 
 /* --- quien pidió menos movimiento --- */

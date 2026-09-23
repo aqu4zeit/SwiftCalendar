@@ -7,7 +7,7 @@ import {
   type Resumen,
 } from "./api";
 import type { FormatoHora } from "./fecha";
-import { useListaConSalida } from "./presencia";
+import { useListaConSalida, usePresencia } from "./presencia";
 import { cuandoOcurre } from "./texto";
 
 interface Props {
@@ -40,6 +40,8 @@ export function Control({
 }: Props) {
   const [eventos, setEventos] = useState<Resumen[]>([]);
   const [preguntando, setPreguntando] = useState<Pregunta | null>(null);
+  // Lo que se dibuja: sigue siendo la pregunta de recién mientras se va.
+  const pregunta = usePresencia(preguntando);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
@@ -97,7 +99,7 @@ export function Control({
         <div className="modal-cab">
           <h2>Todos los eventos</h2>
           <button type="button" className="cerrar" onClick={onCerrar}>
-            ✕
+            <span className="gesto gesto-aspa">✕</span>
           </button>
         </div>
 
@@ -131,7 +133,7 @@ export function Control({
                     onClick={() => setPreguntando({ que: "uno", evento })}
                     data-texto="Borrar este evento"
                   >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <svg className="gesto gesto-aspa" viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M6 6l12 12M18 6L6 18" />
                     </svg>
                   </button>
@@ -157,19 +159,19 @@ export function Control({
         </div>
       </div>
 
-      {preguntando && (
-        <div className="velo interno">
+      {pregunta.valor && (
+        <div className={pregunta.saliendo ? "velo interno saliendo" : "velo interno"}>
           <div className="modal angosto">
             <div className="modal-cab">
               <h2>
-                {preguntando.que === "todos"
+                {pregunta.valor.que === "todos"
                   ? "¿Borrar todos los eventos?"
                   : "¿Borrar este evento?"}
               </h2>
             </div>
 
             <div className="modal-cuerpo apilado">
-              {preguntando.que === "todos" ? (
+              {pregunta.valor.que === "todos" ? (
                 <>
                   <p className="parrafo">
                     Se van a borrar los {eventos.length} eventos guardados, con
@@ -185,9 +187,9 @@ export function Control({
                 </>
               ) : (
                 <p className="parrafo">
-                  {preguntando.evento.titulo},{" "}
-                  {cuandoOcurre(preguntando.evento, formatoHora)}.
-                  {preguntando.evento.rrule !== null &&
+                  {pregunta.valor.evento.titulo},{" "}
+                  {cuandoOcurre(pregunta.valor.evento, formatoHora)}.
+                  {pregunta.valor.evento.rrule !== null &&
                     " Se borra la serie completa, incluidas las que ya pasaron."}
                 </p>
               )}

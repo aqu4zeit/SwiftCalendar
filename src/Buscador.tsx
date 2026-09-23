@@ -175,7 +175,7 @@ export function Buscador({
                 }
                 data-texto="Mes anterior con eventos"
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="gesto gesto-izquierda" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M15 5l-7 7 7 7" />
                 </svg>
               </button>
@@ -191,7 +191,7 @@ export function Buscador({
                 }
                 data-texto="Mes siguiente con eventos"
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="gesto gesto-derecha" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M9 5l7 7-7 7" />
                 </svg>
               </button>

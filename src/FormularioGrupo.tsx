@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { borrarGrupo, crearGrupo, editarGrupo, type Grupo } from "./api";
+import { usePresencia } from "./presencia";
 import { SelectorColor } from "./SelectorColor";
 
 /** Diez colores calibrados para el fondo oscuro. */
@@ -42,6 +43,10 @@ export function FormularioGrupo({
   const [color, setColor] = useState(grupo?.color ?? PALETA[0]);
   const [confirmando, setConfirmando] = useState(false);
   const [preguntando, setPreguntando] = useState(false);
+  // Igual que el título de un evento: se reclama después de pasar por el campo.
+  const [nombreTocado, setNombreTocado] = useState(false);
+  const confirmacion = usePresencia(confirmando ? true : null);
+  const pregunta = usePresencia(preguntando ? true : null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,6 +75,7 @@ export function FormularioGrupo({
   // "Otro" existe siempre y recoge los eventos de los grupos borrados.
   const esPorDefecto = grupo?.es_default === true;
   const faltaNombre = nombre.trim() === "";
+  const reclamarNombre = faltaNombre && nombreTocado && !esPorDefecto;
   const sePuedeGuardar = !faltaNombre && !guardando;
 
   async function guardar() {
@@ -107,19 +113,23 @@ export function FormularioGrupo({
         <div className="modal-cab">
           <h2>{grupo ? "Editar grupo" : "Nuevo grupo"}</h2>
           <button type="button" className="cerrar" onClick={intentarCerrar}>
-            ✕
+            <span className="gesto gesto-aspa">✕</span>
           </button>
         </div>
 
         <div className="modal-cuerpo">
           <div className="fila-campo">
             <label>NOMBRE</label>
-            <div className={faltaNombre ? "campo malo" : "campo"}>
+            <div className={reclamarNombre ? "campo malo" : "campo"}>
               <input
                 type="text"
                 value={nombre}
                 placeholder="Nombre del grupo"
-                onChange={(e) => setNombre(e.target.value)}
+                onChange={(e) => {
+                  setNombreTocado(true);
+                  setNombre(e.target.value);
+                }}
+                onBlur={() => setNombreTocado(true)}
                 disabled={esPorDefecto}
                 autoFocus={!esPorDefecto}
               />
@@ -130,7 +140,7 @@ export function FormularioGrupo({
                 eventos de los grupos que se borran. El color sí se cambia.
               </p>
             )}
-            {faltaNombre && !esPorDefecto && (
+            {reclamarNombre && (
               <div className="msg-error">El nombre es obligatorio</div>
             )}
           </div>
@@ -199,8 +209,8 @@ export function FormularioGrupo({
         </div>
       </div>
 
-      {preguntando && (
-        <div className="velo interno">
+      {pregunta.valor && (
+        <div className={pregunta.saliendo ? "velo interno saliendo" : "velo interno"}>
           <div className="modal angosto">
             <div className="modal-cab">
               <h2>¿Descartar los cambios?</h2>
@@ -227,8 +237,8 @@ export function FormularioGrupo({
         </div>
       )}
 
-      {confirmando && grupo && (
-        <div className="velo interno">
+      {confirmacion.valor && grupo && (
+        <div className={confirmacion.saliendo ? "velo interno saliendo" : "velo interno"}>
           <div className="modal angosto">
             <div className="modal-cab">
               <h2>¿Borrar {grupo.nombre}?</h2>

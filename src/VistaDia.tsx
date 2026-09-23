@@ -97,7 +97,7 @@ export function VistaDia({
               +
             </button>
             <button type="button" className="cerrar" onClick={onCerrar}>
-              ✕
+              <span className="gesto gesto-aspa">✕</span>
             </button>
           </div>
         </div>

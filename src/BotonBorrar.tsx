@@ -11,7 +11,7 @@ export function BotonBorrar({ onBorrar }: Props) {
       onClick={onBorrar}
       data-texto="Vaciar"
     >
-      ✕
+      <span className="gesto gesto-aspa">✕</span>
     </button>
   );
 }

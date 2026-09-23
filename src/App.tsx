@@ -721,6 +721,7 @@ export default function App() {
   const controlVisible = usePresencia(controlAbierto ? true : null);
   const buscadorVisible = usePresencia(buscadorAbierto ? true : null);
   const avisoVisible = usePresencia(avisandoBandeja ? true : null);
+  const pedidoVisible = usePresencia(pedido);
 
   const filtrado = grupos
     ? hayFiltroApagado(grupos, gruposActivos, importanciasActivas)
@@ -756,7 +757,9 @@ export default function App() {
             data-texto="Filtros"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 5h16M7 12h10M10 19h4" />
+              <path className="gesto gesto-linea" d="M4 5h16" />
+              <path className="gesto gesto-linea" d="M7 12h10" />
+              <path className="gesto gesto-linea" d="M10 19h4" />
             </svg>
             {filtrado && <span className="punto" />}
           </button>
@@ -771,7 +774,7 @@ export default function App() {
                   : `${pendientes} ${pendientes === 1 ? "pendiente" : "pendientes"}`
               }
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
+              <svg className="gesto gesto-campana" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8M13.7 21a2 2 0 01-3.4 0" />
               </svg>
               {pendientes > 0 && <span className="punto" />}
@@ -801,7 +804,8 @@ export default function App() {
             disabled={!grupos}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3v12M8 11l4 4 4-4M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4" />
+              <path className="gesto gesto-baja" d="M12 3v12M8 11l4 4 4-4" />
+              <path d="M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4" />
             </svg>
           </button>
 
@@ -810,7 +814,7 @@ export default function App() {
             onClick={() => setAjustesAbiertos(!ajustesAbiertos)}
             data-texto="Ajustes"
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
+            <svg className="gesto gesto-engranaje" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" />
             </svg>
@@ -821,7 +825,7 @@ export default function App() {
             onClick={() => setFormulario({ modo: "crear", fecha: clave(HOY) })}
             disabled={!grupos}
           >
-            Nuevo evento <span>+</span>
+            Nuevo evento <span className="gesto gesto-mas">+</span>
           </button>
         </div>
       </div>
@@ -992,15 +996,16 @@ export default function App() {
         />
       )}
 
-      {pedido && (
+      {pedidoVisible.valor && (
         <PreguntaAlcance
-          accion={pedido.accion}
-          detalle={pedido.detalle}
-          instancia={pedido.instancia}
-          esSerie={pedido.detalle.rrule != null}
+          accion={pedidoVisible.valor.accion}
+          detalle={pedidoVisible.valor.detalle}
+          instancia={pedidoVisible.valor.instancia}
+          esSerie={pedidoVisible.valor.detalle.rrule != null}
           alcance={alcance}
           ocupado={ocupado}
           onAlcance={setAlcance}
+          saliendo={pedidoVisible.saliendo}
           onCancelar={() => setPedido(null)}
           onSeguir={() => void seguirPedido()}
         />

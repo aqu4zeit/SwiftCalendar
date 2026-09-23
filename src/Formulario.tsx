@@ -18,6 +18,7 @@ import { CampoFecha } from "./CampoFecha";
 import { Desplegable } from "./Desplegable";
 import { horaValida, mascaraHora } from "./fecha";
 import { MasOpciones } from "./MasOpciones";
+import { usePresencia } from "./presencia";
 import {
   aRrule,
   desdeRrule,
@@ -227,6 +228,10 @@ export function Formulario({
   const [campos, setCampos] = useState<Campos>(inicial);
   const [masAbierto, setMasAbierto] = useState(false);
   const [preguntando, setPreguntando] = useState(false);
+  // El título se reclama recién cuando se pasó por el campo. Un formulario
+  // recién abierto que ya está en rojo regaña por algo que nadie hizo.
+  const [tituloTocado, setTituloTocado] = useState(false);
+  const pregunta = usePresencia(preguntando ? true : null);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -255,6 +260,7 @@ export function Formulario({
 
   // Validación. El botón se ve siempre; lo que cambia es si funciona.
   const faltaTitulo = campos.titulo.trim() === "";
+  const reclamarTitulo = faltaTitulo && tituloTocado;
   const inicioValido =
     campos.fechaInicio !== "" &&
     (campos.todoElDia || horaValida(campos.horaInicio) !== null);
@@ -364,7 +370,7 @@ export function Formulario({
         <div className="modal-cab">
           <h2>{edicion ? "Editar evento" : "Nuevo evento"}</h2>
           <button type="button" className="cerrar" onClick={intentarCerrar}>
-            ✕
+            <span className="gesto gesto-aspa">✕</span>
           </button>
         </div>
 
@@ -374,14 +380,18 @@ export function Formulario({
           <div className="fila-campo">
             <label>TÍTULO</label>
             <input
-              className={faltaTitulo ? "campo-titulo malo" : "campo-titulo"}
+              className={reclamarTitulo ? "campo-titulo malo" : "campo-titulo"}
               type="text"
               placeholder="Título del evento"
               value={campos.titulo}
-              onChange={(e) => set({ titulo: e.target.value })}
+              onChange={(e) => {
+                setTituloTocado(true);
+                set({ titulo: e.target.value });
+              }}
+              onBlur={() => setTituloTocado(true)}
               autoFocus
             />
-            {faltaTitulo && (
+            {reclamarTitulo && (
               <div className="msg-error">El título es obligatorio</div>
             )}
           </div>
@@ -578,8 +588,8 @@ export function Formulario({
         </div>
       </div>
 
-      {preguntando && (
-        <div className="velo interno">
+      {pregunta.valor && (
+        <div className={pregunta.saliendo ? "velo interno saliendo" : "velo interno"}>
           <div className="modal angosto">
             <div className="modal-cab">
               <h2>

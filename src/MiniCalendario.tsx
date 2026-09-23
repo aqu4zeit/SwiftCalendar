@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { CABECERA_SEMANA, clave, mesYAnio, rejilla } from "./fecha";
+import type { Sentido } from "./VistaMes";
 
 interface Props {
   /** La fecha elegida, en `AAAA-MM-DD`, o vacío si no hay ninguna. */
@@ -13,8 +14,11 @@ export function MiniCalendario({ valor, onElegir }: Props) {
   const inicial = valor ? new Date(`${valor}T00:00:00`) : new Date();
   const [anio, setAnio] = useState(inicial.getFullYear());
   const [mes, setMes] = useState(inicial.getMonth() + 1);
+  // Al abrir no hay: el mes aparece con el panel, no llega desde un costado.
+  const [sentido, setSentido] = useState<Sentido>();
 
   function mover(meses: number) {
+    setSentido(meses > 0 ? "adelante" : "atras");
     const destino = new Date(anio, mes - 1 + meses, 1);
     setAnio(destino.getFullYear());
     setMes(destino.getMonth() + 1);
@@ -26,11 +30,11 @@ export function MiniCalendario({ valor, onElegir }: Props) {
     <div className="mini-cal">
       <div className="mini-cab">
         <button type="button" className="mini-paso" onClick={() => mover(-1)}>
-          ‹
+          <span className="gesto gesto-izquierda">‹</span>
         </button>
         <span>{mesYAnio(anio, mes)}</span>
         <button type="button" className="mini-paso" onClick={() => mover(1)}>
-          ›
+          <span className="gesto gesto-derecha">›</span>
         </button>
       </div>
 
@@ -40,7 +44,11 @@ export function MiniCalendario({ valor, onElegir }: Props) {
         ))}
       </div>
 
-      <div className="mini-rejilla">
+      <div
+        className="mini-rejilla"
+        key={`${anio}-${mes}`}
+        data-sentido={sentido}
+      >
         {rejilla(anio, mes).map((fecha) => {
           const iso = clave(fecha);
           const clases = ["mini-dia"];

@@ -199,7 +199,7 @@ export function MasOpciones(p: Props) {
               <p className="nota">
                 {p.adaptable
                   ? "La hora queda anclada a tu zona horaria. Si cambia el horario de verano o compartes el evento, se muestra en el momento equivalente."
-                  : "Las 18:00 son las 18:00 siempre, aunque cambie el horario o compartas el evento."}
+                  : "La hora que escribes es la que se muestra siempre, aunque cambie el horario o compartas el evento."}
               </p>
             </div>
           )}

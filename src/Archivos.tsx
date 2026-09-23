@@ -153,7 +153,7 @@ export function Archivos({
               onClick={elegirImagen}
             >
               <span className="nombre">Arrastra una imagen o haz clic</span>
-              <span className="mas">+</span>
+              <span className="mas gesto gesto-mas">+</span>
             </button>
           ) : (
             <div
@@ -180,7 +180,7 @@ export function Archivos({
                 }}
                 data-texto="Quitar la imagen"
               >
-                ✕
+                <span className="gesto gesto-aspa">✕</span>
               </button>
             </div>
           )}
@@ -210,7 +210,7 @@ export function Archivos({
                 }
                 data-texto="Quitar el archivo"
               >
-                ✕
+                <span className="gesto gesto-aspa">✕</span>
               </button>
             </div>
           ))}
@@ -223,7 +223,7 @@ export function Archivos({
             onClick={elegirAdjuntos}
           >
             <span className="nombre">Arrastra archivos o haz clic</span>
-            <span className="mas">+</span>
+            <span className="mas gesto gesto-mas">+</span>
           </button>
         </div>
       </div>

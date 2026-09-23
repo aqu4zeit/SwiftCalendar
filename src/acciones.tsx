@@ -115,6 +115,7 @@ export function PreguntaAlcance({
   alcance,
   ocupado,
   onAlcance,
+  saliendo,
   onCancelar,
   onSeguir,
 }: {
@@ -126,13 +127,17 @@ export function PreguntaAlcance({
   /** Deshabilita el botón mientras la acción está en curso. */
   ocupado: boolean;
   onAlcance: (alcance: Alcance) => void;
+  saliendo: boolean;
   onCancelar: () => void;
   onSeguir: () => void;
 }) {
   const verbo = accion === "borrar" ? "Borra" : "Cambia";
 
   return (
-    <div className="velo interno" onClick={(e) => e.stopPropagation()}>
+    <div
+      className={saliendo ? "velo interno saliendo" : "velo interno"}
+      onClick={(e) => e.stopPropagation()}
+    >
       <div className="modal angosto">
         <div className="modal-cab">
           <h2>{esSerie ? "Este evento se repite" : "¿Borrar este evento?"}</h2>

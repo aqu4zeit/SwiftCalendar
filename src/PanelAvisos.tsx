@@ -10,7 +10,7 @@ import {
   type Grupos,
 } from "./api";
 import { fechaCompacta, fechaDe, horaDe, type FormatoHora } from "./fecha";
-import { useListaConSalida } from "./presencia";
+import { useListaConSalida, usePresencia } from "./presencia";
 
 interface Props {
   grupos: Grupos;
@@ -44,6 +44,7 @@ export function PanelAvisos({
 }: Props) {
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [preguntando, setPreguntando] = useState(false);
+  const pregunta = usePresencia(preguntando ? true : null);
   const caja = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -180,8 +181,11 @@ export function PanelAvisos({
 
       {/* Fuera del panel: el panel recorta lo que se sale de sus bordes, y esto
           cubre la ventana entera. */}
-      {preguntando && (
-        <div className="velo interno" onMouseDown={(e) => e.stopPropagation()}>
+      {pregunta.valor && (
+        <div
+          className={pregunta.saliendo ? "velo interno saliendo" : "velo interno"}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           <div className="modal angosto">
             <div className="modal-cab">
               <h2>¿Borrar las notificaciones vistas?</h2>
@@ -280,7 +284,7 @@ function Seccion({
               data-texto="Marcar como vista"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 12l6 6L20 6" />
+                <path className="gesto gesto-check" pathLength={1} d="M4 12l6 6L20 6" />
               </svg>
             </button>
           )}
@@ -292,7 +296,7 @@ function Seccion({
               onClick={() => onBorrar(aviso.id)}
               data-texto="Borrar esta notificación"
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
+              <svg className="gesto gesto-aspa" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 6l12 12M18 6L6 18" />
               </svg>
             </button>
