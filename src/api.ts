@@ -353,28 +353,6 @@ export function borrarNotificacionesVistas(): Promise<number> {
   return invoke("borrar_notificaciones_vistas");
 }
 
-/*
- * El menú de la bandeja. PROTOTIPO DE LA INVESTIGACIÓN.
- *
- * Vive en su propia ventana, así que necesita pedir por su cuenta lo que el
- * calendario ya tiene cargado.
- */
-
-/** Cierra la ventana del menú sin hacer nada más. */
-export function cerrarMenuBandeja(): Promise<void> {
-  return invoke("cerrar_menu_bandeja");
-}
-
-/** Abre el calendario y cierra el menú. Con `avisos`, además abre el panel. */
-export function abrirCalendario(avisos: boolean): Promise<void> {
-  return invoke("abrir_calendario", { avisos });
-}
-
-/** Termina la aplicación. */
-export function salir(): Promise<void> {
-  return invoke("salir");
-}
-
 /** El aviso que pide abrir el panel de recordatorios al llegar desde la bandeja. */
 export const PIDEN_AVISOS = "bandeja://avisos";
 

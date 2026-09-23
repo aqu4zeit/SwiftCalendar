@@ -136,10 +136,6 @@ impl Historial {
         }
     }
 
-    pub fn hay_para_deshacer(&self) -> bool {
-        !self.hecho.is_empty()
-    }
-
     pub fn hay_para_rehacer(&self) -> bool {
         !self.deshecho.is_empty()
     }
