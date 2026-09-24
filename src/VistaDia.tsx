@@ -113,10 +113,8 @@ export function VistaDia({
 
         {dibujados.length === 0 ? (
           <div className="dia-vacio">
-            <p className="vacio-t">No hay nada este día</p>
-            <p className="vacio-s">
-              Puedes crear un evento desde acá o cerrar y volver al mes.
-            </p>
+            {/* Sin segunda línea: repetía lo que ya dicen el botón y la cruz. */}
+            <p className="vacio-t">Sin eventos este día</p>
             <button type="button" className="btn" onClick={onCrear}>
               Nuevo evento <Mas />
             </button>
