@@ -179,8 +179,8 @@ function EventoSolo({
       data-globo="cortado"
       tabIndex={enRecorrido ? 0 : -1}
       aria-label={nombreDeInstancia(instancia, formato)}
+      // El clic en el evento no debe llegar a la celda, que abre el día.
       onClick={(e) => {
-/** El clic en el evento no debe llegar a la celda, que abre el día. */
         e.stopPropagation();
         onAbrir(instancia);
       }}
