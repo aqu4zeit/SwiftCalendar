@@ -3172,6 +3172,9 @@ span.gesto {
   *::before,
   *::after {
     animation-duration: 1ms !important;
+    /* Sin esto, lo escalonado seguía esperando su turno (las líneas del
+       filtro, 50 y 100 ms) para después durar 1 ms. */
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
