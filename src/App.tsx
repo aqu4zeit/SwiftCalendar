@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -46,6 +46,7 @@ import { Ajustes } from "./Ajustes";
 import { Buscador } from "./Buscador";
 import { Control } from "./Control";
 import { AvisoBandeja } from "./AvisoBandeja";
+import { AvisoDeshacer } from "./AvisoDeshacer";
 import {
   edicionSegun,
   exportarAArchivo,
@@ -68,11 +69,15 @@ import { PanelAvisos } from "./PanelAvisos";
 import { usePresencia } from "./presencia";
 import { hayFiltroApagado, PanelFiltros } from "./PanelFiltros";
 import { SelectorMes } from "./SelectorMes";
+import { textoBorrado } from "./texto";
 import { VistaDia } from "./VistaDia";
 import { VistaMes } from "./VistaMes";
 
 /** Hoy se calcula una vez al montar y no se refresca. */
 const HOY = new Date();
+
+/** Lo que dura el aviso de deshacer después de borrar. */
+const MS_AVISO_DESHACER = 6000;
 
 export default function App() {
   const [anio, setAnio] = useState(HOY.getFullYear());
@@ -126,6 +131,21 @@ export default function App() {
   const [versionAvisos, setVersionAvisos] = useState(0);
   const avisos = usePresencia(avisosAbiertos ? true : null);
   const [error, setError] = useState<string | null>(null);
+
+  /*
+   * El aviso de deshacer después de borrar. `ventana` es la que estaba arriba
+   * al borrar (la ficha, "Todos los eventos") o `null`: si después se abre
+   * otra, el aviso se va, porque desde ella se puede hacer algo más y
+   * "Deshacer" desharía eso y no el borrado. `id` separa un aviso del
+   * siguiente aunque digan lo mismo.
+   */
+  const [deshacible, setDeshacible] = useState<{
+    id: number;
+    texto: string;
+    ventana: string | null;
+  } | null>(null);
+  const avisoDeshacer = usePresencia(deshacible);
+  const avisosDados = useRef(0);
 
   // Los filtros. Listas explícitas: vacía significa que no se muestra nada.
   const [importanciasActivas, setImportanciasActivas] = useState<Importancia[]>(
@@ -473,10 +493,9 @@ export default function App() {
 
     setOcupado(true);
     try {
-      await borrarEvento(
-        instancia.evento_id,
-        ocurrenciaSegun(instancia, esSerie, alcance),
-      );
+      const ocurrencia = ocurrenciaSegun(instancia, esSerie, alcance);
+      await borrarEvento(instancia.evento_id, ocurrencia);
+      anunciarBorrado(textoBorrado(instancia.titulo, ocurrencia !== null));
       setPedido(null);
       setVersion((v) => v + 1);
       void refrescarAvisos();
@@ -558,6 +577,27 @@ export default function App() {
               ? "dia"
               : null;
 
+  function anunciarBorrado(texto: string) {
+    avisosDados.current += 1;
+    setDeshacible({ id: avisosDados.current, texto, ventana: arriba });
+  }
+
+  // Seis segundos alcanzan para leerlo y decidir; después Ctrl+Z sigue ahí.
+  const idDeshacible = deshacible?.id;
+  useEffect(() => {
+    if (idDeshacible === undefined) return;
+    const temporizador = setTimeout(() => setDeshacible(null), MS_AVISO_DESHACER);
+    return () => clearTimeout(temporizador);
+  }, [idDeshacible]);
+
+  // Otra ventana encima retira el aviso. La misma que borró puede cerrarse sin
+  // retirarlo; desde ahí, cualquiera que se abra ya cuenta como otra.
+  useEffect(() => {
+    if (deshacible === null || arriba === deshacible.ventana) return;
+    if (arriba !== null) setDeshacible(null);
+    else setDeshacible({ ...deshacible, ventana: null });
+  }, [arriba, deshacible]);
+
   /**
    * Lo que se puede hacer con el calendario, con su nombre ya resuelto.
    *
@@ -619,6 +659,8 @@ export default function App() {
       }
       case "deshacer":
       case "rehacer": {
+        // Desde el botón o desde el teclado, el aviso ya cumplió.
+        setDeshacible(null);
         try {
           const hubo = id === "rehacer" ? await rehacer() : await deshacer();
           if (hubo) {
@@ -937,7 +979,10 @@ export default function App() {
             setAbierto(null);
             setFormulario({ modo: "editar", edicion });
           }}
-          onBorrado={recargar}
+          onBorrado={(texto) => {
+            recargar();
+            anunciarBorrado(texto);
+          }}
         />
       )}
 
@@ -985,6 +1030,8 @@ export default function App() {
             recargar();
             void refrescarAvisos();
           }}
+          onBorrado={anunciarBorrado}
+          recarga={version}
           onCerrar={() => setControlAbierto(false)}
         />
       )}
@@ -1054,6 +1101,14 @@ export default function App() {
       )}
 
       {/* Uno solo para toda la aplicación, encima de todo lo demás. */}
+      {avisoDeshacer.valor && (
+        <AvisoDeshacer
+          texto={avisoDeshacer.valor.texto}
+          saliendo={avisoDeshacer.saliendo}
+          onDeshacer={() => void ejecutar("deshacer")}
+        />
+      )}
+
       <Globo />
       <Foco />
 

@@ -49,6 +49,16 @@ export function cuandoOcurre(evento: Resumen, formato: FormatoHora): string {
 }
 
 /**
+ * Lo que dice el aviso de deshacer después de borrar.
+ *
+ * `soloEseDia` es haber borrado una ocurrencia de una serie: decir solo el
+ * título haría creer que se fue la serie entera.
+ */
+export function textoBorrado(titulo: string, soloEseDia: boolean): string {
+  return soloEseDia ? `Se borró «${titulo}» de ese día` : `Se borró «${titulo}»`;
+}
+
+/**
  * Cómo se nombra un evento del calendario: el título, su horario y, si abarca
  * varios días, cuál de ellos es este.
  *

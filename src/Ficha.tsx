@@ -30,6 +30,7 @@ import { RECORDATORIOS } from "./MasOpciones";
 import { desdeRrule, textoRepeticion } from "./rrule";
 import { useVelo } from "./flotante";
 import { usePresencia } from "./presencia";
+import { textoBorrado } from "./texto";
 
 interface Props {
   instancia: Instancia;
@@ -43,7 +44,8 @@ interface Props {
   saliendo: boolean;
   onCerrar: () => void;
   onEditar: (edicion: Edicion) => void;
-  onBorrado: () => void;
+  /** Recibe lo que tiene que decir el aviso de deshacer. */
+  onBorrado: (texto: string) => void;
 }
 
 const NOMBRE_IMPORTANCIA = {
@@ -141,11 +143,9 @@ export function Ficha({
   async function borrar(elegido: Alcance) {
     setBorrando(true);
     try {
-      await borrarEvento(
-        instancia.evento_id,
-        ocurrenciaSegun(instancia, esSerie, elegido),
-      );
-      onBorrado();
+      const ocurrencia = ocurrenciaSegun(instancia, esSerie, elegido);
+      await borrarEvento(instancia.evento_id, ocurrencia);
+      onBorrado(textoBorrado(instancia.titulo, ocurrencia !== null));
     } catch (e: unknown) {
       setError(String(e));
       setBorrando(false);

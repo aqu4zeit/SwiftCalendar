@@ -8,7 +8,7 @@ import {
 } from "./api";
 import type { FormatoHora } from "./fecha";
 import { useListaConSalida, usePresencia } from "./presencia";
-import { cuandoOcurre } from "./texto";
+import { cuandoOcurre, textoBorrado } from "./texto";
 
 interface Props {
   formatoHora: FormatoHora;
@@ -18,6 +18,13 @@ interface Props {
   saliendo: boolean;
   /** Algo se borró: el calendario tiene que volver a pedir el mes. */
   onCambio: () => void;
+  /** Recibe lo que tiene que decir el aviso de deshacer. */
+  onBorrado: (texto: string) => void;
+  /**
+   * Sube cuando algo de afuera cambió lo guardado —el Deshacer del aviso con
+   * esta ventana abierta—, para volver a leer la lista.
+   */
+  recarga: number;
   onCerrar: () => void;
 }
 
@@ -36,6 +43,8 @@ export function Control({
   activo,
   saliendo,
   onCambio,
+  onBorrado,
+  recarga,
   onCerrar,
 }: Props) {
   // Enlaza cada ventana con su título para que el lector de pantalla la anuncie.
@@ -60,7 +69,7 @@ export function Control({
     return () => {
       vigente = false;
     };
-  }, [version]);
+  }, [version, recarga]);
 
   useEffect(() => {
     function tecla(evento: KeyboardEvent) {
@@ -81,6 +90,11 @@ export function Control({
     try {
       if (preguntando.que === "todos") await borrarTodos();
       else await borrarEvento(preguntando.evento.evento_id, null);
+      onBorrado(
+        preguntando.que === "todos"
+          ? "Se borraron todos los eventos"
+          : textoBorrado(preguntando.evento.titulo, false),
+      );
 
       setPreguntando(null);
       setVersion((v) => v + 1);

@@ -43,6 +43,9 @@
   --z-velo: 50;
   --z-flotante: 60;
   --z-velo-interno: 70;
+  /* Por encima de las ventanas: se borra desde "Todos los eventos" y el aviso
+     tiene que verse con ella abierta. */
+  --z-aviso: 80;
   --z-menu: 90;
   --z-globo: 200;
   /* Lo que dibuja el navegador por su cuenta —el asa que agranda la
@@ -2931,6 +2934,67 @@ button:focus-visible {
 .advertencia,
 .error {
   animation: mensaje-entra var(--entra) var(--curva-entra);
+}
+
+/* --- aviso de deshacer --- */
+
+/* La caja ocupa el ancho para centrarlo sin transform, que queda libre para
+   la animación; ella misma no tapa ni ataja clics. */
+.aviso-deshacer-caja {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 22px;
+  z-index: var(--z-aviso);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.aviso-deshacer {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: calc(100% - 32px);
+  padding: 8px 8px 8px 16px;
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--sombra-globo);
+  font-size: 13px;
+  color: var(--tx);
+  animation: aviso-entra var(--entra) var(--curva-entra);
+}
+
+.aviso-deshacer-texto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aviso-deshacer .btn {
+  flex: none;
+  padding: 6px 12px;
+}
+
+.aviso-deshacer.saliendo {
+  animation: aviso-sale var(--sale) var(--curva-sale) forwards;
+}
+
+/* Sube desde el borde de abajo, donde vive, y se va por el mismo lado. */
+@keyframes aviso-entra {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes aviso-sale {
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 
 /* Los vacíos y el indicador de "hay más" solo se funden: no vienen de ningún
