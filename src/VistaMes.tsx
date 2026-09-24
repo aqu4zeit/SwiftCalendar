@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { Instancia, PorDia } from "./api";
 import { Celda } from "./Celda";
@@ -37,6 +37,21 @@ interface Props {
 /** El lado desde el que entra un mes nuevo. */
 export type Sentido = "adelante" | "atras";
 
+/** Cuántas casillas mueve cada flecha en una rejilla de siete columnas. */
+const SALTOS: Record<string, number> = {
+  ArrowLeft: -1,
+  ArrowRight: 1,
+  ArrowUp: -7,
+  ArrowDown: 7,
+};
+
+/** El primer día del mes en la rejilla. Toda rejilla tiene alguno. */
+function primeroDelMes(dias: Date[], delMes: (fecha: Date) => boolean): Date {
+  const primero = dias.find(delMes);
+  if (!primero) throw new Error("la rejilla no tiene ningún día del mes");
+  return primero;
+}
+
 export function VistaMes({
   anio,
   mes,
@@ -51,6 +66,75 @@ export function VistaMes({
   onMenu,
 }: Props) {
   const dias = rejilla(anio, mes);
+  const delMes = (fecha: Date) => fecha.getMonth() === mes - 1;
+
+  /*
+   * El día por el que el tabulador entra a la cuadrícula.
+   *
+   * La cuadrícula es una sola parada de Tab y las flechas se mueven entre
+   * días: antes eran una parada por día y por evento —33 en un mes con pocos
+   * eventos— y ↑ ↓ no hacían nada. Es el último día enfocado si sigue en este
+   * mes; si no, hoy si se ve, y si no el primero del mes.
+   */
+  const [elegido, setElegido] = useState<string | null>(null);
+  const activo =
+    elegido !== null && dias.some((f) => delMes(f) && clave(f) === elegido)
+      ? elegido
+      : clave(dias.find((f) => delMes(f) && mismoDia(f, hoy)) ?? primeroDelMes(dias, delMes));
+
+  // El día al que hay que llevar el foco cuando la flecha cambió de mes: la
+  // cuadrícula nueva recién existe después de dibujarla.
+  const rejillaRef = useRef<HTMLDivElement>(null);
+  const aEnfocar = useRef<string | null>(null);
+
+  function enfocarDia(dia: string) {
+    rejillaRef.current
+      ?.querySelector<HTMLElement>(`[data-dia="${dia}"] [data-foco-ancla]`)
+      ?.focus();
+  }
+
+  useEffect(() => {
+    if (aEnfocar.current === null) return;
+    enfocarDia(aEnfocar.current);
+    aEnfocar.current = null;
+  }, [anio, mes]);
+
+  /*
+   * ← → un día, ↑ ↓ una semana, con el foco en un día o en uno de sus eventos.
+   * El paso es de casilla en la rejilla, no una cuenta de fechas. Si se sale
+   * del mes se cambia de mes, y si se sale de la cuadrícula el destino se busca
+   * en la del mes vecino, que también contiene el día de partida.
+   */
+  function tecla(evento: React.KeyboardEvent) {
+    const salto = SALTOS[evento.key];
+    const celda = (evento.target as HTMLElement).closest<HTMLElement>("[data-dia]");
+    if (salto === undefined || celda === null) return;
+    if (evento.altKey || evento.ctrlKey || evento.metaKey || evento.shiftKey) return;
+    evento.preventDefault();
+    // Si sube, App lo toma como cambiar de mes.
+    evento.stopPropagation();
+
+    const desde = celda.dataset.dia;
+    let lista = dias;
+    let casilla = lista.findIndex((f) => clave(f) === desde) + salto;
+    if (casilla < 0 || casilla >= lista.length) {
+      const hacia = casilla < 0 ? -1 : 1;
+      const anioVecino = mes + hacia === 0 ? anio - 1 : mes + hacia === 13 ? anio + 1 : anio;
+      const mesVecino = mes + hacia === 0 ? 12 : mes + hacia === 13 ? 1 : mes + hacia;
+      lista = rejilla(anioVecino, mesVecino);
+      casilla = lista.findIndex((f) => clave(f) === desde) + salto;
+    }
+
+    const destino = lista[casilla];
+    const claveDestino = clave(destino);
+    setElegido(claveDestino);
+    if (delMes(destino)) {
+      enfocarDia(claveDestino);
+      return;
+    }
+    aEnfocar.current = claveDestino;
+    onNavegar(destino.getFullYear(), destino.getMonth() + 1);
+  }
 
   // Hacia dónde se movió el calendario, para que el mes nuevo entre desde ese
   // lado. Se compara al dibujar, antes de montar la cuadrícula nueva: si se
@@ -83,6 +167,8 @@ export function VistaMes({
       <div
         className="rejilla"
         key={`${anio}-${mes}`}
+        ref={rejillaRef}
+        onKeyDown={tecla}
         data-sentido={paso.sentido}
         // El sentido vale mientras el mes entra. Después se quita, para que
         // un evento creado más tarde tenga su propia entrada; los de las
@@ -104,6 +190,8 @@ export function VistaMes({
             onAbrir={onAbrir}
             onAbrirDia={onAbrirDia}
             onMenu={onMenu}
+            activo={clave(fecha) === activo}
+            onElegir={() => setElegido(clave(fecha))}
           />
         ))}
       </div>

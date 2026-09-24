@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { Instancia } from "./api";
-import { fechaLarga, horaDe, type FormatoHora } from "./fecha";
+import { clave, fechaLarga, horaDe, type FormatoHora } from "./fecha";
 import { useListaConSalida } from "./presencia";
 import { nombreDeInstancia } from "./texto";
 
@@ -21,6 +21,13 @@ interface Props {
     y: number,
     sobre: { instancia: Instancia } | { fecha: Date },
   ) => void;
+  /**
+   * Si es el día por el que entra el tabulador. La cuadrícula es una sola
+   * parada: el resto de los días y sus eventos se alcanzan con las flechas.
+   */
+  activo: boolean;
+  /** El foco llegó a este día: pasa a ser el de entrada. */
+  onElegir: () => void;
 }
 
 export function Celda({
@@ -34,6 +41,8 @@ export function Celda({
   onAbrir,
   onAbrirDia,
   onMenu,
+  activo,
+  onElegir,
 }: Props) {
   const lista = useRef<HTMLDivElement>(null);
   const [desborda, setDesborda] = useState(false);
@@ -70,6 +79,10 @@ export function Celda({
       // El día es el lugar al que vuelve el teclado cuando lo que se abrió
       // desde acá ya no está: el hueco de la celda, un evento borrado.
       data-foco-zona
+      data-dia={clave(fecha)}
+      // Enfocar el día o uno de sus eventos, con el ratón o el teclado, lo
+      // vuelve el día por el que entra el tabulador.
+      onFocus={esDeEsteMes ? onElegir : undefined}
       onClick={
         esDeEsteMes
           ? () => onAbrirDia(fecha)
@@ -84,16 +97,16 @@ export function Celda({
       }}
     >
       {/* Un botón para que el teclado llegue al día. El clic sube hasta la
-          celda, que es la que sabe qué hacer con él. Los días de otro mes
-          quedan fuera del recorrido del tabulador: solo sirven de atajo al mes
-          vecino, y para eso ya están las flechas. */}
+          celda, que es la que sabe qué hacer con él. Solo el día activo está
+          en el recorrido del tabulador; a los demás se llega con las flechas,
+          y los de otro mes solo sirven de atajo al mes vecino. */}
       <button
         type="button"
         className="numero"
         data-foco-ancla
         aria-label={fechaLarga(fecha)}
         aria-current={esHoy ? "date" : undefined}
-        tabIndex={esDeEsteMes ? undefined : -1}
+        tabIndex={esDeEsteMes && activo ? 0 : -1}
       >
         {fecha.getDate()}
       </button>
@@ -106,6 +119,7 @@ export function Celda({
             formato={formatoHora}
             onAbrir={onAbrir}
             onMenu={onMenu}
+            enRecorrido={activo}
           />
         ) : (
           dibujados.map(({ item, saliendo }) => (
@@ -116,6 +130,7 @@ export function Celda({
               formato={formatoHora}
               onAbrir={onAbrir}
               onMenu={onMenu}
+              enRecorrido={activo}
             />
           ))
         )}
@@ -134,6 +149,8 @@ interface FilaProps {
   instancia: Instancia;
   saliendo: boolean;
   formato: FormatoHora;
+  /** Si el tabulador pasa por este evento: solo los del día activo. */
+  enRecorrido: boolean;
   onAbrir: (instancia: Instancia) => void;
   onMenu: (
     x: number,
@@ -147,6 +164,7 @@ function EventoSolo({
   instancia,
   saliendo,
   formato,
+  enRecorrido,
   onAbrir,
   onMenu,
 }: FilaProps) {
@@ -159,6 +177,7 @@ function EventoSolo({
       className={clases.join(" ")}
       // El globo muestra el nombre entero solo cuando el título no entra.
       data-globo="cortado"
+      tabIndex={enRecorrido ? 0 : -1}
       aria-label={nombreDeInstancia(instancia, formato)}
       onClick={(e) => {
 /** El clic en el evento no debe llegar a la celda, que abre el día. */
@@ -192,6 +211,7 @@ function EventoCompacto({
   instancia,
   saliendo,
   formato,
+  enRecorrido,
   onAbrir,
   onMenu,
 }: FilaProps) {
@@ -200,6 +220,7 @@ function EventoCompacto({
       type="button"
       className={saliendo ? "ev saliendo" : "ev"}
       data-globo="cortado"
+      tabIndex={enRecorrido ? 0 : -1}
       aria-label={nombreDeInstancia(instancia, formato)}
       onClick={(e) => {
         e.stopPropagation();
