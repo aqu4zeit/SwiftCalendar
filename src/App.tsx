@@ -902,47 +902,68 @@ export default function App() {
         </div>
       </header>
 
-      {error ? (
+      {/* El error se muestra encima del calendario, sin reemplazarlo. Antes
+          cualquier comando que fallara —el buscador, una notificación— dejaba
+          la pantalla en blanco con el texto técnico, y solo volvía al cambiar
+          de mes, porque es lo único que lo limpiaba. Si lo que falló es la
+          carga del mes, las celdas quedan vacías debajo y Reintentar la
+          repite. */}
+      {error && (
         <div className="error" role="alert">
-          {error}
+          <span className="error-texto">{error}</span>
+          <span className="error-acciones">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setError(null);
+                setVersion((v) => v + 1);
+              }}
+            >
+              Reintentar
+            </button>
+            <button type="button" className="btn" onClick={() => setError(null)}>
+              Cerrar
+            </button>
+          </span>
         </div>
-      ) : (
-        <main className="cuerpo">
-          <VistaMes
-            anio={anio}
-            mes={mes}
-            hoy={HOY}
-            porDia={porDia}
-            formatoHora={formatoHora}
-            onNavegar={ir}
-            onAbrir={setAbierto}
-            onAbrirDia={setDia}
-            onMenu={(x, y, sobre) => setMenu({ x, y, sobre })}
-            filtrado={filtrado}
-            onMostrarTodos={mostrarTodos}
-          />
-
-          {filtrosVisible.valor && grupos && (
-            <PanelFiltros
-              grupos={grupos}
-              saliendo={filtrosVisible.saliendo}
-              gruposActivos={gruposActivos}
-              importanciasActivas={importanciasActivas}
-              onGrupos={(activos) =>
-                setOcultos(
-                  grupos.todos
-                    .filter((g) => !activos.includes(g.id))
-                    .map((g) => g.id),
-                )
-              }
-              onImportancias={setImportanciasActivas}
-              onEditarGrupo={(g) => setGrupoAbierto({ editando: g })}
-              onNuevoGrupo={() => setGrupoAbierto({})}
-              onReordenar={reordenar}
-            />
-          )}
-        </main>
       )}
+
+      <main className="cuerpo">
+        <VistaMes
+          anio={anio}
+          mes={mes}
+          hoy={HOY}
+          porDia={porDia}
+          formatoHora={formatoHora}
+          onNavegar={ir}
+          onAbrir={setAbierto}
+          onAbrirDia={setDia}
+          onMenu={(x, y, sobre) => setMenu({ x, y, sobre })}
+          filtrado={filtrado}
+          onMostrarTodos={mostrarTodos}
+        />
+
+        {filtrosVisible.valor && grupos && (
+          <PanelFiltros
+            grupos={grupos}
+            saliendo={filtrosVisible.saliendo}
+            gruposActivos={gruposActivos}
+            importanciasActivas={importanciasActivas}
+            onGrupos={(activos) =>
+              setOcultos(
+                grupos.todos
+                  .filter((g) => !activos.includes(g.id))
+                  .map((g) => g.id),
+              )
+            }
+            onImportancias={setImportanciasActivas}
+            onEditarGrupo={(g) => setGrupoAbierto({ editando: g })}
+            onNuevoGrupo={() => setGrupoAbierto({})}
+            onReordenar={reordenar}
+          />
+        )}
+      </main>
 
       {diaVisible.valor && carpeta && (
         <VistaDia
