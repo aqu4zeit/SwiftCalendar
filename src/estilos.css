@@ -85,9 +85,9 @@
   --velo: rgba(9, 8, 7, 0.62);
   --velo-2: rgba(9, 8, 7, 0.5);
   --sombra-globo: rgba(9, 8, 7, 0.45);
-  --esquina: rgba(19, 17, 16, 0.72);
-  --esquina-hover: rgba(19, 17, 16, 0.88);
-  --tapa-filtro: rgba(19, 17, 16, 0.86);
+  /* El fondo con transparencia sale del mismo --bg: escrito aparte como
+     rgba(19, 17, 16, …) era una copia más que cambiar si cambia el fondo. */
+  --tapa-filtro: color-mix(in srgb, var(--bg) 86%, transparent);
 
   /* Alturas de las filas de la celda: mínimo, máximo y tope de la tarjeta. */
   --fila-min: 24px;
@@ -3447,7 +3447,7 @@ span.gesto {
 
 .sombra {
   position: absolute;
-  background: rgba(19, 17, 16, 0.6);
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
   pointer-events: none;
 }
 
@@ -3457,7 +3457,7 @@ span.gesto {
 .marco {
   position: absolute;
   cursor: move;
-  outline: 1px solid rgba(19, 17, 16, 0.75);
+  outline: 1px solid color-mix(in srgb, var(--bg) 75%, transparent);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9);
 }
 
@@ -3498,7 +3498,7 @@ span.gesto {
   width: 14px;
   height: 14px;
   background: #fff;
-  border: 1px solid rgba(19, 17, 16, 0.75);
+  border: 1px solid color-mix(in srgb, var(--bg) 75%, transparent);
   border-radius: 2px;
   box-sizing: border-box;
 }
