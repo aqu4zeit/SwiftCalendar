@@ -109,9 +109,15 @@ export function Foco() {
      * único que no se vino a hacer, ni lo destructivo, que con un Enter de más
      * borraría. La cruz queda solo si no hay otra cosa.
      */
+    // Lo destructivo lo declara cada botón con `data-destructivo`. Antes se
+    // miraba la clase `.malo`, que además marca un campo inválido y que la
+    // papelera de "Todos los eventos" no lleva: esa ventana abría con el foco
+    // en "Borrar este evento".
     function primeroUtil(ventana: HTMLElement): HTMLElement | null {
       const lista = enfocables(ventana);
-      return lista.find((e) => !e.matches(".cerrar, .malo")) ?? lista[0] ?? null;
+      return (
+        lista.find((e) => !e.matches(".cerrar, [data-destructivo]")) ?? lista[0] ?? null
+      );
     }
 
     function entrar(abierta: (typeof pila)[number]) {
@@ -132,10 +138,16 @@ export function Foco() {
 
     function volver(ventana: HTMLElement, disparador: HTMLElement | null) {
       // Solo si el foco sigue en la ventana que se va o se perdió. Si ya está
-      // en otra —la que la reemplazó—, esa manda.
+      // en otra —la que la reemplazó—, esa manda. Una que también se está yendo
+      // no manda: Escape en "¿Restaurar este respaldo?" cierra también Ajustes,
+      // y el foco, que estaba en la pregunta, se quedaba sin nadie que lo
+      // devolviera.
       const actual = document.activeElement;
       const perdido =
-        actual === null || actual === document.body || ventana.contains(actual);
+        actual === null ||
+        actual === document.body ||
+        ventana.contains(actual) ||
+        actual.closest(".saliendo") !== null;
       if (!perdido || disparador === null) return;
       if (!disparador.isConnected || disparador.closest(".saliendo")) return;
       disparador.focus();

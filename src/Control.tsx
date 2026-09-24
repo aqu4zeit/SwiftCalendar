@@ -140,7 +140,7 @@ export function Control({
 
                   <button
                     type="button"
-                    className="control-borrar"
+                    className="control-borrar" data-destructivo
                     onClick={() => setPreguntando({ que: "uno", evento })}
                     data-globo aria-label="Borrar este evento"
                   >
@@ -162,7 +162,7 @@ export function Control({
 
           <button
             type="button"
-            className={eventos.length === 0 ? "btn inactivo" : "btn malo"}
+            className={eventos.length === 0 ? "btn inactivo" : "btn malo"} data-destructivo
             disabled={eventos.length === 0}
             onClick={() => setPreguntando({ que: "todos" })}
           >
@@ -222,7 +222,7 @@ export function Control({
               </button>
               <button
                 type="button"
-                className="btn malo"
+                className="btn malo" data-destructivo
                 disabled={ocupado}
                 onClick={() => void confirmar()}
               >

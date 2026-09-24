@@ -682,7 +682,7 @@ export function Formulario({
               >
                 Seguir editando
               </button>
-              <button type="button" className="btn malo" onClick={onCerrar}>
+              <button type="button" className="btn malo" data-destructivo onClick={onCerrar}>
                 Descartar
               </button>
             </div>

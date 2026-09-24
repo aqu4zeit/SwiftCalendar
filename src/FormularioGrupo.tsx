@@ -208,7 +208,7 @@ export function FormularioGrupo({
           {grupo && !esPorDefecto && (
             <button
               type="button"
-              className="btn malo"
+              className="btn malo" data-destructivo
               onClick={() => setConfirmando(true)}
             >
               Borrar
@@ -255,7 +255,7 @@ export function FormularioGrupo({
               >
                 Seguir editando
               </button>
-              <button type="button" className="btn malo" onClick={onCerrar}>
+              <button type="button" className="btn malo" data-destructivo onClick={onCerrar}>
                 Descartar
               </button>
             </div>
@@ -289,7 +289,7 @@ export function FormularioGrupo({
               </button>
               <button
                 type="button"
-                className="btn malo"
+                className="btn malo" data-destructivo
                 disabled={guardando}
                 onClick={borrar}
               >

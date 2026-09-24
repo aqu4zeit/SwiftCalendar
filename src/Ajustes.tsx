@@ -397,7 +397,7 @@ export function Ajustes({
               </button>
               <button
                 type="button"
-                className="btn malo"
+                className="btn malo" data-destructivo
                 onClick={() => {
                   void restaurarRespaldo(aRestaurar).catch((e: unknown) => {
                     setError(String(e));

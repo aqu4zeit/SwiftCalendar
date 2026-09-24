@@ -292,7 +292,7 @@ export function Ficha({
             <div className="ficha-pie">
               <button
                 type="button"
-                className="btn malo"
+                className="btn malo" data-destructivo
                 onClick={() => pedir("borrar")}
               >
                 Borrar

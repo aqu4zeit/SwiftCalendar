@@ -189,6 +189,7 @@ export function PreguntaAlcance({
           <button
             type="button"
             className={accion === "borrar" ? "btn malo" : "btn pri"}
+            data-destructivo={accion === "borrar" || undefined}
             disabled={ocupado}
             onClick={onSeguir}
           >

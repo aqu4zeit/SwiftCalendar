@@ -217,7 +217,7 @@ export function PanelAvisos({
               </button>
               <button
                 type="button"
-                className="btn malo"
+                className="btn malo" data-destructivo
                 onClick={borrarTodasLasVistas}
               >
                 Borrar
@@ -300,7 +300,7 @@ function Seccion({
           {onBorrar && (
             <button
               type="button"
-              className="aviso-ok borrar"
+              className="aviso-ok borrar" data-destructivo
               onClick={() => onBorrar(aviso.id)}
               data-globo aria-label="Borrar esta notificación"
             >
