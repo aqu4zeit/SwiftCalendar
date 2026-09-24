@@ -94,6 +94,30 @@ export function Buscador({
       ?.scrollIntoView({ block: "nearest" });
   }, [elegido]);
 
+  /*
+   * Si quedan filas por debajo de lo que se ve. La lista corta en 320 px sin
+   * ninguna señal, y una octava fila fuera de la vista se leía como un evento
+   * que el buscador no encontraba. Es el mismo aviso que la celda del mes y la
+   * vista día; acá se va al llegar al final, porque esta lista se recorre.
+   */
+  const [hayMas, setHayMas] = useState(false);
+
+  function revisarHayMas() {
+    const nodo = lista.current;
+    setHayMas(
+      nodo !== null && nodo.scrollTop + nodo.clientHeight < nodo.scrollHeight - 1,
+    );
+  }
+
+  useEffect(() => {
+    const nodo = lista.current;
+    revisarHayMas();
+    if (!nodo) return;
+    const observador = new ResizeObserver(revisarHayMas);
+    observador.observe(nodo);
+    return () => observador.disconnect();
+  }, [pagina]);
+
   const velo = useVelo(onCerrar);
 
   function tecla(evento: React.KeyboardEvent) {
@@ -203,34 +227,41 @@ export function Buscador({
               </button>
             </div>
 
-            <div className="paleta-lista" ref={lista}>
-              {eventos.map((evento, i) => (
-                <button
-                  key={evento.evento_id}
-                  type="button"
-                  className={
-                    i === elegido
-                      ? "paleta-fila buscador-fila on"
-                      : "paleta-fila buscador-fila"
-                  }
-                  data-elegido={i === elegido}
-                  // Con el ratón, la fila señalada es la elegida: si no, moverse
-                  // con el ratón y pulsar Enter llevaría a otro evento.
-                  onMouseMove={() => setElegido(i)}
-                  onClick={() => onIr(evento)}
-                >
-                  <span className="dot" style={{ background: evento.color }} />
-
-                  <span className="buscador-txt">
-                    <span className="t">{evento.titulo}</span>
-                    <span className="h">
-                      {cuandoOcurre(evento, formatoHora)}
+            <div className="buscador-lista-caja">
+              <div className="paleta-lista" ref={lista} onScroll={revisarHayMas}>
+                {eventos.map((evento, i) => (
+                  <button
+                    key={evento.evento_id}
+                    type="button"
+                    className={
+                      i === elegido
+                        ? "paleta-fila buscador-fila on"
+                        : "paleta-fila buscador-fila"
+                    }
+                    data-elegido={i === elegido}
+                    // Con el ratón, la fila señalada es la elegida: si no, moverse
+                    // con el ratón y pulsar Enter llevaría a otro evento.
+                    onMouseMove={() => setElegido(i)}
+                    onClick={() => onIr(evento)}
+                  >
+                    <span className="dot" style={{ background: evento.color }} />
+  
+                    <span className="buscador-txt">
+                      <span className="t">{evento.titulo}</span>
+                      <span className="h">
+                        {cuandoOcurre(evento, formatoHora)}
+                      </span>
                     </span>
-                  </span>
-
-                  <span className="buscador-grupo">{evento.grupo}</span>
-                </button>
-              ))}
+  
+                    <span className="buscador-grupo">{evento.grupo}</span>
+                  </button>
+                ))}
+              </div>
+              {hayMas && (
+                <div className="hay-mas buscador" aria-hidden="true">
+                  <i />
+                </div>
+              )}
             </div>
           </>
         )}

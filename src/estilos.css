@@ -3981,6 +3981,17 @@ span.gesto {
   color: var(--tx-3);
 }
 
+/* La caja existe para colgar el aviso de que hay más filas abajo. */
+.buscador-lista-caja {
+  position: relative;
+}
+
+.hay-mas.buscador {
+  height: 28px;
+  padding-bottom: 5px;
+  background: linear-gradient(transparent, var(--raised) 72%);
+}
+
 .paleta-lista {
   max-height: 320px;
   overflow-y: auto;
