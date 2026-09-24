@@ -1059,6 +1059,7 @@ export default function App() {
           grupo={grupoVisible.valor.editando}
           activo={arriba === "grupo"}
           saliendo={grupoVisible.saliendo}
+          formatoHora={formatoHora}
           onCerrar={() => setGrupoAbierto(null)}
           onGuardado={(id) => {
             grupoVisible.valor?.alCrear?.(id);

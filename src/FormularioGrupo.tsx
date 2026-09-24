@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from "react";
 
 import { borrarGrupo, crearGrupo, editarGrupo, type Grupo } from "./api";
+import { horaDe, type FormatoHora } from "./fecha";
 import { usePresencia } from "./presencia";
 import { alSoltarElPuntero } from "./puntero";
 import { SelectorColor } from "./SelectorColor";
@@ -26,16 +27,26 @@ interface Props {
   activo: boolean;
   /** Verdadero mientras se está yendo. */
   saliendo: boolean;
+  /** El de Ajustes, para que la vista previa se lea como el calendario. */
+  formatoHora: FormatoHora;
   onCerrar: () => void;
   /** Recibe el identificador, que al crear es nuevo. */
   onGuardado: (id: number) => void;
   onBorrado: () => void;
 }
 
+/**
+ * Las horas de los dos eventos de muestra. El día no se ve: solo está para
+ * darle a horaDe el mismo texto que trae una instancia de verdad.
+ */
+const MUESTRA_URGENTE = "2026-01-01 08:30";
+const MUESTRA_IMPORTANTE = "2026-01-01 11:00";
+
 export function FormularioGrupo({
   grupo,
   activo,
   saliendo,
+  formatoHora,
   onCerrar,
   onGuardado,
   onBorrado,
@@ -184,12 +195,12 @@ export function FormularioGrupo({
             <div className="previa" aria-hidden="true">
               <div className="ev">
                 <span className="marca" style={{ background: color }} />
-                <span className="hora">08:30</span>
+                <span className="hora">{horaDe(MUESTRA_URGENTE, formatoHora)}</span>
                 <span className="titulo-ev">{nombre.trim() || "Urgente"}</span>
               </div>
               <div className="ev">
                 <span className="marca" style={{ borderColor: color }} />
-                <span className="hora">11:00</span>
+                <span className="hora">{horaDe(MUESTRA_IMPORTANTE, formatoHora)}</span>
                 <span className="titulo-ev">
                   {nombre.trim() || "Importante"}
                 </span>
