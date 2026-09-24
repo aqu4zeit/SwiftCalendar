@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 
 import { borrarGrupo, crearGrupo, editarGrupo, type Grupo } from "./api";
 import { usePresencia } from "./presencia";
+import { alSoltarElPuntero } from "./puntero";
 import { SelectorColor } from "./SelectorColor";
 
 /** Diez colores calibrados para el fondo oscuro. */
@@ -140,7 +141,7 @@ export function FormularioGrupo({
                   setNombreTocado(true);
                   setNombre(e.target.value);
                 }}
-                onBlur={() => setNombreTocado(true)}
+                onBlur={() => alSoltarElPuntero(() => setNombreTocado(true))}
                 disabled={esPorDefecto}
                 autoFocus={!esPorDefecto}
               />

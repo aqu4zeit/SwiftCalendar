@@ -20,6 +20,7 @@ import { Desplegable } from "./Desplegable";
 import { horaValida, mascaraHora } from "./fecha";
 import { MasOpciones } from "./MasOpciones";
 import { usePresencia } from "./presencia";
+import { alSoltarElPuntero } from "./puntero";
 import {
   aRrule,
   desdeRrule,
@@ -427,7 +428,7 @@ export function Formulario({
                 setTituloTocado(true);
                 set({ titulo: e.target.value });
               }}
-              onBlur={() => setTituloTocado(true)}
+              onBlur={() => alSoltarElPuntero(() => setTituloTocado(true))}
               autoFocus
             />
             {reclamarTitulo && (
