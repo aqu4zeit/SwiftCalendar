@@ -67,6 +67,9 @@ export function Celda({
   return (
     <div
       className={clases.join(" ")}
+      // El día es el lugar al que vuelve el teclado cuando lo que se abrió
+      // desde acá ya no está: el hueco de la celda, un evento borrado.
+      data-foco-zona
       onClick={
         esDeEsteMes
           ? () => onAbrirDia(fecha)
@@ -87,6 +90,7 @@ export function Celda({
       <button
         type="button"
         className="numero"
+        data-foco-ancla
         aria-label={fechaLarga(fecha)}
         aria-current={esHoy ? "date" : undefined}
         tabIndex={esDeEsteMes ? undefined : -1}

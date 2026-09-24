@@ -18,6 +18,27 @@ function abiertas(): HTMLElement[] {
   );
 }
 
+/**
+ * Dónde vuelve el foco cuando lo que abrió una ventana ya no está.
+ *
+ * Lo declara el marcado y no Foco: una zona (`data-foco-zona`, la celda del
+ * día) nombra su ancla (`data-foco-ancla`, el número), y el último recurso
+ * (`data-foco-ultimo`, "Nuevo evento") es uno solo en la barra.
+ */
+const ULTIMO_RECURSO = "[data-foco-ultimo]";
+
+function anclaDe(elemento: Element | null): HTMLElement | null {
+  return (
+    elemento?.closest("[data-foco-zona]")?.querySelector<HTMLElement>("[data-foco-ancla]") ??
+    null
+  );
+}
+
+/** Sigue en el documento y no se está yendo. */
+function vivo(elemento: HTMLElement | null): boolean {
+  return elemento !== null && elemento.isConnected && elemento.closest(".saliendo") === null;
+}
+
 /** Lo que Tab recorre dentro de una ventana, en su orden. */
 function enfocables(ventana: HTMLElement): HTMLElement[] {
   return [...ventana.querySelectorAll<HTMLElement>(ENFOCABLE)].filter(
@@ -52,6 +73,8 @@ export function Foco() {
     const pila: {
       ventana: HTMLElement;
       disparador: HTMLElement | null;
+      /** Adónde volver si el disparador ya no está: el día donde vivía. */
+      ancla: HTMLElement | null;
       provisional: HTMLElement | null;
     }[] = [];
 
@@ -70,8 +93,7 @@ export function Foco() {
      * No alcanza con mirar el foco cuando aparece la ventana: si ella misma se
      * enfoca al montarse (el campo del formulario, el de la paleta), para
      * entonces el foco ya está adentro. `null` marca que el foco se fue al
-     * vacío, por ejemplo con un clic sobre el hueco de una celda: ahí no hay
-     * nadie a quien volver.
+     * vacío sin nada a lo que anclarse.
      */
     const recientes: (HTMLElement | null)[] = [];
 
@@ -85,7 +107,23 @@ export function Foco() {
     }
 
     function alDesenfocar(evento: FocusEvent) {
+      // Si el foco se va por un clic, el clic ya dejó anotado adónde volver
+      // (`alApretar` corre antes): anotar la nada encima borraba el día de un
+      // clic en el hueco de su celda.
+      if (document.documentElement.matches(":active")) return;
       if (evento.relatedTarget === null) recordar(null);
+    }
+
+    /*
+     * Un clic sobre algo que no se puede enfocar —el hueco de una celda, que
+     * abre su día— no deja disparador. Se recuerda el ancla de la zona, el
+     * número del día, para que al cerrar el teclado siga desde ahí. Lo que sí
+     * se enfoca lo recoge `alEnfocar`.
+     */
+    function alApretar(evento: PointerEvent) {
+      if (!(evento.target instanceof Element)) return;
+      if (evento.target.closest(ENFOCABLE)) return;
+      recordar(anclaDe(evento.target));
     }
 
     function disparadorDe(ventana: HTMLElement): HTMLElement | null {
@@ -136,7 +174,35 @@ export function Foco() {
       if (primeroUtil(abierta.ventana) !== abierta.provisional) entrar(abierta);
     }
 
-    function volver(ventana: HTMLElement, disparador: HTMLElement | null) {
+    /*
+     * Adónde vuelve el foco al cerrar, en este orden:
+     *
+     * 1. Al disparador, si sigue ahí.
+     * 2. A ninguno, si el disparador vivía en otra ventana que también se va
+     *    o ya se fue: la vuelta la hace esa otra (Escape en "¿Restaurar?" y
+     *    Ajustes; "¿Borrar?" y la ficha).
+     * 3. Al ancla del disparador —el número de su día— si el disparador ya no
+     *    está: el evento que se borró desde su ficha.
+     * 4. A lo marcado como último recurso ("Nuevo evento"), si hubo disparador
+     *    y no quedó ni él ni su día: por ejemplo, se cambió de mes mientras.
+     *
+     * Sin disparador —un atajo con nada enfocado— no se elige ninguno: no había
+     * dónde estar, e inventarlo sería mentir sobre dónde estaba uno.
+     */
+    function destinoDe(
+      disparador: HTMLElement | null,
+      ancla: HTMLElement | null,
+    ): HTMLElement | null {
+      if (disparador === null) return null;
+      if (vivo(disparador)) return disparador;
+      // Aunque ya no esté en el documento: un nodo quitado conserva sus
+      // ancestros, y si vivía en una ventana, la vuelta es de esa ventana.
+      if (disparador.closest(VENTANA)) return null;
+      if (ancla !== null && vivo(ancla)) return ancla;
+      return document.querySelector<HTMLElement>(ULTIMO_RECURSO);
+    }
+
+    function volver(ventana: HTMLElement, destino: HTMLElement | null) {
       // Solo si el foco sigue en la ventana que se va o se perdió. Si ya está
       // en otra —la que la reemplazó—, esa manda. Una que también se está yendo
       // no manda: Escape en "¿Restaurar este respaldo?" cierra también Ajustes,
@@ -148,9 +214,20 @@ export function Foco() {
         actual === document.body ||
         ventana.contains(actual) ||
         actual.closest(".saliendo") !== null;
-      if (!perdido || disparador === null) return;
-      if (!disparador.isConnected || disparador.closest(".saliendo")) return;
-      disparador.focus();
+      if (perdido) destino?.focus();
+    }
+
+    /*
+     * Lo enfocado que se va del calendario —un evento que se borra y hace su
+     * salida— deja el foco en su día. Sin esto se perdía un instante después,
+     * aunque la ventana ya lo hubiera devuelto a su lugar.
+     */
+    function sostener() {
+      const actual = document.activeElement;
+      if (!(actual instanceof HTMLElement) || actual.closest(VENTANA)) return;
+      if (actual.closest(".saliendo") === null) return;
+      const ancla = anclaDe(actual);
+      if (ancla !== null && vivo(ancla)) ancla.focus();
     }
 
     function sincronizar() {
@@ -158,20 +235,24 @@ export function Foco() {
 
       // Primero las que se cerraron, para que las nuevas hereden su origen.
       for (let i = pila.length - 1; i >= 0; i--) {
-        const { ventana, disparador } = pila[i];
+        const { ventana, disparador, ancla } = pila[i];
         if (ahora.includes(ventana)) continue;
         pila.splice(i, 1);
         origen.set(ventana, disparador);
-        volver(ventana, disparador);
+        volver(ventana, destinoDe(disparador, ancla));
       }
+
+      sostener();
 
       for (const abierta of pila) revisarProvisional(abierta);
 
       for (const ventana of ahora) {
         if (pila.some((p) => p.ventana === ventana)) continue;
+        const disparador = disparadorDe(ventana);
         const abierta: (typeof pila)[number] = {
           ventana,
-          disparador: disparadorDe(ventana),
+          disparador,
+          ancla: anclaDe(disparador),
           provisional: null,
         };
         pila.push(abierta);
@@ -218,6 +299,7 @@ export function Foco() {
     });
     document.addEventListener("focusin", alEnfocar, true);
     document.addEventListener("focusout", alDesenfocar, true);
+    document.addEventListener("pointerdown", alApretar, true);
     document.addEventListener("keydown", tecla, true);
     sincronizar();
 
@@ -225,6 +307,7 @@ export function Foco() {
       observador.disconnect();
       document.removeEventListener("focusin", alEnfocar, true);
       document.removeEventListener("focusout", alDesenfocar, true);
+      document.removeEventListener("pointerdown", alApretar, true);
       document.removeEventListener("keydown", tecla, true);
     };
   }, []);

@@ -847,6 +847,9 @@ export default function App() {
 
           <button
             className="nuevo-evento"
+            // Adonde vuelve el teclado si lo que abrió una ventana ya no está
+            // y tampoco su día. Ver Foco.tsx.
+            data-foco-ultimo
             data-globo aria-label="Nuevo evento"
             aria-keyshortcuts="Control+N"
             onClick={() => setFormulario({ modo: "crear", fecha: clave(HOY) })}
