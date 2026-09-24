@@ -63,6 +63,19 @@ export function PanelAvisos({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version]);
 
+  // Escape cancela la pregunta de borrar las vistas, como en las demás
+  // confirmaciones. El panel no está entre las ventanas que App conoce, así
+  // que nadie más escuchaba la tecla y la pregunta solo se cerraba con Cancelar.
+  useEffect(() => {
+    if (!preguntando) return;
+
+    function tecla(evento: KeyboardEvent) {
+      if (evento.key === "Escape") setPreguntando(false);
+    }
+    document.addEventListener("keydown", tecla);
+    return () => document.removeEventListener("keydown", tecla);
+  }, [preguntando]);
+
   // Se cierra al clicar fuera. El botón que lo abre queda excluido porque su
   // propio clic ya alterna el panel: cerrarlo dos veces lo reabriría.
   useEffect(() => {

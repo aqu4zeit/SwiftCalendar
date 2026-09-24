@@ -160,14 +160,22 @@ export function Ajustes({
     }
   }
 
+  // Con la pregunta de restaurar abierta, Escape la cancela a ella y Ajustes
+  // queda abierto, como en las demás confirmaciones. Antes cerraba las dos:
+  // App no sabe que Ajustes tiene una pregunta encima.
   useEffect(() => {
     function tecla(evento: KeyboardEvent) {
-      if (evento.key === "Escape" && activo) onCerrar();
+      if (evento.key !== "Escape" || !activo) return;
+      if (confirmando !== null) setConfirmando(null);
+      else onCerrar();
     }
     document.addEventListener("keydown", tecla);
     return () => document.removeEventListener("keydown", tecla);
   });
 
+  // Un clic fuera no cierra Ajustes: se revisó en la tanda 9 y se dejó así.
+  // La decisión 44 reserva ese cierre para la vista día y la ficha; Ajustes se
+  // cierra con Escape o la cruz.
   return (
     <div className={saliendo ? "velo saliendo" : "velo"}>
       <div
